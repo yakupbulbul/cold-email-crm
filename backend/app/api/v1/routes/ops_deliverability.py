@@ -4,7 +4,7 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.models.monitoring import DeliverabilityEvent
 from app.models.campaign import Campaign, Contact
-from app.models.mailbox import Mailbox, Domain
+from app.models.core import Mailbox, Domain
 from datetime import datetime, timedelta
 
 router = APIRouter()
