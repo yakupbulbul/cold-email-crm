@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cold_email_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    restart: always
+
+  worker:
+    build: .
+    command: celery -A app.workers.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - POSTGRES_URL=postgresql://user:password@db:5432/cold_email_crm
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  scheduler:
+    build: .
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    volumes:
+      - .:/app
+    environment:
+      - POSTGRES_URL=postgresql://user:password@db:5432/cold_email_crm
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+volumes:
+  postgres_data:

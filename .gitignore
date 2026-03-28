@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+env/
+.env
+
+# Node
+node_modules/
+.pnp
+.pnp.js
+.next/
+out/
+build/
+.env*.local
+
+# Dependencies
+package-lock.json
+
+# Docker
+postgres_data/
+
+# OS
+.DS_Store
+Thumbs.db
