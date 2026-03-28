@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX } from 'lucide-react';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu } from 'lucide-react';
 
 export default function Sidebar() {
   return (
@@ -34,6 +34,22 @@ export default function Sidebar() {
         </Link>
         <Link href="/suppression" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
           <ShieldX size={20} className="group-hover:scale-110 transition-transform"/> Suppression
+        </Link>
+        <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Operations & Telemetry</div>
+        <Link href="/ops" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
+          <Activity size={20} className="group-hover:scale-110 transition-transform"/> System Health
+        </Link>
+        <Link href="/ops/deliverability" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
+          <TrendingUp size={20} className="group-hover:scale-110 transition-transform"/> Deliverability
+        </Link>
+        <Link href="/ops/jobs" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
+          <Network size={20} className="group-hover:scale-110 transition-transform"/> Worker Queues
+        </Link>
+        <Link href="/ops/alerts" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
+          <Bell size={20} className="group-hover:scale-110 transition-transform"/> System Alerts
+        </Link>
+        <Link href="/ops/readiness" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
+          <Cpu size={20} className="group-hover:scale-110 transition-transform"/> Prod Readiness
         </Link>
       </nav>
       <div className="p-4 border-t border-slate-800">
