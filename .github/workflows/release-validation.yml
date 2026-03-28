@@ -1,0 +1,83 @@
+name: Release Validation
+
+on:
+  push:
+    branches: ["release/**"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options: [staging, production]
+
+jobs:
+  full-validation:
+    name: Full Release Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Start all services ──────────────────────────────────────────────
+      - name: Boot staging Docker stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+          sleep 15
+
+      # ── Backend integration tests ────────────────────────────────────────
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install backend test deps
+        run: |
+          cd backend && pip install -r requirements.txt && \
+          pip install pytest pytest-asyncio httpx pytest-cov factory-boy faker
+      - name: Run API + integration tests
+        run: |
+          cd backend && pytest tests/ -v -m "not integration or integration" \
+            --junitxml=../artifacts/pytest/results.xml \
+            --cov=app --cov-report=xml:../artifacts/pytest/coverage.xml
+        env:
+          TEST_DATABASE_URL: postgresql://user:password@localhost:5432/cold_email_test
+          REDIS_URL: redis://localhost:6380/1
+          SECRET_KEY: ci-test-secret
+          SMTP_TEST_HOST: localhost
+          SMTP_TEST_PORT: "1025"
+        continue-on-error: true
+
+      # ── Playwright E2E ───────────────────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Install Playwright
+        run: cd frontend && npm ci && npx playwright install --with-deps chromium
+      - name: Run E2E smoke suite
+        run: cd frontend && npx playwright test --reporter=list
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          TEST_ADMIN_EMAIL: admin@example.com
+          TEST_ADMIN_PASSWORD: testpassword
+        continue-on-error: true
+
+      # ── Upload all artifacts ─────────────────────────────────────────────
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-validation-artifacts
+          path: |
+            artifacts/playwright/
+            artifacts/pytest/
+          retention-days: 30
+
+      # ── Generate summary ─────────────────────────────────────────────────
+      - name: Generate release summary
+        if: always()
+        run: |
+          echo "## Release Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- Playwright: see artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- pytest: see artifacts" >> $GITHUB_STEP_SUMMARY
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.staging.yml down

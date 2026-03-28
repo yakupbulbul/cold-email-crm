@@ -1,0 +1,38 @@
+version: "3.9"
+
+# Staging environment — includes Mailpit as SMTP/IMAP stub and seeded test data
+# Usage: docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: crm_mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "1143:1143"   # IMAP
+      - "8025:8025"   # Web UI
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    restart: unless-stopped
+
+  backend:
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      IMAP_HOST: mailpit
+      IMAP_PORT: "1143"
+      SEED_TEST_DATA: "true"
+      ENV: staging
+    depends_on:
+      - mailpit
+
+  worker:
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      IMAP_HOST: mailpit
+      IMAP_PORT: "1143"
+      ENV: staging
+    depends_on:
+      - mailpit
