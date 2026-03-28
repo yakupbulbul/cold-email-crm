@@ -1,42 +1,47 @@
-# 🚀 AI-Powered Cold Email CRM
+# 🚀 AI-Powered Cold Email CRM 
+_Enterprise-grade Open-Source Cold Outreach automation natively integrating Mailcow & OpenAI._
 
-An open-source SendGrid + CRM + AI Inbox system connecting directly to your Mailcow infrastructure.
-Built for high deliverability, automated warm-ups, and AI-assisted email workflows.
+Welcome to the definitive all-in-one open-source Cold Email CRM. This platform is not just a sender. It is a full **SendGrid + CRM + AI Inbox** architecture that routes through robust multi-tenant Mailcow instances.
+
+Currently maintained by [Yakup Bulbul](https://github.com/yakupbulbul).
 
 ## 🌟 Key Features
+* **Natively Multi-Tenant**: Attach infinite domains and mailboxes securely to single Mailcow infrastructures.
+* **Smart Warm-up Engine**: Built-in 14-day exponential scaling volume caps (5 \u2192 10 \u2192 20) with natively injected time randomization.
+* **Campaign Constraints**: Dedicated duplicate lead prevention, variable templating, and absolute daily limit enforcement.
+* **Imap Thread Resolutions**: Inbound sync engine parsing strict MIME/RFC822 headers resolving cross-thread replies robustly.
+* **AI Processing**: Built in `OpenAI` processing extracting lead intents, thread summarizing, and drafting contextual replies locally!
+* **Enterprise Tech Stack**: Built entirely on Next.js 14 App Router, Python FastAPI, PostgreSQL (SQLAlchemy + Alembic), Celery Workers, Redis, and Mailcow.
 
-- **Automated Warm-up Engine**: Exchanges emails between connected mailboxes with realistic delays and AI-generated replies to build sender reputation.
-- **AI Inbox Intelligence**: Uses OpenAI to automatically classify intent (Positive, Question, etc.), summarize threads in 2 sentences, and generate contextual draft replies.
-- **Mailcow Integration**: Designed to work seamlessly with Mailcow via SMTP (for sending) and IMAP (for receiving).
-- **Campaign Management**: Track leads, sending volumes, limits, and reply rates across your cold outreach campaigns.
-- **Modern UI**: A beautiful, premium Next.js dashboard crafted with Tailwind CSS and Lucide React.
+## 🧱 Architecture Overview
+1. **Frontend**: The `frontend/` directory is an expansive Next.js App router serving responsive UI built natively using sleek Tailwind CSS and Lucide React. 
+2. **Backend Gateway**: The `backend/app/main.py` entrypoint. The API scales perfectly handling REST mappings, JWT tokens, Rate Limiting (`slowapi`), Database Transactions, and external network interactions. 
+3. **Automations Daemon**: The `backend/workers/celery_app.py` entrypoint runs the background schedules synchronizing inbound IMAPs, outbound Campaign rules, and the Warmup constraints perfectly disjoint from the main gateway! 
 
-## 🏗️ Architecture
+## 🛠️ Quickstart
 
-- **Frontend**: Next.js 14 App Router (React, Tailwind CSS, TypeScript)
-- **Backend API**: Python FastAPI
-- **Background Jobs**: Celery + Redis (Warm-up scheduler, IMAP Inbox Sync)
-- **Database**: PostgreSQL (SQLAlchemy ORM)
+To spin up the ecosystem immediately in your dockerized environment:
 
-## 🚀 Getting Started
+\`\`\`bash
+git clone https://github.com/yakupbulbul/cold-email-crm.git
+cd cold-email-crm
+cp backend/.env.example backend/.env
 
-Ensure you have Docker and Docker Compose installed.
+# Spin up the Database, Redis, Celery, Backend Gateway, and Frontend:
+make up
 
-### 1. Environment Variables
-You need an OpenAI API Key for the AI features. Set it in your environment or directly in the `docker-compose.yml`.
+# Apply PostgreSQL schemas for the 11 integrated tables
+make migrate
+\`\`\`
 
-### 2. Run the Stack
-Run the entire platform (Frontend, API, Workers, DB, Cache) with one command:
-```bash
-docker-compose up -d --build
-```
-
-### 3. Access
-- **Frontend Dashboard**: `http://localhost:3000`
-- **Backend API Docs**: `http://localhost:8000/docs`
+Access the Next.js Frontend precisely at `http://localhost:3000`. 
+API Documentations natively live at `http://localhost:8050/api/v1/docs`. 
 
 ## 🤝 Contributing
-We welcome contributions from the open-source community! Feel free to open issues or submit pull requests.
+Open source contributions are highly encouraged. Please review the `CONTRIBUTING.md` guidelines (coming soon) and feel free to submit PRs for any architectural upgrades! 
 
 ## 📄 License
-This project is licensed under the MIT License.
+This platform operates under the MIT Open Source License.
+
+---
+_Built for scale, structured for communities, and engineered for deliverability._
