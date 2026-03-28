@@ -58,23 +58,19 @@ def lead_quality_report(campaign_id: str, db: Session = Depends(get_db)):
         "total": len(leads)
     }
 
+@router.get("/{campaign_id}/preflight/history")
+def get_preflight_history(campaign_id: str, db: Session = Depends(get_db)):
+    from app.models.monitoring import CampaignPreflightCheck
+    checks = db.query(CampaignPreflightCheck).filter(CampaignPreflightCheck.campaign_id == campaign_id).order_by(CampaignPreflightCheck.created_at.desc()).limit(50).all()
+    return checks
+
 @router.post("/{campaign_id}/preflight")
-def campaign_preflight_clean(campaign_id: str, db: Session = Depends(get_db)):
-    from app.models.campaign import CampaignLead, Contact
-    
-    campaign_leads = db.query(CampaignLead).join(Contact).filter(
-        CampaignLead.campaign_id == campaign_id,
-        CampaignLead.status == "scheduled",
-        (Contact.is_suppressed == True) | (Contact.verification_score < 80)
-    ).all()
-    
-    cleaned = 0
-    for cl in campaign_leads:
-        cl.status = "failed"
-        cleaned += 1
-        
-    db.commit()
-    return {"status": "preflight_complete", "removed_from_queue": cleaned}
+def campaign_preflight_evaluation(campaign_id: str, db: Session = Depends(get_db)):
+    from app.services.preflight_service import PreflightService
+    svc = PreflightService(db)
+    result = svc.run_preflight(campaign_id)
+    return result
+    # Replaced by robust Domain Resolvers
 
 @router.get("/{campaign_id}/export-ready-leads")
 def export_ready_campaign_leads(campaign_id: str, db: Session = Depends(get_db)):

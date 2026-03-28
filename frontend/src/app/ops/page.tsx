@@ -17,7 +17,7 @@ export default function OpsDashboard() {
         fetchHealth();
     }, [request]);
 
-    const getStatusIcon = (status: str) => {
+    const getStatusIcon = (status: string) => {
         if (status === "healthy") return <CheckCircle2 className="text-emerald-500" size={24} />;
         if (status === "degraded") return <AlertTriangle className="text-amber-500" size={24} />;
         return <XCircle className="text-red-500" size={24} />;
