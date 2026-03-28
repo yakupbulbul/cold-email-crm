@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.health_service import SystemHealthService
-from app.models.monitoring import JobLog
+from app.models.monitoring import JobLog, SystemAlert, AuditLog
 from sqlalchemy import func
 
 router = APIRouter()
@@ -68,3 +68,34 @@ def cancel_job(job_id: str, db: Session = Depends(get_db)):
 def get_queue_stats(db: Session = Depends(get_db)):
     stats = db.query(JobLog.status, func.count(JobLog.id)).group_by(JobLog.status).all()
     return {k: v for k, v in stats}
+
+# Alerts
+@router.get("/alerts")
+def get_active_alerts(unacknowledged: bool = False, db: Session = Depends(get_db)):
+    q = db.query(SystemAlert).filter(SystemAlert.is_active == True)
+    if unacknowledged:
+        q = q.filter(SystemAlert.is_acknowledged == False)
+    return q.order_by(SystemAlert.created_at.desc()).all()
+
+@router.post("/alerts/{alert_id}/acknowledge")
+def acknowledge_alert(alert_id: str, db: Session = Depends(get_db)):
+    alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
+    if alert:
+        alert.is_acknowledged = True
+        import datetime
+        alert.acknowledged_at = datetime.datetime.utcnow()
+        db.commit()
+    return {"status": "acknowledged"}
+
+@router.post("/alerts/{alert_id}/resolve")
+def resolve_alert(alert_id: str, db: Session = Depends(get_db)):
+    alert = db.query(SystemAlert).filter(SystemAlert.id == alert_id).first()
+    if alert:
+        alert.is_active = False
+        db.commit()
+    return {"status": "resolved"}
+
+# Audit Logs
+@router.get("/audit-logs")
+def get_audit_logs(limit: int = 100, db: Session = Depends(get_db)):
+    return db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit).all()
