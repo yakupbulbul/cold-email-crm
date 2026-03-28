@@ -1,10 +1,11 @@
 from fastapi import APIRouter
-from app.api.v1.routes import health, sending, warmup, campaigns, ai
+from app.api.v1.routes import health, sending, warmup, campaigns, ai, auth
 
 api_router = APIRouter()
 
 # Core system routes
 api_router.include_router(health.router, prefix="/health", tags=["health"])
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(sending.router, prefix="", tags=["sending"])
 api_router.include_router(warmup.router, prefix="/warmup", tags=["warmup"])
 api_router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"])
