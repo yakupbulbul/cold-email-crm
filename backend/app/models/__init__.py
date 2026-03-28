@@ -6,6 +6,7 @@ from .email import Thread, Message, AiSummary
 from .import_job import LeadImportJob, LeadImportRow
 from .verification import EmailVerificationLog
 from .suppression import SuppressionList
+from .monitoring import WorkerHeartbeat, JobLog, CampaignPreflightCheck, DeliverabilityEvent, AuditLog, SystemAlert
 
 # Expose all models for Alembic environment mapping
 __all__ = [
@@ -24,5 +25,11 @@ __all__ = [
     "LeadImportJob",
     "LeadImportRow",
     "EmailVerificationLog",
-    "SuppressionList"
+    "SuppressionList",
+    "WorkerHeartbeat",
+    "JobLog",
+    "CampaignPreflightCheck",
+    "DeliverabilityEvent",
+    "AuditLog",
+    "SystemAlert"
 ]
