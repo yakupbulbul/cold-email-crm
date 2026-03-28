@@ -8,7 +8,7 @@ celery_app = Celery(
     "cold_email_crm",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.workers.imap_sync_worker", "app.workers.warmup_worker"]
+    include=["app.workers.imap_sync_worker", "app.workers.warmup_worker", "app.workers.campaign_worker"]
 )
 
 celery_app.conf.beat_schedule = {
@@ -19,5 +19,9 @@ celery_app.conf.beat_schedule = {
     "run-warmup-every-15-minutes": {
         "task": "app.workers.warmup_worker.run_warmup_cycle",
         "schedule": 900.0  # Every 15 minutes adds natural randomization
+    },
+    "run-campaigns-every-5-minutes": {
+        "task": "app.workers.campaign_worker.run_campaign_cycle",
+        "schedule": 300.0
     }
 }

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.routes import health, sending, warmup
+from app.api.v1.routes import health, sending, warmup, campaigns
 
 api_router = APIRouter()
 
@@ -7,6 +7,7 @@ api_router = APIRouter()
 api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(sending.router, prefix="", tags=["sending"])
 api_router.include_router(warmup.router, prefix="/warmup", tags=["warmup"])
+api_router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"])
 
 # Future grouped endpoints
 # api_router.include_router(domains.router, prefix="/domains", tags=["domains"])
