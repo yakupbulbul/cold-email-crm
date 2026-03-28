@@ -99,3 +99,9 @@ def resolve_alert(alert_id: str, db: Session = Depends(get_db)):
 @router.get("/audit-logs")
 def get_audit_logs(limit: int = 100, db: Session = Depends(get_db)):
     return db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit).all()
+
+# Readiness
+@router.get("/readiness")
+def get_readiness_checklist(db: Session = Depends(get_db)):
+    from app.services.readiness_service import ReadinessService
+    return ReadinessService(db).perform_readiness_checks()
