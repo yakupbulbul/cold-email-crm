@@ -9,13 +9,34 @@ class Contact(Base):
     __tablename__ = "contacts"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, nullable=False, unique=True, index=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     company = Column(String, nullable=True)
-    status = Column(String, default="active") # "active", "unsubscribed", "bounced"
+
+    job_title = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    linkedin_url = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    
+    email_status = Column(String, default="new")
+    verification_score = Column(Integer, default=0)
+    is_disposable = Column(Boolean, default=False)
+    is_role_based = Column(Boolean, default=False)
+    is_suppressed = Column(Boolean, default=False)
+    
     source = Column(String, nullable=True)
+    source_file_name = Column(String, nullable=True)
+    source_import_job_id = Column(UUID(as_uuid=True), ForeignKey("lead_import_jobs.id", ondelete="SET NULL"), nullable=True)
+    
+    last_verified_at = Column(DateTime, nullable=True)
+    last_contacted_at = Column(DateTime, nullable=True)
+    last_replied_at = Column(DateTime, nullable=True)
+    
+    tags = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

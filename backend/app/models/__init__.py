@@ -4,6 +4,8 @@ from .warmup import WarmupPair, WarmupEvent
 from .campaign import Contact, Campaign, CampaignLead, SendLog
 from .email import Thread, Message, AiSummary
 from .import_job import LeadImportJob, LeadImportRow
+from .verification import EmailVerificationLog
+from .suppression import SuppressionList
 
 # Expose all models for Alembic environment mapping
 __all__ = [
@@ -20,5 +22,7 @@ __all__ = [
     "Message",
     "AiSummary",
     "LeadImportJob",
-    "LeadImportRow"
+    "LeadImportRow",
+    "EmailVerificationLog",
+    "SuppressionList"
 ]

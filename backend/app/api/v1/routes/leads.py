@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.import_service import CSVParserService, LeadImportJobService
+from app.services.verification_service import EmailVerificationService
 from app.schemas.import_job import ImportMappingRules
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -64,4 +66,21 @@ def get_import_job(job_id: str, db: Session = Depends(get_db)):
             "invalid": job.invalid_rows
         },
         "preview_rows": rows
+    }
+
+class VerifyRequest(BaseModel):
+    email: str
+
+@router.post("/verify")
+def verify_email(req: VerifyRequest, db: Session = Depends(get_db)):
+    service = EmailVerificationService(db)
+    log = service.verify_email(req.email)
+    
+    return {
+        "status": log.final_status,
+        "score": log.verification_score,
+        "syntax_valid": log.syntax_valid,
+        "mx_valid": log.mx_valid,
+        "disposable": log.disposable,
+        "role_based": log.role_based
     }
