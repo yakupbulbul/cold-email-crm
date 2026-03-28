@@ -39,3 +39,39 @@ def pause_campaign(campaign_id: str, db: Session = Depends(get_db)):
     c.status = "paused"
     db.commit()
     return {"status": "paused"}
+
+@router.get("/{campaign_id}/lead-quality")
+def lead_quality_report(campaign_id: str, db: Session = Depends(get_db)):
+    from app.models.campaign import CampaignLead, Contact
+    leads = db.query(Contact).join(CampaignLead).filter(CampaignLead.campaign_id == campaign_id).all()
+    
+    valid = sum(1 for c in leads if c.verification_score == 100)
+    risky = sum(1 for c in leads if c.verification_score >= 80 and c.verification_score < 100)
+    invalid = sum(1 for c in leads if c.verification_score < 80)
+    suppressed = sum(1 for c in leads if c.is_suppressed)
+    
+    return {
+        "valid": valid,
+        "risky": risky,
+        "invalid": invalid,
+        "suppressed": suppressed,
+        "total": len(leads)
+    }
+
+@router.post("/{campaign_id}/preflight")
+def campaign_preflight_clean(campaign_id: str, db: Session = Depends(get_db)):
+    from app.models.campaign import CampaignLead, Contact
+    
+    campaign_leads = db.query(CampaignLead).join(Contact).filter(
+        CampaignLead.campaign_id == campaign_id,
+        CampaignLead.status == "scheduled",
+        (Contact.is_suppressed == True) | (Contact.verification_score < 80)
+    ).all()
+    
+    cleaned = 0
+    for cl in campaign_leads:
+        cl.status = "failed"
+        cleaned += 1
+        
+    db.commit()
+    return {"status": "preflight_complete", "removed_from_queue": cleaned}

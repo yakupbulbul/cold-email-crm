@@ -32,6 +32,9 @@ export default function Sidebar() {
         <Link href="/inbox" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
           <Inbox size={20} className="group-hover:scale-110 transition-transform"/> Inbox
         </Link>
+        <Link href="/suppression" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group">
+          <ShieldX size={20} className="group-hover:scale-110 transition-transform"/> Suppression
+        </Link>
       </nav>
       <div className="p-4 border-t border-slate-800">
         <Link href="/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200 font-medium group">

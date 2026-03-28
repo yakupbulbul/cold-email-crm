@@ -31,9 +31,12 @@ class CampaignService:
         if sent_today >= campaign.daily_limit:
             return
             
-        pending_leads = self.db.query(CampaignLead).filter(
+        from app.models.campaign import Contact
+        pending_leads = self.db.query(CampaignLead).join(Contact).filter(
             CampaignLead.campaign_id == campaign.id,
-            CampaignLead.status == "scheduled"
+            CampaignLead.status == "scheduled",
+            Contact.is_suppressed == False,
+            Contact.verification_score >= 80
         ).limit(campaign.daily_limit - sent_today).all()
 
         for lead in pending_leads:
