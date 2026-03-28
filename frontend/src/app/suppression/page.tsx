@@ -18,7 +18,7 @@ export default function SuppressionPage() {
         fetchList();
     }, [request]);
 
-    const performDelete = async (id: str) => {
+    const performDelete = async (id: string) => {
         await request(`/suppression/${id}`, { method: "DELETE" });
         setList(list.filter(item => item.id !== id));
     };

@@ -75,3 +75,23 @@ def campaign_preflight_clean(campaign_id: str, db: Session = Depends(get_db)):
         
     db.commit()
     return {"status": "preflight_complete", "removed_from_queue": cleaned}
+
+@router.get("/{campaign_id}/export-ready-leads")
+def export_ready_campaign_leads(campaign_id: str, db: Session = Depends(get_db)):
+    from app.models.campaign import CampaignLead, Contact
+    leads = db.query(Contact).join(CampaignLead).filter(
+        CampaignLead.campaign_id == campaign_id,
+        CampaignLead.status == "scheduled",
+        Contact.is_suppressed == False,
+        Contact.verification_score >= 80
+    ).all()
+    
+    from fastapi.responses import StreamingResponse
+    import io, csv
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Email", "First Name", "Last Name", "Company"])
+    for c in leads:
+        writer.writerow([c.email, c.first_name, c.last_name, c.company])
+    output.seek(0)
+    return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8')), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=campaign_ready_leads.csv"})

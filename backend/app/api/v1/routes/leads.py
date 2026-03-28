@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.services.import_service import CSVParserService, LeadImportJobService
 from app.services.verification_service import EmailVerificationService
 from app.schemas.import_job import ImportMappingRules
 from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
+import io
+import csv
 
 router = APIRouter()
 
@@ -81,6 +83,31 @@ def verify_email(req: VerifyRequest, db: Session = Depends(get_db)):
         "score": log.verification_score,
         "syntax_valid": log.syntax_valid,
         "mx_valid": log.mx_valid,
-        "disposable": log.disposable,
-        "role_based": log.role_based
     }
+
+def generate_csv_response(contacts, filename):
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Email", "First Name", "Last Name", "Company", "Verification Score", "Suppressed"])
+    for c in contacts:
+        writer.writerow([c.email, c.first_name, c.last_name, c.company, c.verification_score, c.is_suppressed])
+    output.seek(0)
+    return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8')), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+@router.get("/export")
+def export_all_contacts(db: Session = Depends(get_db)):
+    from app.models.campaign import Contact
+    contacts = db.query(Contact).all()
+    return generate_csv_response(contacts, "all_contacts.csv")
+
+@router.get("/export/invalid")
+def export_invalid_contacts(db: Session = Depends(get_db)):
+    from app.models.campaign import Contact
+    contacts = db.query(Contact).filter(Contact.verification_score < 80).all()
+    return generate_csv_response(contacts, "invalid_contacts.csv")
+
+@router.get("/export/suppressed")
+def export_suppressed_contacts(db: Session = Depends(get_db)):
+    from app.models.campaign import Contact
+    contacts = db.query(Contact).filter(Contact.is_suppressed == True).all()
+    return generate_csv_response(contacts, "suppressed_contacts.csv")

@@ -26,10 +26,20 @@ export default function Table({ columns, children }: TableProps) {
     );
 }
 
-export function TableRow({ children }: { children: React.ReactNode }) {
-    return <tr className="hover:bg-slate-50/80 transition-colors">{children}</tr>;
+interface TableRowProps {
+    children: React.ReactNode;
+    className?: string;
 }
 
-export function TableCell({ children, className = "" }: { children: React.ReactNode, className?: string }) {
-    return <td className={`px-6 py-4 text-sm text-slate-700 ${className}`}>{children}</td>;
+export function TableRow({ children, className = "" }: TableRowProps) {
+    return <tr className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${className}`}>{children}</tr>;
+}
+
+interface TableCellProps {
+    children: React.ReactNode;
+    className?: string;
+    colSpan?: number;
+}
+export function TableCell({ children, className = "", colSpan }: TableCellProps) {
+    return <td colSpan={colSpan} className={`px-6 py-4 text-sm ${className}`}>{children}</td>;
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX } from 'lucide-react';
 
 export default function Sidebar() {
   return (
