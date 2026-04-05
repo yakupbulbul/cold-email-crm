@@ -4,11 +4,15 @@ services:
   frontend:
     build: 
       context: ./frontend
+      args:
+        # /api/v1 is a same-origin relative URL — always HTTPS-safe behind Nginx
+        NEXT_PUBLIC_API_URL: /api/v1
     ports:
       - "3000:3000"
     restart: always
     environment:
-      - NEXT_PUBLIC_API_URL=https://crm.example.com/api/v1
+      # BACKEND_URL is used by Next.js rewrites (server-side) for local dev fallback
+      - BACKEND_URL=http://api:8000
 
   api:
     build: 
