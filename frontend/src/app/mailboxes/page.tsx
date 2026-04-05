@@ -47,9 +47,9 @@ export default function MailboxesPage() {
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
                 <ServerCrash className="text-red-500" size={28} />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Backend Endpoint Missing</h3>
-            <p className="text-sm text-slate-500 max-w-sm mb-2">The REST API for querying mailboxes is not yet connected or available.</p>
-            <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded">Error: {error}</p>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Failed to Load Mailboxes</h3>
+            <p className="text-sm text-slate-500 max-w-sm mb-2">Something went wrong while fetching your mailbox infrastructure.</p>
+            <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded">{error}</p>
         </div>
       ) : loading ? (
          <div className="flex justify-center items-center py-16 bg-white rounded-2xl border border-slate-200 shadow-sm mt-6">
