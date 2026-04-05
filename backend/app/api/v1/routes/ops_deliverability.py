@@ -16,7 +16,11 @@ def get_summary(db: Session = Depends(get_db)):
         .filter(DeliverabilityEvent.occurred_at >= cutoff)\
         .group_by(DeliverabilityEvent.event_type).all()
         
-    return {k: v for k,v in events}
+    res = {"sent": 0, "replied": 0, "bounced": 0, "suppressed": 0}
+    for k, v in events:
+        if k in res:
+            res[k] = v
+    return res
 
 @router.get("/trends")
 def get_trends(db: Session = Depends(get_db)):

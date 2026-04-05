@@ -8,7 +8,13 @@ from fastapi.responses import StreamingResponse
 import io
 import csv
 
+from app.models.campaign import Contact
+
 router = APIRouter()
+
+@router.get("/")
+def list_leads(db: Session = Depends(get_db)):
+    return db.query(Contact).all()
 
 @router.post("/import/csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):

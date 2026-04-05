@@ -115,6 +115,21 @@ def seed(session):
     session.add_all(audit_entries)
     print("  ✔  3 audit log entries seeded")
 
+    # ── Deliverability Events ──────────────────────────────────────────
+    events = []
+    # Seed some events for the last 30 days
+    for _ in range(50):
+        events.append(DeliverabilityEvent(event_type="sent", occurred_at=datetime.utcnow()))
+    for _ in range(12):
+        events.append(DeliverabilityEvent(event_type="replied", occurred_at=datetime.utcnow()))
+    for _ in range(5):
+        events.append(DeliverabilityEvent(event_type="bounced", occurred_at=datetime.utcnow()))
+    for _ in range(8):
+        events.append(DeliverabilityEvent(event_type="suppressed", occurred_at=datetime.utcnow()))
+        
+    session.add_all(events)
+    print(f"  ✔  {len(events)} deliverability events seeded")
+
     session.commit()
     print("\n✅  All seed data inserted successfully.")
 

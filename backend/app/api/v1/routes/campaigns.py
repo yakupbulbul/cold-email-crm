@@ -6,6 +6,10 @@ from app.models.campaign import Campaign
 
 router = APIRouter()
 
+@router.get("/")
+def list_campaigns(db: Session = Depends(get_db)):
+    return db.query(Campaign).all()
+
 @router.post("/", response_model=CampaignResponse)
 def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
     c = Campaign(
