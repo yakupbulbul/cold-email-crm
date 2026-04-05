@@ -45,9 +45,12 @@ export default function LeadImportPage() {
         formData.append("file", uploadedFile);
         
         try {
-            const res = await fetch("http://localhost:8050/api/v1/leads/import/csv", {
+            const token = localStorage.getItem("token");
+            const apiBase = (process.env.NEXT_PUBLIC_API_URL || "/api/v1");
+            const res = await fetch(`${apiBase}/leads/import/csv`, {
                 method: "POST",
-                body: formData
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: formData  // Do NOT set Content-Type - browser sets multipart boundary automatically
             });
             const data = await res.json();
             setJobId(data.job_id);
