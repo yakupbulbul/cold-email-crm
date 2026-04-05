@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8050/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 interface ApiOptions {
     method?: "GET" | "POST" | "PUT" | "DELETE";
@@ -17,18 +17,28 @@ export function useApi() {
         setError(null);
         
         try {
+            const token = localStorage.getItem("token");
             const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
-            const headers = {
+            const headers: Record<string, string> = {
                 "Content-Type": "application/json",
                 ...options.headers,
-                // Add Authorization JWT headers here in Phase 11
             };
+
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
 
             const res = await fetch(url, {
                 method: options.method || "GET",
                 headers,
                 body: options.body ? JSON.stringify(options.body) : undefined,
             });
+
+            if (res.status === 401) {
+                localStorage.removeItem("token");
+                window.location.href = "/signin";
+                return null;
+            }
 
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
