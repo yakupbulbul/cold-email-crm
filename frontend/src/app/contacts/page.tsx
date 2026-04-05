@@ -1,34 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useApi } from "@/hooks/useApi";
+import { useApiService } from "@/services/api";
+import { Contact } from "@/types/models";
 import Link from "next/link";
 import Table, { TableRow, TableCell } from "@/components/ui/Table";
 import Spinner from "@/components/ui/Spinner";
-import { Download, Upload, ShieldX, CheckCircle, ShieldAlert } from "lucide-react";
+import { Download, Upload, ShieldX, CheckCircle, ShieldAlert, AlertCircle } from "lucide-react";
 
 export default function ContactsPage() {
-    const { request, loading } = useApi();
-    const [leads, setLeads] = useState<any[]>([]);
+    const { getLeads, loading, error } = useApiService();
+    const [leads, setLeads] = useState<Contact[]>([]);
 
     useEffect(() => {
-        // Normally fetches from /api/v1/contacts 
-        // We simulate loading to show the robust UI components cleanly in Phase 20/21
         const fetchLeads = async () => {
-             // const data = await request("/contacts");
-             // if (data) setLeads(data);
-             // Simulated mock response matching the DB Schema:
-             setLeads([
-                 { id: "1", email: "ceo@acmecorp.com", first_name: "John", last_name: "Doe", company: "Acme Corp", verification_score: 100, is_suppressed: false },
-                 { id: "2", email: "marketing@tech.io", first_name: "Jane", last_name: "Smith", company: "Tech IO", verification_score: 80, is_suppressed: false },
-                 { id: "3", email: "sales@bounced.org", first_name: "Bob", last_name: "Jones", company: "Bounced Org", verification_score: 0, is_suppressed: true },
-             ]);
+             const data = await getLeads();
+             if (data) setLeads(data);
         };
         fetchLeads();
-    }, [request]);
+    }, [getLeads]);
 
-    const getVerificationBadge = (score: number, is_suppressed: boolean) => {
+    const getVerificationBadge = (score: number | null, is_suppressed: boolean) => {
         if (is_suppressed) return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold tracking-wide"><ShieldX size={14} /> Suppressed</span>;
+        if (score === null || score === undefined) return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold tracking-wide"><AlertCircle size={14} /> Unknown</span>;
         if (score === 100) return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold tracking-wide"><CheckCircle size={14} /> Verified</span>;
         if (score >= 80) return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-bold tracking-wide"><ShieldAlert size={14} /> Risky</span>;
         return <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold tracking-wide">Unverified</span>;
@@ -67,7 +61,13 @@ export default function ContactsPage() {
                 </div>
             </div>
 
-            {loading ? (
+            {error && leads.length === 0 ? (
+                <div className="p-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex flex-col items-center justify-center py-16 shadow-sm text-center">
+                    <AlertCircle className="mb-4 text-red-500" size={32} />
+                    <span className="font-bold mb-2">Failed to Load Contacts</span>
+                    <span className="text-sm">{error}</span>
+                </div>
+            ) : loading ? (
                 <div className="h-64 flex items-center justify-center bg-white rounded-2xl border border-slate-200 shadow-sm">
                     <Spinner size="lg" />
                 </div>

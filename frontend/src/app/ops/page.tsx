@@ -1,21 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useApi } from "@/hooks/useApi";
+import { useApiService } from "@/services/api";
+import { SystemHealth, Alert, DeliverabilitySummary } from "@/types/models";
 import { Activity, Database, Server, ServerCrash, CheckCircle2, AlertTriangle, XCircle, MailWarning, Network } from "lucide-react";
 import Link from "next/link";
 
 export default function OpsDashboard() {
-    const { request, loading } = useApi();
-    const [health, setHealth] = useState<any>(null);
+    const { getHealth, getAlerts, getDeliverabilitySummary, loading, error } = useApiService();
+    const [health, setHealth] = useState<SystemHealth | null>(null);
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [deliverability, setDeliverability] = useState<DeliverabilitySummary | null>(null);
 
     useEffect(() => {
-        const fetchHealth = async () => {
-            const data = await request("/ops/health");
-            if (data) setHealth(data);
+        const fetchDashboardData = async () => {
+            const h = await getHealth();
+            if (h) setHealth(h);
+            const a = await getAlerts();
+            if (a) setAlerts(a);
+            const d = await getDeliverabilitySummary();
+            if (d) setDeliverability(d);
         };
-        fetchHealth();
-    }, [request]);
+        fetchDashboardData();
+    }, [getHealth, getAlerts, getDeliverabilitySummary]);
 
     const getStatusIcon = (status: string) => {
         if (status === "healthy") return <CheckCircle2 className="text-emerald-500" size={24} />;
@@ -24,7 +31,7 @@ export default function OpsDashboard() {
     };
 
     const StatusCard = ({ title, icon, data }: { title: string, icon: any, data: any }) => (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow h-full">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-slate-50 rounded-xl text-slate-600">{icon}</div>
@@ -33,21 +40,25 @@ export default function OpsDashboard() {
                 {data ? getStatusIcon(data.status) : <div className="w-6 h-6 bg-slate-100 rounded-full animate-pulse"/>}
             </div>
             
-            <div className="space-y-2 mt-2">
+            <div className="space-y-2 mt-2 flex-grow">
                 {data?.status === "failed" && (
                     <div className="text-xs font-bold text-red-600 bg-red-50 p-2 rounded-lg">Error details available in logs.</div>
                 )}
                 {data?.active_count !== undefined && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm mt-auto">
                         <span className="text-slate-500 font-medium">Active Nodes</span>
                         <span className="font-bold text-slate-800">{data.active_count} / {data.total_registered}</span>
                     </div>
                 )}
                 {data?.latency_ms !== undefined && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm mt-auto">
                         <span className="text-slate-500 font-medium">Ping Latency</span>
                         <span className="font-bold text-slate-800">{data.latency_ms}ms</span>
                     </div>
+                )}
+                {/* Fallback for components without metrics */}
+                {data?.status === "healthy" && data?.active_count === undefined && data?.latency_ms === undefined && (
+                     <div className="text-xs font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg mt-auto">Component Online.</div>
                 )}
             </div>
         </div>
@@ -74,26 +85,32 @@ export default function OpsDashboard() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8 items-stretch">
                 <StatusCard title="Core Database" icon={<Database/>} data={health?.components?.postgres} />
                 <StatusCard title="Redis Backplane" icon={<Server/>} data={health?.components?.redis} />
                 <StatusCard title="Background Workers" icon={<Network/>} data={health?.components?.workers} />
                 <StatusCard title="SMTP/IMAP Infrastructure" icon={<ServerCrash/>} data={health?.components?.smtp_engine} />
             </div>
 
-            {/* Simulated Live Action Feed Panel */}
+            {/* Live Action Feed Panel */}
             <div className="grid grid-cols-3 gap-6 mt-8">
-                <div className="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 line-clamp-none h-96">
-                    <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <MailWarning size={20} className="text-amber-500" /> Recent Preflight & Delivery Blockers
+                <div className="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-y-auto h-96">
+                    <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 sticky top-0 bg-white z-10 pb-2 border-b border-slate-100">
+                        <MailWarning size={20} className="text-amber-500" /> Recent System Alerts & Blockers
                     </h3>
                     <div className="space-y-4">
-                        <div className="p-3 border-l-4 border-red-500 bg-red-50 text-sm font-bold text-red-800 rounded-r-lg">
-                            Campaign "Q3 SaaS Reachout" halted. Preflight validation failed: 40% leads identified as Disposable.
-                        </div>
-                        <div className="p-3 border-l-4 border-amber-500 bg-amber-50 text-sm font-bold text-amber-800 rounded-r-lg">
-                            Mailbox "dev@example.com" Daily Limit (50/50) exceeded. Jobs deferred to queue.
-                        </div>
+                        {loading && alerts.length === 0 ? (
+                           <div className="flex justify-center p-8"><span className="animate-pulse text-slate-400">Loading alerts...</span></div>
+                        ) : alerts.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400">No active system alerts detected. Systems are stable.</div>
+                        ) : (
+                            alerts.map((alert) => (
+                                <div key={alert.id} className={`p-3 border-l-4 ${alert.severity === 'critical' ? 'border-red-500 bg-red-50 text-red-800' : 'border-amber-500 bg-amber-50 text-amber-800'} text-sm font-bold rounded-r-lg`}>
+                                    <p className="font-black mb-1">{alert.title}</p>
+                                    <p className="font-medium text-xs">{alert.message}</p>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
                 
@@ -102,11 +119,11 @@ export default function OpsDashboard() {
                     <div className="flex flex-col gap-4">
                         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
                             <span className="text-slate-500 font-bold text-xs uppercase">Emails Sent Today</span>
-                            <span className="text-blue-600 font-black text-xl">14,203</span>
+                            <span className="text-blue-600 font-black text-xl">{deliverability?.sent || 0}</span>
                         </div>
                         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
                             <span className="text-slate-500 font-bold text-xs uppercase">Bounces Blocked</span>
-                            <span className="text-amber-600 font-black text-xl">412</span>
+                            <span className="text-amber-600 font-black text-xl">{deliverability?.suppressed || 0}</span>
                         </div>
                         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
                             <span className="text-slate-500 font-bold text-xs uppercase">Queue Backlog</span>

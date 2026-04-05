@@ -1,25 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useApi } from "@/hooks/useApi";
+import { useApiService } from "@/services/api";
+import { SuppressionEntry } from "@/types/models";
 import Table, { TableRow, TableCell } from "@/components/ui/Table";
 import Spinner from "@/components/ui/Spinner";
-import { ShieldX, Trash2 } from "lucide-react";
+import { ShieldX, Trash2, AlertCircle } from "lucide-react";
 
 export default function SuppressionPage() {
-    const { request, loading } = useApi();
-    const [list, setList] = useState<any[]>([]);
+    const { getSuppressionList, deleteSuppression, loading, error } = useApiService();
+    const [list, setList] = useState<SuppressionEntry[]>([]);
 
     useEffect(() => {
         const fetchList = async () => {
-            const data = await request("/suppression");
+            const data = await getSuppressionList();
             if (data) setList(data);
         };
         fetchList();
-    }, [request]);
+    }, [getSuppressionList]);
 
     const performDelete = async (id: string) => {
-        await request(`/suppression/${id}`, { method: "DELETE" });
+        await deleteSuppression(id);
         setList(list.filter(item => item.id !== id));
     };
 
@@ -37,7 +38,13 @@ export default function SuppressionPage() {
             </div>
 
             <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-8 mt-8 flex flex-col items-center justify-center max-w-full">
-                {loading ? (
+                {error && list.length === 0 ? (
+                    <div className="p-6 text-red-700 flex flex-col items-center justify-center py-12 text-center w-full">
+                        <AlertCircle className="mb-4 text-red-500" size={32} />
+                        <span className="font-bold mb-2">Error Loading Suspensions</span>
+                        <span className="text-sm">{error}</span>
+                    </div>
+                ) : loading ? (
                     <Spinner size="lg" />
                 ) : (
                     <div className="w-full">
