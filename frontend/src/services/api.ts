@@ -35,10 +35,13 @@ export function useApiService() {
     const startWarmup = useCallback((mailbox_id: string) => request("/warmup/start", { method: "POST", body: { mailbox_id } }), [request]);
     const stopWarmup = useCallback((mailbox_id: string) => request("/warmup/stop", { method: "POST", body: { mailbox_id } }), [request]);
 
-    // ── DOMAINS & MAILBOXES (Missing Backend - Graceful Fallback) ──
-    // These will likely 404 until implemented in the backend. 
+    // ── DOMAINS ──
     const getDomains = useCallback(() => request<Domain[]>("/domains"), [request]);
+    const createDomain = useCallback((name: string) => request<Domain>("/domains", { method: "POST", body: { name } }), [request]);
+
+    // ── MAILBOXES ──
     const getMailboxes = useCallback(() => request<Mailbox[]>("/mailboxes"), [request]);
+    const createMailbox = useCallback((data: any) => request<Mailbox>("/mailboxes", { method: "POST", body: data }), [request]);
 
     // ── INBOX & THREADS (Missing Backend - Graceful Fallback) ──
     const getThreads = useCallback(() => request<Thread[]>("/inbox/threads"), [request]);
@@ -62,7 +65,9 @@ export function useApiService() {
         startWarmup,
         stopWarmup,
         getDomains,
+        createDomain,
         getMailboxes,
+        createMailbox,
         getThreads,
         getMessages
     };
