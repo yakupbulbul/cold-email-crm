@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.v1.routes import health, sending, warmup, campaigns, ai, auth, leads, suppression, ops, ops_deliverability
+from app.api.v1.routes import health, sending, warmup, campaigns, ai, auth, leads, suppression, ops, ops_deliverability, domains
 from app.api.deps import get_current_active_user, get_current_active_admin
 
 api_router = APIRouter()
@@ -15,13 +15,10 @@ api_router.include_router(warmup.router, prefix="/warmup", tags=["warmup"], depe
 api_router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(ai.router, prefix="/ai", tags=["ai"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(sending.router, prefix="", tags=["sending"], dependencies=[Depends(get_current_active_user)])
+api_router.include_router(domains.router, prefix="/domains", tags=["domains"], dependencies=[Depends(get_current_active_user)])
 
 # Admin Protected Routes
 api_router.include_router(ops.router, prefix="/ops", tags=["ops"], dependencies=[Depends(get_current_active_admin)])
 api_router.include_router(ops_deliverability.router, prefix="/ops/deliverability", tags=["ops_deliverability"], dependencies=[Depends(get_current_active_admin)])
 
 
-# Future grouped endpoints
-# api_router.include_router(domains.router, prefix="/domains", tags=["domains"])
-# api_router.include_router(mailboxes.router, prefix="/mailboxes", tags=["mailboxes"])
-# ...
