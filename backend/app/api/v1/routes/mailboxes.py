@@ -60,11 +60,13 @@ def mailbox_to_response(mb: Mailbox) -> dict:
     }
 
 @router.get("/")
+@router.get("")  # Handle both /mailboxes and /mailboxes/ without redirect
 def list_mailboxes(db: Session = Depends(get_db)):
     mailboxes = db.query(Mailbox).all()
     return [mailbox_to_response(mb) for mb in mailboxes]
 
 @router.post("/")
+@router.post("")  # Handle both /mailboxes and /mailboxes/ without redirect
 def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
     # Verify domain exists
     domain = db.query(Domain).filter(Domain.id == req.domain_id).first()

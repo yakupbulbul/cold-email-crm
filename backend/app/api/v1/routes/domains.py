@@ -10,10 +10,12 @@ class DomainCreate(BaseModel):
     name: str
 
 @router.get("/")
+@router.get("")  # Handle both /domains and /domains/ without redirect
 def list_domains(db: Session = Depends(get_db)):
     return db.query(Domain).all()
 
 @router.post("/")
+@router.post("")  # Handle both /domains and /domains/ without redirect
 def create_domain(req: DomainCreate, db: Session = Depends(get_db)):
     existing = db.query(Domain).filter(Domain.name == req.name).first()
     if existing:
