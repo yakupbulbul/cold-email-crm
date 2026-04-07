@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
+    const isAuthRoute = pathname === "/signin" || pathname === "/login";
 
     const fetchMe = useCallback(async (authToken: string) => {
         try {
@@ -61,10 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [fetchMe]);
 
     useEffect(() => {
-        if (!isLoading && !token && pathname !== "/signin") {
+        if (!isLoading && !token && !isAuthRoute) {
             router.push("/signin");
         }
-    }, [isLoading, token, pathname, router]);
+    }, [isAuthRoute, isLoading, token, router]);
 
     const login = async (newToken: string) => {
         localStorage.setItem("token", newToken);

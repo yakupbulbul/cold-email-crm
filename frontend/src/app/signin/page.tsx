@@ -65,6 +65,7 @@ export default function SignInPage() {
                                 <Mail size={18} />
                             </div>
                             <input
+                                data-testid="email-input"
                                 type="email"
                                 required
                                 value={email}
@@ -83,6 +84,7 @@ export default function SignInPage() {
                                 <Lock size={18} />
                             </div>
                             <input
+                                data-testid="password-input"
                                 type="password"
                                 required
                                 value={password}
@@ -95,6 +97,7 @@ export default function SignInPage() {
                     </div>
 
                     <button
+                        data-testid="login-button"
                         type="submit"
                         disabled={loading}
                         className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg transition-all shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4 active:scale-95"

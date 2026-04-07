@@ -10,7 +10,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { token, isLoading } = useAuth();
     const pathname = usePathname();
 
-    const isSigninPage = pathname === "/signin";
+    const isAuthRoute = pathname === "/signin" || pathname === "/login";
 
     if (isLoading) {
         return (
@@ -23,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
 
-    if (isSigninPage) {
+    if (isAuthRoute) {
         return <div className="w-full">{children}</div>;
     }
 
