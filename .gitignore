@@ -5,7 +5,10 @@ __pycache__/
 venv/
 ENV/
 env/
+.venv/
 .env
+.env.*
+!.env.example
 
 # Node
 node_modules/
@@ -18,9 +21,12 @@ build/
 
 # Dependencies
 package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # Docker
 postgres_data/
+postgres_test_data/
 
 # OS
 .DS_Store
@@ -28,3 +34,4 @@ Thumbs.db
 
 # Documentation
 README_PRIVATE.md
+*.local.env
