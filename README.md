@@ -61,7 +61,7 @@ docker compose exec api python scripts/create_user.py --email admin@example.com 
 ## 📬 Mailcow Online Integration
 
 This CRM is designed to connect to any Mailcow instance. 
-1. Log in to your Mailcow Admin Panel (`https://mail.yourdomain.com`).
+1. Log in to your Mailcow Admin Panel (`https://mail.example.com`).
 2. Navigate to **System -> Configuration -> API**.
 3. Enable the API and generate an **API Key**.
 4. Add the Key and your instance URL to the CRM's `.env` file.

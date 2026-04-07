@@ -21,7 +21,7 @@ def seed_db():
             mailbox = Mailbox(
                 domain_id=domain.id,
                 email="dev@example.com",
-                display_name="Dev The Project",
+                display_name="Dev Example",
                 smtp_host="mail.example.com",
                 smtp_port=587,
                 smtp_username="dev@example.com",
