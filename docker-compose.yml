@@ -1,61 +1,76 @@
-version: '3.8'
-
 services:
   frontend:
-    build: 
+    profiles: ["full"]
+    build:
       context: ./frontend
       args:
-        # /api/v1 is a same-origin relative URL — always HTTPS-safe behind Nginx
-        NEXT_PUBLIC_API_URL: /api/v1
-    ports:
-      - "3000:3000"
-    restart: always
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
     environment:
-      # BACKEND_URL is used by Next.js rewrites (server-side) for local dev fallback
-      - BACKEND_URL=http://api:8000
-
-  api:
-    build: 
-      context: ./backend
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
     ports:
-      - "8050:8000"
-    restart: always
-    environment:
-      - POSTGRES_URL=postgresql://user:password@db:5432/cold_email_crm
-      - REDIS_URL=redis://redis:6379/0
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - SECRET_KEY=${SECRET_KEY:-super-secret-key-for-development-only-change-in-production}
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - db
-      - redis
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+  backend:
+    profiles: ["full"]
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    environment:
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8000
+      BACKEND_URL: http://backend:8000
+      POSTGRES_URL: ${POSTGRES_URL_DOCKER:-postgresql://user:password@postgres:5432/cold_email_crm}
+      REDIS_URL: ${REDIS_URL_DOCKER:-redis://redis:6379/0}
+    ports:
+      - "${BACKEND_PORT:-8050}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   worker:
-    build: 
+    profiles: ["full"]
+    build:
       context: ./backend
     command: celery -A app.workers.celery_app worker --loglevel=info
-    restart: always
+    env_file:
+      - .env
     environment:
-      - POSTGRES_URL=postgresql://user:password@db:5432/cold_email_crm
-      - REDIS_URL=redis://redis:6379/0
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - SECRET_KEY=${SECRET_KEY:-super-secret-key-for-development-only-change-in-production}
+      POSTGRES_URL: ${POSTGRES_URL_DOCKER:-postgresql://user:password@postgres:5432/cold_email_crm}
+      REDIS_URL: ${REDIS_URL_DOCKER:-redis://redis:6379/0}
     depends_on:
-      - db
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   scheduler:
-    build: 
+    profiles: ["full"]
+    build:
       context: ./backend
     command: celery -A app.workers.celery_app beat --loglevel=info
-    restart: always
+    env_file:
+      - .env
     environment:
-      - POSTGRES_URL=postgresql://user:password@db:5432/cold_email_crm
-      - REDIS_URL=redis://redis:6379/0
+      POSTGRES_URL: ${POSTGRES_URL_DOCKER:-postgresql://user:password@postgres:5432/cold_email_crm}
+      REDIS_URL: ${REDIS_URL_DOCKER:-redis://redis:6379/0}
     depends_on:
-      - db
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
-  db:
+  postgres:
     image: postgres:15
     environment:
       POSTGRES_USER: user
@@ -65,13 +80,23 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d cold_email_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
-    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
 
 volumes:
   postgres_data:

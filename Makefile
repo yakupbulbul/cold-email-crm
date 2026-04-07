@@ -1,95 +1,74 @@
-.PHONY: up down logs migrate restart build frontend-build backend-build help
+SHELL := /bin/zsh
+
 .DEFAULT_GOAL := help
 
-up: ## Start all infrastructure components in detached mode
-	docker compose up -d
+ENV_FILE ?= .env
+COMPOSE := docker compose --env-file $(ENV_FILE)
+PYTHON_BIN := backend/.venv/bin/python
+PIP_BIN := backend/.venv/bin/pip
+NPM_BIN := npm
 
-down: ## Stop all infrastructure components
-	docker compose down
+.PHONY: help setup up down logs migrate seed dev test reset \
+	full-up full-down test-infra-up test-infra-down \
+	test-backend test-frontend test-e2e smoke check-env
 
-restart: ## Refresh the composition containers
-	docker compose down && docker compose up -d
+help: ## Show available targets
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-logs: ## Tail the logs of the entire stack
-	docker compose logs -f
+check-env: ## Ensure the local .env file exists
+	@test -f $(ENV_FILE) || (echo "Missing $(ENV_FILE). Copy .env.example to $(ENV_FILE) and fill in local values." && exit 1)
 
-logs-api: ## Tail API backend logs
-	docker compose logs -f api
+setup: check-env ## Install host development dependencies
+	python3 -m venv backend/.venv
+	$(PIP_BIN) install --upgrade pip
+	$(PIP_BIN) install -r backend/requirements.txt
+	cd frontend && $(NPM_BIN) install
 
-logs-worker: ## Tail Celery worker logs
-	docker compose logs -f worker
+up: check-env ## Start local Postgres and Redis for hybrid development
+	$(COMPOSE) up -d --wait postgres redis
 
-migrate: ## Execute Alembic database migrations internally
-	docker compose exec api /bin/bash -c "source venv/bin/activate && alembic upgrade head"
+down: check-env ## Stop local containers
+	$(COMPOSE) down --remove-orphans
 
-build: ## Rebuild all docker images natively
-	docker compose build
+logs: check-env ## Tail container logs for local infra
+	$(COMPOSE) logs -f postgres redis
 
-frontend-build: ## Build NextJS prod deployment
-	docker compose build frontend
+migrate: check-env ## Run Alembic migrations against the local database
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; cd backend && ../$(PYTHON_BIN) -m alembic upgrade head'
 
-backend-build: ## Build FastAPI app
-	docker compose build api worker scheduler
+seed: check-env ## Create the local admin user and deterministic safe seed data
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; test "$${BOOTSTRAP_ADMIN_PASSWORD}" != "replace-with-a-local-admin-password" || (echo "Set BOOTSTRAP_ADMIN_PASSWORD in $(ENV_FILE) before running make seed." && exit 1); cd backend && ../$(PYTHON_BIN) scripts/create_user.py --email "$${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}" --password "$${BOOTSTRAP_ADMIN_PASSWORD}" --admin'
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; cd backend && ../$(PYTHON_BIN) scripts/seed_test_data.py --reset'
 
-shell: ## SSH directly into the running python container securely
-	docker compose exec api /bin/bash
+dev: check-env ## Run frontend, backend, worker, and scheduler on the host
+	./scripts/dev.sh $(ENV_FILE)
 
-help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}'
+test: test-backend test-frontend test-e2e ## Run the local validation suite
 
-# ─── Staging ────────────────────────────────────────────────────────────────
-staging-up: ## Boot full staging stack (includes Mailpit SMTP/IMAP stub)
-	docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
-	@echo "✅  Staging up. Mailpit UI: http://localhost:8025"
+test-backend: check-env ## Run backend tests against the test infra
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); source .env.test.local 2>/dev/null || true; set +a; cd backend && ../$(PYTHON_BIN) -m pytest tests/api tests/integration -v'
 
-staging-down: ## Tear down staging stack
-	docker compose -f docker-compose.yml -f docker-compose.staging.yml down
+test-frontend: check-env ## Run frontend lint checks
+	cd frontend && $(NPM_BIN) run lint
 
-# ─── Test infra ─────────────────────────────────────────────────────────────
-test-infra-up: ## Start minimal postgres+redis test containers
-	docker compose -f docker-compose.test.yml up -d
-	@sleep 3
+test-e2e: check-env ## Run Playwright end-to-end tests
+	cd frontend && $(NPM_BIN) run test:e2e
 
-test-infra-down: ## Stop test containers
-	docker compose -f docker-compose.test.yml down
+smoke: check-env ## Run local backend connectivity smoke checks
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; curl -fsS "$${BACKEND_URL}/api/v1/health" && echo && curl -fsS "$${BACKEND_URL}/api/v1/health/db" && echo && curl -fsS "$${BACKEND_URL}/api/v1/health/redis" && echo'
 
-# ─── Backend Tests ──────────────────────────────────────────────────────────
-test-api: ## Run pytest API unit tests (fast, no external services)
-	cd backend && source venv/bin/activate && \
-	  pytest tests/api -v \
-	  --junitxml=../artifacts/pytest/results.xml \
-	  --cov=app --cov-report=xml:../artifacts/pytest/coverage.xml \
-	  --cov-report=term-missing
+reset: check-env ## Recreate local Postgres and Redis volumes
+	$(COMPOSE) down -v --remove-orphans
+	$(COMPOSE) up -d --wait postgres redis
 
-test-integration: ## Run integration tests (requires staging services)
-	cd backend && source venv/bin/activate && \
-	  pytest tests/integration -v -m integration \
-	  --junitxml=../artifacts/pytest/integration-results.xml
+full-up: check-env ## Run the full application stack in Docker
+	$(COMPOSE) --profile full up -d --build --wait
 
-# ─── Frontend E2E ──────────────────────────────────────────────────────────
-test-e2e: ## Run Playwright E2E tests headlessly
-	cd frontend && npx playwright test --reporter=list
+full-down: check-env ## Stop the full Docker stack
+	$(COMPOSE) --profile full down --remove-orphans
 
-test-e2e-headed: ## Run Playwright E2E tests in headed mode
-	cd frontend && npx playwright test --headed
+test-infra-up: check-env ## Start isolated test Postgres and Redis
+	docker compose --env-file $(ENV_FILE) -f docker-compose.test.yml up -d --wait
 
-test-e2e-smoke: ## Run only smoke E2E tests (dashboard + ops)
-	cd frontend && npx playwright test tests/e2e/dashboard.spec.ts tests/e2e/ops.spec.ts
-
-# ─── Release Validation ─────────────────────────────────────────────────────
-test-release: test-api test-integration test-e2e ## Run full release validation
-	@echo "✅  All release validation tests complete."
-
-# ─── Data Management ────────────────────────────────────────────────────────
-reset-test-data: ## Reset deterministic staging/test seed data
-	cd backend && source venv/bin/activate && python scripts/seed_test_data.py --reset
-
-seed-staging: ## Seed staging environment with demo data
-	cd backend && source venv/bin/activate && python scripts/seed_test_data.py
-
-# ─── Artifacts ──────────────────────────────────────────────────────────────
-show-report: ## Open Playwright HTML report
-	cd frontend && npx playwright show-report ../artifacts/playwright
-
-setup-artifacts: ## Create artifact directories
-	mkdir -p artifacts/playwright artifacts/pytest artifacts/release
+test-infra-down: check-env ## Stop isolated test Postgres and Redis
+	docker compose --env-file $(ENV_FILE) -f docker-compose.test.yml down -v --remove-orphans
