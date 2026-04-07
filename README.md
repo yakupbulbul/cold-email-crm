@@ -1,47 +1,90 @@
-# 🚀 AI-Powered Cold Email CRM 
-_Enterprise-grade Open-Source Cold Outreach automation natively integrating Mailcow & OpenAI._
+# 🚀 AI-Powered Cold Email CRM
 
-Welcome to the definitive all-in-one open-source Cold Email CRM. This platform is not just a sender. It is a full **SendGrid + CRM + AI Inbox** architecture that routes through robust multi-tenant Mailcow instances.
+Enterprise-grade open-source cold outreach automation platform. Natively integrates with **Mailcow** for infrastructure and **OpenAI** for intelligence.
 
-Currently maintained by [Yakup Bulbul](https://github.com/yakupbulbul).
+## 🏗️ Architecture Stack
 
-## 🌟 Key Features
-* **Natively Multi-Tenant**: Attach infinite domains and mailboxes securely to single Mailcow infrastructures.
-* **Smart Warm-up Engine**: Built-in 14-day exponential scaling volume caps (5 \u2192 10 \u2192 20) with natively injected time randomization.
-* **Campaign Constraints**: Dedicated duplicate lead prevention, variable templating, and absolute daily limit enforcement.
-* **Imap Thread Resolutions**: Inbound sync engine parsing strict MIME/RFC822 headers resolving cross-thread replies robustly.
-* **AI Processing**: Built in `OpenAI` processing extracting lead intents, thread summarizing, and drafting contextual replies locally!
-* **Enterprise Tech Stack**: Built entirely on Next.js 14 App Router, Python FastAPI, PostgreSQL (SQLAlchemy + Alembic), Celery Workers, Redis, and Mailcow.
-
-## 🧱 Architecture Overview
-1. **Frontend**: The `frontend/` directory is an expansive Next.js App router serving responsive UI built natively using sleek Tailwind CSS and Lucide React. 
-2. **Backend Gateway**: The `backend/app/main.py` entrypoint. The API scales perfectly handling REST mappings, JWT tokens, Rate Limiting (`slowapi`), Database Transactions, and external network interactions. 
-3. **Automations Daemon**: The `backend/workers/celery_app.py` entrypoint runs the background schedules synchronizing inbound IMAPs, outbound Campaign rules, and the Warmup constraints perfectly disjoint from the main gateway! 
-
-## 🛠️ Quickstart
-
-To spin up the ecosystem immediately in your dockerized environment:
-
-\`\`\`bash
-git clone https://github.com/yakupbulbul/cold-email-crm.git
-cd cold-email-crm
-cp backend/.env.example backend/.env
-
-# Spin up the Database, Redis, Celery, Backend Gateway, and Frontend:
-make up
-
-# Apply PostgreSQL schemas for the 11 integrated tables
-make migrate
-\`\`\`
-
-Access the Next.js Frontend precisely at `http://localhost:3000`. 
-API Documentations natively live at `http://localhost:8050/api/v1/docs`. 
-
-## 🤝 Contributing
-Open source contributions are highly encouraged. Please review the `CONTRIBUTING.md` guidelines (coming soon) and feel free to submit PRs for any architectural upgrades! 
-
-## 📄 License
-This platform operates under the MIT Open Source License.
+- **Frontend**: Next.js 14 (App Router), Tailwind CSS, Lucide React.
+- **Backend**: FastAPI (Python), SQLAlchemy, Pydantic.
+- **Database**: PostgreSQL 15.
+- **Async Tasks**: Celery with Redis as the broker.
+- **Mailing Infrastructure**: Mailcow (Dockerized).
 
 ---
-_Built for scale, structured for communities, and engineered for deliverability._
+
+## 🛠️ Local Setup Instructions
+
+Follow these steps to get the full stack running on your local machine.
+
+### 1. Prerequisites
+- [Docker](https://www.docker.com/get-started) & Docker Compose.
+- [Git](https://git-scm.com/).
+
+### 2. Clone and Environment Setup
+```bash
+git clone https://github.com/yakupbulbul/cold-email-crm.git
+cd cold-email-crm
+
+# Copy the example environment file
+cp .env.example .env
+```
+
+### 3. Configure Environment Variables
+Edit your `.env` file with the following required values:
+
+- **Security**: `SECRET_KEY` (Generate a random string).
+- **AI**: `OPENAI_API_KEY` (Required for lead categorization and draft generation).
+- **Mailcow API**:
+  - `MAILCOW_API_URL`: `https://mail.example.com/api/v1` (or your local instance).
+  - `MAILCOW_API_KEY`: Your API key from the Mailcow admin panel.
+
+### 4. Launch the Application
+The project includes a `Makefile` for simplified management:
+
+```bash
+# Build and start all services in the background
+make up
+
+# Run database migrations
+make migrate
+```
+
+### 5. Initialize Admin User
+To access the dashboard, you must create an initial admin user:
+
+```bash
+docker compose exec api python scripts/create_user.py --email admin@example.com --password YourSecurePassword --admin
+```
+
+---
+
+## 📬 Mailcow Online Integration
+
+This CRM is designed to connect to any Mailcow instance. 
+1. Log in to your Mailcow Admin Panel (`https://mail.yourdomain.com`).
+2. Navigate to **System -> Configuration -> API**.
+3. Enable the API and generate an **API Key**.
+4. Add the Key and your instance URL to the CRM's `.env` file.
+
+Once connected, the CRM will be able to synchronize domains and provision mailboxes automatically.
+
+---
+
+## 💡 Common Commands (Command Prompt Reference)
+
+| Action | Command |
+| :--- | :--- |
+| **Start Services** | `docker compose up -d` |
+| **Stop Services** | `docker compose down` |
+| **View Backend Logs** | `docker compose logs -f api` |
+| **View Worker Logs** | `docker compose logs -f worker` |
+| **Reset Database** | `docker compose down -v && docker compose up -d` |
+| **Shell Access (API)** | `docker compose exec api bash` |
+
+---
+
+## 🤝 Contributing
+Contributions are welcome! Please open an issue or submit a pull request for any improvements.
+
+## 📄 License
+This project is licensed under the MIT License.

@@ -18,4 +18,8 @@ class Settings(BaseSettings):
     # External APIs
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
 
+    # Mailcow API Integration
+    MAILCOW_API_URL: str | None = os.getenv("MAILCOW_API_URL")
+    MAILCOW_API_KEY: str | None = os.getenv("MAILCOW_API_KEY")
+
 settings = Settings()
