@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
 from app.models.campaign import Campaign
-from app.models.core import Domain, Mailbox, SuppressionEntry
+from app.models.core import Domain, Mailbox
+from app.models.suppression import SuppressionList
 from app.models.user import User
 
 _COUNTER = count(1)
@@ -125,8 +126,8 @@ def create_suppression_entry(
     *,
     email: str | None = None,
     reason: str = "bounce",
-) -> SuppressionEntry:
-    entry = SuppressionEntry(
+) -> SuppressionList:
+    entry = SuppressionList(
         email=email or f"{_next('suppressed')}@example.com",
         reason=reason,
         source="test-suite",

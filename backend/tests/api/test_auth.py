@@ -26,7 +26,7 @@ def test_auth_me_returns_current_user(client: TestClient, auth_headers: dict):
 
 def test_protected_routes_require_authentication(client: TestClient):
     resp = client.get("/api/v1/domains")
-    assert resp.status_code == 403
+    assert resp.status_code == 401
 
 
 def test_admin_routes_reject_non_admin_users(client: TestClient, user_headers: dict):

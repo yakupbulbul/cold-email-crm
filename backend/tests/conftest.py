@@ -25,6 +25,15 @@ from app.main import app
 from app.models.base import Base
 from app.core.database import get_db
 from app.api.v1.routes import auth as auth_routes
+from tests.factories import (
+    campaign_payload,
+    create_campaign,
+    create_domain,
+    create_mailbox,
+    create_suppression_entry,
+    create_user,
+)
+from tests.utils.mailcow import mocked_mailcow_response
 
 engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -83,6 +92,82 @@ def auth_headers(client: TestClient) -> dict:
 def user_headers(client: TestClient) -> dict:
     """Return Authorization headers for a seeded non-admin user."""
     return _issue_token(client, "test-user@example.com", "test1234", is_admin=False)
+
+
+@pytest.fixture()
+def admin_user(db: Session):
+    return create_user(
+        db,
+        email="test-admin@example.com",
+        password="test1234",
+        is_admin=True,
+        full_name="Test Admin",
+    )
+
+
+@pytest.fixture()
+def regular_user(db: Session):
+    return create_user(
+        db,
+        email="test-user@example.com",
+        password="test1234",
+        is_admin=False,
+        full_name="Test User",
+    )
+
+
+@pytest.fixture()
+def domain_factory(db: Session):
+    def factory(**kwargs):
+        return create_domain(db, **kwargs)
+
+    return factory
+
+
+@pytest.fixture()
+def mailbox_factory(db: Session):
+    def factory(**kwargs):
+        return create_mailbox(db, **kwargs)
+
+    return factory
+
+
+@pytest.fixture()
+def campaign_factory(db: Session):
+    def factory(**kwargs):
+        return create_campaign(db, **kwargs)
+
+    return factory
+
+
+@pytest.fixture()
+def campaign_payload_factory():
+    return campaign_payload
+
+
+@pytest.fixture()
+def suppression_factory(db: Session):
+    def factory(**kwargs):
+        return create_suppression_entry(db, **kwargs)
+
+    return factory
+
+
+@pytest.fixture()
+def mock_mailcow_request(monkeypatch):
+    calls: list[tuple[str, str]] = []
+
+    def factory(*, status_code: int = 200, payload: dict | None = None):
+        response = mocked_mailcow_response(status_code=status_code, payload=payload)
+
+        def _request(self, method: str, path: str):
+            calls.append((method, path))
+            return response
+
+        monkeypatch.setattr("app.integrations.mailcow.client.MailcowClient._request", _request)
+        return calls
+
+    return factory
 
 
 def _issue_token(client: TestClient, email: str, password: str, *, is_admin: bool) -> dict:
