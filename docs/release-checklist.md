@@ -32,7 +32,7 @@
 | 15 | `/ops` dashboard loads — health cards render | ☐ | |
 | 16 | `/api/v1/ops/health` returns `healthy` status for DB | ☐ | |
 | 17 | `/api/v1/ops/health/redis` returns `healthy` | ☐ | |
-| 18 | Worker heartbeat count > 0 | ☐ | |
+| 18 | `/api/v1/ops/health/workers` is `disabled` in lean mode or `healthy` in full mode | ☐ | |
 | 18a | `/api/v1/ops/health/mailcow` returns a safe status payload | ☐ | |
 | 19 | `/ops/jobs` shows job logs table | ☐ | |
 | 20 | Failed job retry button changes status to `queued` | ☐ | |
@@ -63,7 +63,7 @@
 | 31 | `alembic upgrade head` runs without errors | ☐ | |
 | 32 | `SECRET_KEY` is set and non-default | ☐ | |
 | 33 | `DEBUG=false` in production container | ☐ | |
-| 34 | `/api/v1/ops/readiness` reports `ready` status | ☐ | |
+| 34 | `/api/v1/ops/readiness` reports the expected structured state for the chosen mode (`degraded` in lean mode is acceptable if Mailcow or workers are intentionally blocked) | ☐ | |
 | 35 | HTTPS termination configured at Nginx/proxy layer | ☐ | |
 | 36 | `ALLOWED_ORIGINS` contains only production domains | ☐ | |
 | 37 | Postgres backup schedule verified | ☐ | |

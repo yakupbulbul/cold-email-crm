@@ -13,9 +13,16 @@ The local development model is:
 
 ### Prerequisites
 
-- Docker Desktop or another working Docker daemon
 - Python 3.11+
 - Node.js 20+
+- Homebrew on macOS for the recommended host Redis install
+
+Recommended host-run services:
+
+- PostgreSQL on `127.0.0.1:5432`
+- Redis on `127.0.0.1:6379`
+
+Docker is optional fallback infrastructure. It is no longer required for the default local workflow.
 
 ### 1. Clone and create local env
 
@@ -38,8 +45,6 @@ Required local values:
 
 - `SECRET_KEY`
 - `BOOTSTRAP_ADMIN_PASSWORD`
-- `POSTGRES_PORT`
-- `REDIS_PORT`
 - `POSTGRES_URL`
 - `REDIS_URL`
 - `ALLOWED_ORIGINS`
@@ -59,18 +64,26 @@ make setup
 
 This creates `backend/.venv` and installs frontend dependencies.
 
-### 3. Start local infrastructure
+### 3. Install and verify host services
+
+```bash
+brew install redis
+brew services start redis
+make host-check
+```
+
+`make host-check` validates the current `.env` against the host Postgres and Redis endpoints before the app starts.
+
+The tracked defaults now target host services directly:
+
+- Postgres: `127.0.0.1:5432`
+- Redis: `127.0.0.1:6379`
+
+If you prefer Docker-backed infra instead, keep Docker running and use:
 
 ```bash
 make up
 ```
-
-This starts only local Postgres and Redis for hybrid development.
-
-The tracked defaults use dedicated Docker host ports so the app does not silently connect to another local Postgres or Redis instance:
-
-- Postgres: `127.0.0.1:55432`
-- Redis: `127.0.0.1:56379`
 
 ### 4. Run migrations and bootstrap local access
 
@@ -93,12 +106,20 @@ make seed
 make dev
 ```
 
-This runs:
+`make dev` is the lean default. It runs:
 
 - FastAPI on `BACKEND_URL`
-- Celery worker on the host
-- Celery beat on the host
 - Next.js on `http://localhost:3000` by default
+
+It also prints the exact host-run commands for backend, frontend, worker, and beat. Worker and beat are intentionally disabled in lean mode to reduce memory and process count.
+
+When you need queue processing, use:
+
+```bash
+make dev-full
+```
+
+`make dev-full` starts backend, frontend, Celery worker, and Celery beat together on the host.
 
 Sign in locally at `/signin`.
 
@@ -106,12 +127,14 @@ Sign in locally at `/signin`.
 
 ```bash
 make setup
+make host-check
 make up
 make down
 make migrate
 make bootstrap-admin
 make seed
 make dev
+make dev-full
 make smoke
 make test
 make reset
@@ -121,6 +144,9 @@ make full-down
 
 Notes:
 
+- `make host-check` is the default no-Docker preflight
+- `make dev` is lean mode: backend + frontend only
+- `make dev-full` enables Celery worker + beat on the host
 - `make up` and `make reset` require Docker
 - `make bootstrap-admin` is the primary no-seed login path
 - `make full-up` runs the entire stack in Docker
@@ -162,19 +188,18 @@ If `MAILCOW_SMTP_HOST` and `MAILCOW_IMAP_HOST` are configured server-side, mailb
 
 ### Backend
 
-Database-backed backend tests expect the isolated test services from `docker-compose.test.yml`.
+Host-backed backend checks use `.env.test.local` and do not require Docker if local Postgres and Redis are running:
+
+```bash
+make test-backend
+```
+
+If you want isolated Docker-backed test services instead:
 
 ```bash
 make test-infra-up
 make test-backend
 make test-infra-down
-```
-
-DB-free backend checks can run without Docker:
-
-```bash
-cd backend
-../backend/.venv/bin/python -m pytest tests/api/test_config.py tests/api/test_mailcow.py -v
 ```
 
 ### Frontend
@@ -193,6 +218,19 @@ make test-e2e
 
 ## Troubleshooting
 
+### Host Redis is missing
+
+Symptom:
+
+- `make host-check` fails on Redis
+- `make dev` refuses to start
+
+Fix:
+
+- install Redis locally with `brew install redis`
+- start it with `brew services start redis`
+- rerun `make host-check`
+
 ### Docker daemon is not running
 
 Symptom:
@@ -202,7 +240,7 @@ Symptom:
 Fix:
 
 - Start Docker Desktop or your Docker service
-- rerun the command
+- rerun the command if you are using Docker-backed infra
 
 ### Backend fails on startup with config validation errors
 
@@ -228,6 +266,18 @@ Fix:
 - confirm backend is running on `BACKEND_URL`
 - keep `NEXT_PUBLIC_API_URL=/api/v1`
 - keep frontend pointed at the local backend, not Mailcow directly
+
+### Warmup or campaign start returns `409`
+
+Symptom:
+
+- warmup start says background workers are disabled
+- campaign start says to run `make dev-full`
+
+Fix:
+
+- this is expected in lean mode
+- run `make dev-full` when you need queue-backed processing
 
 ### Mailcow health is degraded or failed
 

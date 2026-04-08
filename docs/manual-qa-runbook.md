@@ -34,8 +34,8 @@
 | Step | Action | Expected Result | ✅/❌ | Notes |
 |------|--------|----------------|-------|-------|
 | 3.1 | Go to `/warmup` | Warm-up list or empty state renders | | |
-| 3.2 | Click Start Warm-up for a mailbox | Status changes to active | | |
-| 3.3 | Click Stop Warm-up | Status returns to idle | | |
+| 3.2 | In lean mode, click Start Warm-up for a mailbox | Clear `409` / safe-mode message explains that `make dev-full` is required | | |
+| 3.3 | In full mode, click Start Warm-up | Status changes to active | | |
 | 3.4 | Verify health score card displays | Score (0-100) visible | | |
 
 ---
@@ -60,7 +60,8 @@
 | 5.3 | Create a valid campaign | Campaign appears in list | | |
 | 5.4 | Trigger preflight on a campaign with suppressed leads | Preflight fails, launch blocked | | |
 | 5.5 | Trigger preflight on a clean campaign | Shows pass/warning results | | |
-| 5.6 | Pause an active campaign | Status changes to paused | | |
+| 5.6 | In lean mode, start a campaign | Clear `409` / safe-mode message explains that `make dev-full` is required | | |
+| 5.7 | In full mode, pause an active campaign | Status changes to paused | | |
 
 ---
 
@@ -100,8 +101,8 @@
 
 | Step | Action | Expected Result | ✅/❌ | Notes |
 |------|--------|----------------|-------|-------|
-| 9.1 | Go to `/ops` | Status cards render for DB, Redis, Workers | | |
-| 9.2 | One card shows `healthy` in green | Status color correct | | |
+| 9.1 | Go to `/ops` in lean mode | Status cards render for DB, Redis, Workers | | |
+| 9.2 | Worker card shows `disabled` in lean mode or `healthy` in full mode | Status color and label are honest | | |
 | 9.3 | Go to `/ops/jobs` | Job table renders (may be empty) | | |
 | 9.4 | Go to `/ops/alerts` | Alert list or "all clear" message visible | | |
 | 9.5 | Go to `/ops/deliverability` | KPI cards and mailbox table visible | | |
@@ -124,7 +125,7 @@
 
 | Step | Action | Expected Result | ✅/❌ | Notes |
 |------|--------|----------------|-------|-------|
-| 11.1 | GET `/api/v1/ops/readiness` | `status: ready` or list of failing items | | |
+| 11.1 | GET `/api/v1/ops/readiness` | Structured status plus checklist items; lean mode may be degraded and Mailcow auth may still fail safely | | |
 | 11.2 | Verify `SECRET_KEY` is not the default test value | Strong random string in env | | |
 | 11.3 | Verify `alembic upgrade head` shows no pending migrations | `Running upgrade ... done` | | |
 | 11.4 | Confirm HTTPS terminates at proxy, HTTP redirects cleanly | `curl -I http://...` returns 301 | | |
