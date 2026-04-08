@@ -39,3 +39,4 @@ README_PRIVATE.md
 # Local development runtime
 tmp/
 backend/celerybeat-schedule.db
+artifacts/k6/
