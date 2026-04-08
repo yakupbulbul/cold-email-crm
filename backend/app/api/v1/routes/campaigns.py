@@ -4,17 +4,40 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.campaign import Campaign, CampaignLead, Contact
+from app.models.lists import CampaignList
 from app.models.monitoring import JobLog
 from app.schemas.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
+from app.schemas.lists import CampaignListAttachPayload
+from app.services.list_service import LeadListService
 from app.services.verification_service import contact_is_reachable
 from app.workers.campaign_worker import run_campaign_cycle
 
 router = APIRouter()
 
+
+def _campaign_payload(db: Session, campaign: Campaign) -> dict:
+    service = LeadListService(db)
+    campaign_lists_summary = service.summarize_campaign_lists(str(campaign.id))
+    sent_count = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign.id, CampaignLead.status == "sent").count()
+    return {
+        "id": str(campaign.id),
+        "name": campaign.name,
+        "status": campaign.status,
+        "mailbox_id": str(campaign.mailbox_id) if campaign.mailbox_id else None,
+        "template_subject": campaign.template_subject,
+        "template_body": campaign.template_body,
+        "daily_limit": campaign.daily_limit,
+        "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
+        "lead_count": campaign_lists_summary["lead_count"],
+        "sent_count": sent_count,
+        "reply_rate": "0%",
+        "lists_summary": campaign_lists_summary,
+    }
+
 @router.get("/")
 @router.get("")  # Handle both /campaigns and /campaigns/ without redirect
 def list_campaigns(db: Session = Depends(get_db)):
-    return db.query(Campaign).all()
+    return [_campaign_payload(db, campaign) for campaign in db.query(Campaign).all()]
 
 @router.post("/", response_model=CampaignResponse)
 @router.post("")  # Handle both /campaigns and /campaigns/ without redirect
@@ -29,7 +52,7 @@ def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
     db.add(c)
     db.commit()
     db.refresh(c)
-    return c
+    return _campaign_payload(db, c)
 
 
 @router.put("/{campaign_id}")
@@ -45,7 +68,41 @@ def update_campaign(campaign_id: str, req: CampaignUpdate, db: Session = Depends
     campaign.daily_limit = req.daily_limit
     db.commit()
     db.refresh(campaign)
-    return campaign
+    return _campaign_payload(db, campaign)
+
+
+@router.post("/{campaign_id}/lists")
+def attach_list_to_campaign(campaign_id: str, req: CampaignListAttachPayload, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    service = LeadListService(db)
+    lead_list = service.get_list_or_404(str(req.list_id))
+    existing = db.query(CampaignList).filter(CampaignList.campaign_id == campaign.id, CampaignList.list_id == lead_list.id).first()
+    if not existing:
+        db.add(CampaignList(campaign_id=campaign.id, list_id=lead_list.id))
+        db.commit()
+    return service.sync_campaign_leads(campaign_id)
+
+
+@router.get("/{campaign_id}/lists")
+def get_campaign_lists(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    service = LeadListService(db)
+    return service.summarize_campaign_lists(campaign_id)
+
+
+@router.delete("/{campaign_id}/lists/{list_id}")
+def remove_list_from_campaign(campaign_id: str, list_id: str, db: Session = Depends(get_db)):
+    attached = db.query(CampaignList).filter(CampaignList.campaign_id == campaign_id, CampaignList.list_id == list_id).first()
+    if not attached:
+        raise HTTPException(status_code=404, detail="List is not attached to this campaign")
+    db.delete(attached)
+    db.commit()
+    service = LeadListService(db)
+    return service.sync_campaign_leads(campaign_id)
 
 @router.post("/{campaign_id}/start")
 def start_campaign(campaign_id: str, db: Session = Depends(get_db)):

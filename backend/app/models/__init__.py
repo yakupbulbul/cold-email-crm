@@ -6,6 +6,7 @@ from .email import Thread, Message, AiSummary
 from .import_job import LeadImportJob, LeadImportRow
 from .verification import EmailVerificationLog
 from .suppression import SuppressionList
+from .lists import LeadList, LeadListMember, CampaignList
 from .monitoring import WorkerHeartbeat, JobLog, CampaignPreflightCheck, DeliverabilityEvent, AuditLog, SystemAlert
 from .user import User
 
@@ -27,6 +28,9 @@ __all__ = [
     "LeadImportRow",
     "EmailVerificationLog",
     "SuppressionList",
+    "LeadList",
+    "LeadListMember",
+    "CampaignList",
     "WorkerHeartbeat",
     "JobLog",
     "CampaignPreflightCheck",

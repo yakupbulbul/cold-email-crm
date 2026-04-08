@@ -2,6 +2,7 @@ import dns.resolver
 from sqlalchemy.orm import Session
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.monitoring import CampaignPreflightCheck
+from app.services.list_service import LeadListService
 from app.services.verification_service import contact_is_reachable
 
 class PreflightService:
@@ -36,6 +37,8 @@ class PreflightService:
         domain = campaign.mailbox.email.split('@')[1]
         
         checks = []
+        list_service = LeadListService(self.db)
+        list_summary = list_service.summarize_campaign_lists(str(campaign.id))
         
         # 1. SPF Check
         has_spf = self.check_spf(domain)
@@ -82,6 +85,15 @@ class PreflightService:
                 severity="info",
                 message="Lead quality metrics within acceptable bounds."
             ))
+
+        checks.append(CampaignPreflightCheck(
+            campaign_id=campaign.id,
+            check_name="list_coverage",
+            status="pass" if list_summary["lead_count"] > 0 else "warning",
+            severity="info" if list_summary["lead_count"] > 0 else "warning",
+            message=f"Attached lists contribute {list_summary['lead_count']} deduplicated leads ({list_summary['reachable_count']} reachable, {list_summary['suppressed_count']} suppressed, {list_summary['invalid_count']} invalid/risky blockers).",
+            metadata_blob=list_summary,
+        ))
             
         self.db.add_all(checks)
         self.db.commit()
@@ -107,5 +119,6 @@ class PreflightService:
             "checks": [
                 {"name": c.check_name, "status": c.status, "message": c.message} 
                 for c in checks
-            ]
+            ],
+            "list_summary": list_summary,
         }
