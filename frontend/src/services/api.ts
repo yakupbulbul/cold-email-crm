@@ -5,6 +5,8 @@ import {
     SystemHealth, Alert, JobLog, DeliverabilitySummary, Thread, Message, SettingsSummary,
     LeadVerificationJob,
     LeadVerificationResult,
+    CampaignActionResult,
+    CampaignPreflightResult,
 } from "@/types/models";
 
 type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
@@ -41,7 +43,7 @@ type CampaignCreatePayload = {
  * Service API wrapping backend endpoints. Provides typed data fetching abstractions.
  */
 export function useApiService() {
-    const { request, loading, error } = useApi();
+    const { request, requestOrThrow, loading, error } = useApi();
 
     // ── OPS / METRICS ──
     const getHealth = useCallback(() => request<SystemHealth>("/ops/health"), [request]);
@@ -54,7 +56,9 @@ export function useApiService() {
     const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
     const getCampaignById = useCallback((id: string) => request<Campaign>(`/campaigns/${id}`), [request]);
     const createCampaign = useCallback((data: CampaignCreatePayload) => request<Campaign>("/campaigns", { method: "POST", body: data }), [request]);
-    const runPreflight = useCallback((id: string) => request(`/campaigns/${id}/preflight`, { method: "POST" }), [request]);
+    const startCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/start`, { method: "POST" }), [requestOrThrow]);
+    const pauseCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/pause`, { method: "POST" }), [requestOrThrow]);
+    const runPreflight = useCallback((id: string) => requestOrThrow<CampaignPreflightResult>(`/campaigns/${id}/preflight`, { method: "POST" }), [requestOrThrow]);
 
     // ── LEADS / CONTACTS ──
     const getLeads = useCallback(() => request<Contact[]>("/leads"), [request]);
@@ -102,6 +106,8 @@ export function useApiService() {
         getCampaigns,
         getCampaignById,
         createCampaign,
+        startCampaign,
+        pauseCampaign,
         runPreflight,
         getLeads,
         verifyLead,

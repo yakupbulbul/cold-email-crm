@@ -45,6 +45,24 @@ export interface Campaign {
     reply_rate?: string | number;
 }
 
+export interface CampaignActionResult {
+    status: string;
+    campaign?: string;
+    eligible_leads?: number;
+    job_queued?: boolean;
+    job_id?: string | null;
+}
+
+export interface CampaignPreflightResult {
+    status: string;
+    blocked: boolean;
+    checks: Array<{
+        name: string;
+        status: string;
+        message: string;
+    }>;
+}
+
 export interface Contact {
     id: string;
     email: string;

@@ -1,13 +1,26 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Plus, Users, BarChart2, Calendar, AlertCircle } from 'lucide-react';
-import { useApiService } from '@/services/api';
-import { Campaign, Mailbox } from '@/types/models';
+import { AlertCircle, BarChart2, Calendar, LoaderCircle, Play, Plus, ShieldAlert, Users } from 'lucide-react';
+
 import Spinner from '@/components/ui/Spinner';
+import { useApiService } from '@/services/api';
+import { Campaign, CampaignPreflightResult, Mailbox } from '@/types/models';
+
+type ActionState = {
+  type: 'start' | 'pause' | 'preflight';
+  campaignId: string;
+};
 
 export default function CampaignsPage() {
-  const { getCampaigns, getMailboxes, createCampaign, loading, error } = useApiService();
+  const {
+    getCampaigns,
+    getMailboxes,
+    createCampaign,
+    startCampaign,
+    pauseCampaign,
+    runPreflight,
+  } = useApiService();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [name, setName] = useState('');
@@ -17,22 +30,57 @@ export default function CampaignsPage() {
   const [dailyLimit, setDailyLimit] = useState('50');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+  const [actionState, setActionState] = useState<ActionState | null>(null);
+  const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
+  const [preflightResults, setPreflightResults] = useState<Record<string, CampaignPreflightResult>>({});
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPageData = async () => {
+      setIsPageLoading(true);
+      setPageError(null);
       const [campaignData, mailboxData] = await Promise.all([getCampaigns(), getMailboxes()]);
-      if (campaignData) setCampaigns(campaignData);
+      if (!campaignData || !mailboxData) {
+        setPageError('Failed to load campaigns or mailboxes. Check the backend response and try again.');
+        setIsPageLoading(false);
+        return;
+      }
+      setCampaigns(campaignData);
       if (mailboxData) {
         setMailboxes(mailboxData);
         setMailboxId((current) => current || mailboxData[0]?.id || '');
       }
+      setIsPageLoading(false);
     };
-    fetchPageData();
+    void fetchPageData();
   }, [getCampaigns, getMailboxes]);
+
+  const refreshCampaigns = async () => {
+    const refreshed = await getCampaigns();
+    if (refreshed) setCampaigns(refreshed);
+  };
+
+  const clearCampaignMessages = (campaignId: string) => {
+    setActionErrors((current) => {
+      if (!current[campaignId]) return current;
+      const next = { ...current };
+      delete next[campaignId];
+      return next;
+    });
+    setPreflightResults((current) => {
+      if (!current[campaignId]) return current;
+      const next = { ...current };
+      delete next[campaignId];
+      return next;
+    });
+  };
 
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError(null);
+    setBanner(null);
     if (!name.trim() || !mailboxId || !subject.trim() || !body.trim()) {
       setSubmitError('Name, mailbox, subject, and body are required.');
       return;
@@ -54,15 +102,92 @@ export default function CampaignsPage() {
     setSubject('');
     setBody('');
     setDailyLimit('50');
-    const refreshed = await getCampaigns();
-    if (refreshed) setCampaigns(refreshed);
+    await refreshCampaigns();
+    setBanner({ tone: 'success', message: `Campaign ${created.name} created.` });
   };
+
+  const handleStart = async (campaignId: string) => {
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'start', campaignId });
+    try {
+      const result = await startCampaign(campaignId);
+      await refreshCampaigns();
+      const message = result.job_queued
+        ? `Campaign activation queued${result.eligible_leads ? ` for ${result.eligible_leads} eligible leads` : ''}.`
+        : 'Campaign activated.';
+      setBanner({ tone: 'success', message });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign activation failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handlePause = async (campaignId: string) => {
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'pause', campaignId });
+    try {
+      await pauseCampaign(campaignId);
+      await refreshCampaigns();
+      setBanner({ tone: 'success', message: 'Campaign paused.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign pause failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handlePreflight = async (campaignId: string) => {
+    setBanner(null);
+    setActionErrors((current) => {
+      if (!current[campaignId]) return current;
+      const next = { ...current };
+      delete next[campaignId];
+      return next;
+    });
+    setActionState({ type: 'preflight', campaignId });
+    try {
+      const result = await runPreflight(campaignId);
+      setPreflightResults((current) => ({ ...current, [campaignId]: result }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign preflight failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const isActionPending = (campaignId: string, type: ActionState['type']) =>
+    actionState?.campaignId === campaignId && actionState?.type === type;
 
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Campaigns</h1>
       </div>
+
+      {banner && (
+        <div className={`rounded-2xl border px-5 py-4 text-sm font-medium ${
+          banner.tone === 'success'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : 'border-red-200 bg-red-50 text-red-700'
+        }`}>
+          {banner.message}
+        </div>
+      )}
 
       <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 grid gap-4 md:grid-cols-2">
         <div>
@@ -98,15 +223,15 @@ export default function CampaignsPage() {
         </div>
       </form>
 
-      {error ? (
+      {isPageLoading ? (
+        <div className="flex justify-center items-center py-16 bg-white rounded-2xl border border-slate-200">
+           <Spinner size="lg" />
+        </div>
+      ) : pageError ? (
         <div className="p-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex flex-col items-center justify-center py-16 text-center">
             <AlertCircle className="mb-4 text-red-500" size={32} />
             <span className="font-bold mb-2">Error Fetching Campaigns</span>
-            <span className="text-sm">{error}</span>
-        </div>
-      ) : loading ? (
-        <div className="flex justify-center items-center py-16 bg-white rounded-2xl border border-slate-200">
-           <Spinner size="lg" />
+            <span className="text-sm">{pageError}</span>
         </div>
       ) : campaigns.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center">
@@ -118,41 +243,120 @@ export default function CampaignsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {campaigns.map((campaign) => (
-            <div key={campaign.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-7 group cursor-pointer relative overflow-hidden">
-              <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 opacity-30 group-hover:opacity-70 transition-opacity ${campaign.status === 'active' ? 'bg-blue-300' : 'bg-slate-300'}`}></div>
-              <div className="relative z-10">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-slate-800 mb-1.5 group-hover:text-blue-600 transition-colors">{campaign.name}</h3>
-                    <p className="text-sm font-semibold text-slate-400 flex items-center gap-1.5">
-                      <Calendar size={14}/> Started on {new Date(campaign.created_at).toLocaleDateString()}
-                    </p>
+          {campaigns.map((campaign) => {
+            const blockedMessage = actionErrors[campaign.id];
+            const preflight = preflightResults[campaign.id];
+            const canStart = campaign.status === 'draft' || campaign.status === 'paused';
+            const canPause = campaign.status === 'active';
+
+            return (
+              <div key={campaign.id} data-testid={`campaign-card-${campaign.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-7 group relative overflow-hidden">
+                <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 opacity-30 group-hover:opacity-70 transition-opacity ${campaign.status === 'active' ? 'bg-blue-300' : 'bg-slate-300'}`}></div>
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h3 className="text-xl font-extrabold text-slate-800 mb-1.5 group-hover:text-blue-600 transition-colors">{campaign.name}</h3>
+                      <p className="text-sm font-semibold text-slate-400 flex items-center gap-1.5">
+                        <Calendar size={14}/> Created on {new Date(campaign.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span data-testid={`campaign-status-${campaign.id}`} className={`px-4 py-1 text-xs font-bold tracking-wide rounded-full border shadow-sm ${campaign.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : campaign.status === 'paused' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                      {campaign.status}
+                    </span>
                   </div>
-                  <span className={`px-4 py-1 text-xs font-bold tracking-wide rounded-full border shadow-sm ${campaign.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                    {campaign.status}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-6">
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><Users size={14}/> Leads</p>
-                    <p className="text-3xl font-extrabold text-slate-800">{campaign.lead_count || 0}</p>
+
+                  <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><Users size={14}/> Leads</p>
+                      <p className="text-3xl font-extrabold text-slate-800">{campaign.lead_count || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><BarChart2 size={14}/> Sent</p>
+                      <p className="text-3xl font-extrabold text-slate-800">{campaign.sent_count || 0}</p>
+                    </div>
+                     <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm">Reply Rate</p>
+                      <p className="text-3xl font-extrabold text-green-600">{campaign.reply_rate || '0%'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><BarChart2 size={14}/> Sent</p>
-                    <p className="text-3xl font-extrabold text-slate-800">{campaign.sent_count || 0}</p>
+
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    {canStart && (
+                      <>
+                        <button
+                          data-testid={`start-campaign-${campaign.id}`}
+                          type="button"
+                          onClick={() => void handleStart(campaign.id)}
+                          disabled={!!actionState}
+                          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isActionPending(campaign.id, 'start') ? <LoaderCircle size={16} className="animate-spin" /> : <Play size={16} />}
+                          Start
+                        </button>
+                        <button
+                          data-testid={`preflight-campaign-${campaign.id}`}
+                          type="button"
+                          onClick={() => void handlePreflight(campaign.id)}
+                          disabled={!!actionState}
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isActionPending(campaign.id, 'preflight') ? <LoaderCircle size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
+                          Preflight
+                        </button>
+                      </>
+                    )}
+                    {canPause && (
+                      <button
+                        data-testid={`pause-campaign-${campaign.id}`}
+                        type="button"
+                        onClick={() => void handlePause(campaign.id)}
+                        disabled={!!actionState}
+                        className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isActionPending(campaign.id, 'pause') ? <LoaderCircle size={16} className="animate-spin" /> : <PauseGlyph />}
+                        Pause
+                      </button>
+                    )}
                   </div>
-                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm">Reply Rate</p>
-                    <p className="text-3xl font-extrabold text-green-600">{campaign.reply_rate || '0%'}</p>
-                  </div>
+
+                  {blockedMessage && (
+                    <div data-testid={`campaign-message-${campaign.id}`} className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                      {blockedMessage}
+                    </div>
+                  )}
+
+                  {preflight && (
+                    <div data-testid={`campaign-preflight-${campaign.id}`} className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-bold text-slate-700">Preflight: {preflight.status}</span>
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${preflight.blocked ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {preflight.blocked ? 'Blocked' : 'Ready'}
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {preflight.checks.map((check) => (
+                          <div key={check.name} className="rounded-lg bg-white px-3 py-2 text-sm text-slate-600 border border-slate-200">
+                            <span className="font-semibold text-slate-800">{check.name}</span>: {check.message}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
+  );
+}
+
+function PauseGlyph() {
+  return (
+    <span className="inline-flex gap-1">
+      <span className="h-3.5 w-1 rounded bg-current" />
+      <span className="h-3.5 w-1 rounded bg-current" />
+    </span>
   );
 }

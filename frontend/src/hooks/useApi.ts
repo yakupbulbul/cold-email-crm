@@ -4,7 +4,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 interface ApiOptions {
     method?: "GET" | "POST" | "PUT" | "DELETE";
-    body?: any;
+    body?: unknown;
     headers?: Record<string, string>;
 }
 
@@ -12,10 +12,10 @@ export function useApi() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const request = useCallback(async <T = any,>(endpoint: string, options: ApiOptions = {}): Promise<T | null> => {
+    const performRequest = useCallback(async <T = unknown,>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
         setLoading(true);
         setError(null);
-        
+
         try {
             const token = localStorage.getItem("token");
             const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
@@ -47,13 +47,24 @@ export function useApi() {
 
             const data = await res.json();
             return data as T;
-        } catch (err: any) {
-            setError(err.message || "An unexpected network error occurred");
-            return null;
+        } catch (err: unknown) {
+            const normalizedError = err instanceof Error ? err : new Error("An unexpected network error occurred");
+            setError(normalizedError.message);
+            throw normalizedError;
         } finally {
             setLoading(false);
         }
     }, []);
 
-    return { request, loading, error };
+    const request = useCallback(async <T = unknown,>(endpoint: string, options: ApiOptions = {}): Promise<T | null> => {
+        try {
+            return await performRequest<T>(endpoint, options);
+        } catch {
+            return null;
+        }
+    }, [performRequest]);
+
+    const requestOrThrow = useCallback(async <T = unknown,>(endpoint: string, options: ApiOptions = {}): Promise<T> => performRequest<T>(endpoint, options), [performRequest]);
+
+    return { request, requestOrThrow, loading, error };
 }

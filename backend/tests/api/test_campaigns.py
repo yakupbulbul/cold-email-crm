@@ -1,7 +1,7 @@
 """test_campaigns.py — Campaign API + preflight tests."""
 import pytest
 from fastapi.testclient import TestClient
-from app.models.campaign import CampaignLead, Contact
+from app.models.campaign import Campaign, CampaignLead, Contact
 
 
 def test_list_campaigns_returns_200_or_401(client: TestClient):
@@ -123,7 +123,14 @@ def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_hea
         headers=auth_headers,
     )
 
-    contact = Contact(email="lead@example.com", first_name="Lead", verification_score=100, is_suppressed=False)
+    contact = Contact(
+        email="lead@example.com",
+        first_name="Lead",
+        email_status="valid",
+        verification_score=100,
+        verification_integrity="high",
+        is_suppressed=False,
+    )
     db.add(contact)
     db.commit()
     db.refresh(contact)
@@ -135,3 +142,43 @@ def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_hea
     payload = resp.json()
     assert payload["job_queued"] is True
     assert payload["eligible_leads"] == 1
+
+
+def test_pause_campaign_updates_status(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-pause.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-pause.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Pause Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    campaign.status = "active"
+    db.commit()
+
+    resp = client.post(f"/api/v1/campaigns/{campaign_id}/pause", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "paused"
+
+    paused_campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    assert paused_campaign.status == "paused"
