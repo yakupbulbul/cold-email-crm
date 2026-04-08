@@ -57,6 +57,7 @@ class Mailbox(Base):
     current_warmup_stage = Column(Integer, default=1)
     
     status = Column(String, default="active")
+    remote_mailcow_provisioned = Column(Boolean, default=False, nullable=False)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

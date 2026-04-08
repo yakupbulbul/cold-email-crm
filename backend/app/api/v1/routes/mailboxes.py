@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
+
 from app.core.config import settings
 from app.core.database import get_db
+from app.integrations.mailcow.client import MailcowClient
 from app.models.core import Mailbox, Domain
 
 router = APIRouter()
@@ -41,6 +43,8 @@ class MailboxResponse(BaseModel):
     daily_send_limit: int
     current_warmup_stage: int
     status: str
+    remote_mailcow_provisioned: bool
+    provisioning_mode: str
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -62,6 +66,8 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "daily_send_limit": mb.daily_send_limit,
         "current_warmup_stage": mb.current_warmup_stage,
         "status": mb.status,
+        "remote_mailcow_provisioned": mb.remote_mailcow_provisioned,
+        "provisioning_mode": "mailcow_synced" if mb.remote_mailcow_provisioned else "local_only",
         "created_at": str(mb.created_at) if mb.created_at else None,
         "updated_at": str(mb.updated_at) if mb.updated_at else None,
     }
@@ -85,6 +91,57 @@ def resolve_mailbox_connection_defaults(req: MailboxCreate) -> dict:
         "imap_username": req.imap_username or req.email,
     }
 
+
+def validate_mailbox_email_for_domain(req: MailboxCreate, domain: Domain) -> None:
+    local_part, separator, email_domain = req.email.strip().lower().partition("@")
+    if not separator or not local_part or email_domain != domain.name.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Mailbox email must belong to the selected domain.",
+        )
+
+
+def ensure_remote_mailcow_mailbox(
+    *,
+    req: MailboxCreate,
+    domain: Domain,
+) -> None:
+    client = MailcowClient()
+    if not client.configured:
+        raise HTTPException(
+            status_code=424,
+            detail="Mailcow mutations are enabled but the Mailcow API is not configured.",
+        )
+
+    domain_result = client.lookup_domain(domain.name)
+    if domain_result.status == "not_found":
+        raise HTTPException(status_code=409, detail="Selected domain does not exist in remote Mailcow.")
+    if domain_result.status == "unauthorized":
+        raise HTTPException(status_code=502, detail="Mailcow rejected the configured credentials.")
+    if domain_result.status == "unreachable":
+        raise HTTPException(status_code=502, detail="Mailcow is unreachable from the backend environment.")
+    if domain_result.status not in {"verified"}:
+        raise HTTPException(status_code=502, detail="Mailcow returned an unexpected domain verification response.")
+
+    provision_result = client.create_mailbox(
+        email=req.email.strip().lower(),
+        display_name=req.display_name.strip(),
+        password=req.smtp_password,
+    )
+    if provision_result.created:
+        return
+    if provision_result.reason == "mailbox_exists":
+        raise HTTPException(status_code=409, detail="Mailbox already exists in remote Mailcow.")
+    if provision_result.reason == "domain_missing":
+        raise HTTPException(status_code=409, detail="Selected domain does not exist in remote Mailcow.")
+    if provision_result.reason == "unauthorized":
+        raise HTTPException(status_code=502, detail="Mailcow rejected the configured credentials.")
+    if provision_result.reason == "unreachable":
+        raise HTTPException(status_code=502, detail="Mailcow is unreachable from the backend environment.")
+    if provision_result.reason == "misconfigured":
+        raise HTTPException(status_code=424, detail="Mailcow mutations are enabled but the Mailcow API is not configured.")
+    raise HTTPException(status_code=502, detail="Mailcow returned an unexpected mailbox provisioning response.")
+
 @router.get("/")
 @router.get("")  # Handle both /mailboxes and /mailboxes/ without redirect
 def list_mailboxes(db: Session = Depends(get_db)):
@@ -98,6 +155,8 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
     domain = db.query(Domain).filter(Domain.id == req.domain_id).first()
     if not domain:
         raise HTTPException(status_code=400, detail="Domain not found")
+
+    validate_mailbox_email_for_domain(req, domain)
     
     existing = db.query(Mailbox).filter(Mailbox.email == req.email).first()
     if existing:
@@ -105,12 +164,15 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
     
     connection_defaults = resolve_mailbox_connection_defaults(req)
 
-    # Safe mode keeps mailbox creation local-only unless a future explicit
-    # Mailcow provisioning path is enabled server-side.
+    remote_mailcow_provisioned = False
+    if settings.MAILCOW_ENABLE_MUTATIONS:
+        ensure_remote_mailcow_mailbox(req=req, domain=domain)
+        remote_mailcow_provisioned = True
+
     mailbox = Mailbox(
         domain_id=req.domain_id,
-        email=req.email,
-        display_name=req.display_name,
+        email=req.email.strip().lower(),
+        display_name=req.display_name.strip(),
         smtp_host=connection_defaults["smtp_host"],
         smtp_port=connection_defaults["smtp_port"],
         smtp_username=connection_defaults["smtp_username"],
@@ -120,6 +182,7 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
         imap_username=connection_defaults["imap_username"],
         imap_password_encrypted=req.imap_password,  # TODO: encrypt at rest
         daily_send_limit=req.daily_send_limit,
+        remote_mailcow_provisioned=remote_mailcow_provisioned,
     )
     db.add(mailbox)
     db.commit()
