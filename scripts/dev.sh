@@ -18,15 +18,25 @@ set +a
 : "${FRONTEND_PORT:=3000}"
 : "${NODE_OPTIONS:=--max-old-space-size=1024}"
 : "${DEV_LOG_DIR:=tmp/dev-logs}"
+: "${DEV_PID_DIR:=tmp/dev-pids}"
 : "${NEXT_DEV_BUNDLER:=webpack}"
 : "${UVICORN_LOG_LEVEL:=warning}"
 : "${CELERY_LOGLEVEL:=warning}"
 : "${CELERY_WORKER_CONCURRENCY:=1}"
 : "${CELERY_WORKER_POOL:=solo}"
+: "${BACKEND_RELOAD:=auto}"
 
 BACKGROUND_WORKERS_ENABLED_VALUE=false
 if [[ "${MODE}" == "full" ]]; then
   BACKGROUND_WORKERS_ENABLED_VALUE=true
+fi
+
+if [[ "${BACKEND_RELOAD}" == "auto" ]]; then
+  if [[ "${MODE}" == "full" ]]; then
+    BACKEND_RELOAD=false
+  else
+    BACKEND_RELOAD=true
+  fi
 fi
 
 if [[ ! -x backend/.venv/bin/python ]]; then
@@ -39,16 +49,53 @@ if [[ ! -d frontend/node_modules ]]; then
   exit 1
 fi
 
-trap 'kill 0' EXIT INT TERM
 mkdir -p "${DEV_LOG_DIR}"
+mkdir -p "${DEV_PID_DIR}"
 
 BACKEND_LOG="${DEV_LOG_DIR}/backend.log"
 FRONTEND_LOG="${DEV_LOG_DIR}/frontend.log"
 WORKER_LOG="${DEV_LOG_DIR}/worker.log"
 BEAT_LOG="${DEV_LOG_DIR}/beat.log"
+BACKEND_PID_FILE="${DEV_PID_DIR}/backend.pid"
+FRONTEND_PID_FILE="${DEV_PID_DIR}/frontend.pid"
+WORKER_PID_FILE="${DEV_PID_DIR}/worker.pid"
+BEAT_PID_FILE="${DEV_PID_DIR}/beat.pid"
+
+cleanup_pid_file() {
+  local pid_file="$1"
+  if [[ -f "${pid_file}" ]]; then
+    local existing_pid
+    existing_pid="$(<"${pid_file}")"
+    if [[ -n "${existing_pid}" ]] && kill -0 "${existing_pid}" 2>/dev/null; then
+      kill "${existing_pid}" 2>/dev/null || true
+      sleep 1
+      kill -9 "${existing_pid}" 2>/dev/null || true
+    fi
+    rm -f "${pid_file}"
+  fi
+}
+
+cleanup_managed_processes() {
+  cleanup_pid_file "${BACKEND_PID_FILE}"
+  cleanup_pid_file "${FRONTEND_PID_FILE}"
+  cleanup_pid_file "${WORKER_PID_FILE}"
+  cleanup_pid_file "${BEAT_PID_FILE}"
+}
+
+cleanup_children() {
+  cleanup_managed_processes
+}
+
+trap cleanup_children EXIT INT TERM
+cleanup_managed_processes
+
+BACKEND_CMD=(../backend/.venv/bin/python -m uvicorn app.main:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --log-level "${UVICORN_LOG_LEVEL}")
+if [[ "${BACKEND_RELOAD}" == "true" ]]; then
+  BACKEND_CMD=(../backend/.venv/bin/python -m uvicorn app.main:app --reload --reload-dir app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --log-level "${UVICORN_LOG_LEVEL}")
+fi
 
 echo "Starting host development mode: ${MODE}"
-echo "Backend:  ../backend/.venv/bin/python -m uvicorn app.main:app --reload --reload-dir app --host ${BACKEND_HOST} --port ${BACKEND_PORT} --log-level ${UVICORN_LOG_LEVEL}"
+echo "Backend:  ${BACKEND_CMD[*]}"
 echo "Frontend: cd frontend && NODE_OPTIONS='${NODE_OPTIONS}' npm run dev -- --${NEXT_DEV_BUNDLER} --hostname 0.0.0.0 --port ${FRONTEND_PORT}"
 echo "Worker:   cd backend && ../backend/.venv/bin/python -m celery -A app.workers.celery_app worker --loglevel=${CELERY_LOGLEVEL} --pool=${CELERY_WORKER_POOL} --concurrency=${CELERY_WORKER_CONCURRENCY}"
 echo "Beat:     cd backend && ../backend/.venv/bin/python -m celery -A app.workers.celery_app beat --loglevel=${CELERY_LOGLEVEL}"
@@ -61,19 +108,22 @@ echo "Logs:     ${BACKEND_LOG} ${FRONTEND_LOG} ${WORKER_LOG} ${BEAT_LOG}"
 
 (
   cd backend
-  BACKGROUND_WORKERS_ENABLED="${BACKGROUND_WORKERS_ENABLED_VALUE}" ../backend/.venv/bin/python -m uvicorn app.main:app --reload --reload-dir app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --log-level "${UVICORN_LOG_LEVEL}" >> "../${BACKEND_LOG}" 2>&1
+  BACKGROUND_WORKERS_ENABLED="${BACKGROUND_WORKERS_ENABLED_VALUE}" "${BACKEND_CMD[@]}" >> "../${BACKEND_LOG}" 2>&1
 ) &
+echo $! > "${BACKEND_PID_FILE}"
 
 if [[ "${MODE}" == "full" ]]; then
   (
     cd backend
     BACKGROUND_WORKERS_ENABLED=true ../backend/.venv/bin/python -m celery -A app.workers.celery_app worker --loglevel="${CELERY_LOGLEVEL}" --pool="${CELERY_WORKER_POOL}" --concurrency="${CELERY_WORKER_CONCURRENCY}" >> "../${WORKER_LOG}" 2>&1
   ) &
+  echo $! > "${WORKER_PID_FILE}"
 
   (
     cd backend
     BACKGROUND_WORKERS_ENABLED=true ../backend/.venv/bin/python -m celery -A app.workers.celery_app beat --loglevel="${CELERY_LOGLEVEL}" >> "../${BEAT_LOG}" 2>&1
   ) &
+  echo $! > "${BEAT_PID_FILE}"
 else
   echo "Lean mode leaves workers disabled. Use 'make dev-full' to run worker and beat."
 fi
@@ -82,6 +132,7 @@ fi
   cd frontend
   NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS="${NODE_OPTIONS}" npm run dev -- --"${NEXT_DEV_BUNDLER}" --hostname 0.0.0.0 --port "${FRONTEND_PORT}" >> "../${FRONTEND_LOG}" 2>&1
 ) &
+echo $! > "${FRONTEND_PID_FILE}"
 
 sleep 2
 echo "Ready checks:"
