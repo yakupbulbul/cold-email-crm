@@ -1,12 +1,11 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Plus, Globe, Mail, Edit2, Trash2, ServerCrash } from 'lucide-react';
+import { Plus, Mail, Edit2, Trash2, ServerCrash } from 'lucide-react';
 import { useApiService } from '@/services/api';
 import { Domain, Mailbox } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
 
 export default function MailboxesPage() {
-  const [activeTab, setActiveTab] = useState('mailboxes');
   const { getMailboxes, getDomains, createMailbox, updateMailbox, deleteMailbox, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -141,23 +140,7 @@ export default function MailboxesPage() {
         <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Infrastructure</h1>
       </div>
 
-      <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 w-fit shadow-sm">
-        <button 
-          className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'mailboxes' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-          onClick={() => setActiveTab('mailboxes')}
-        >
-          Mailboxes
-        </button>
-        <button 
-          className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${activeTab === 'domains' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-          onClick={() => setActiveTab('domains')}
-        >
-          Domains
-        </button>
-      </div>
-
-      {activeTab === 'mailboxes' ? (
-        <form onSubmit={handleCreateMailbox} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 grid gap-4 md:grid-cols-2">
+      <form onSubmit={handleCreateMailbox} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="mailbox-domain" className="block text-sm font-semibold text-slate-700 mb-2">Domain</label>
             <select id="mailbox-domain" data-testid="mailbox-domain-select" value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
@@ -185,12 +168,7 @@ export default function MailboxesPage() {
               <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add Mailbox'}
             </button>
           </div>
-        </form>
-      ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 text-sm text-slate-600">
-          Domain onboarding now lives on the dedicated <a href="/domains" className="font-semibold text-blue-600 hover:underline">Domains</a> page so Mailcow and DNS readiness stay visible.
-        </div>
-      )}
+      </form>
 
       {error ? (
          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center mt-6">
@@ -205,7 +183,7 @@ export default function MailboxesPage() {
          <div className="flex justify-center items-center py-16 bg-white rounded-2xl border border-slate-200 shadow-sm mt-6">
             <Spinner size="lg" />
          </div>
-      ) : activeTab === 'mailboxes' && mailboxes.length > 0 ? (
+      ) : mailboxes.length > 0 ? (
         <div className="space-y-4">
           {actionError && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -328,15 +306,15 @@ export default function MailboxesPage() {
           </table>
         </div>
         </div>
-      ) : activeTab === 'mailboxes' ? (
+      ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col items-center justify-center p-16">
            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-slate-100">
-             <Globe className="text-slate-300" size={32} />
+             <Mail className="text-slate-300" size={32} />
            </div>
            <h3 className="text-xl font-bold text-slate-800 mb-2">No Mailboxes Found</h3>
            <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">Use the form above to add the first local mailbox for a verified or local-only domain.</p>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
