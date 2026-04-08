@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:frontend": "eslint src/app/signin/page.tsx src/app/login/page.tsx src/components/AppLayout.tsx src/context/AuthContext.tsx tests/e2e/auth.spec.ts tests/e2e/auth.setup.ts",
+    "test:frontend": "eslint src/app/signin/page.tsx src/app/login/page.tsx src/app/settings/page.tsx src/components/AppLayout.tsx src/context/AuthContext.tsx src/services/api.ts src/types/models.ts tests/e2e/auth.spec.ts tests/e2e/auth.setup.ts tests/e2e/settings.spec.ts tests/e2e/ops.spec.ts tests/e2e/empty_error_states.spec.ts tests/e2e/boundary_security.spec.ts tests/utils/auth.ts tests/utils/env.ts",
     "test:e2e": "playwright test --reporter=list"
   },
   "dependencies": {

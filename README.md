@@ -239,7 +239,7 @@ make test-infra-down
 
 ### Frontend
 
-Focused frontend auth/runtime checks:
+Lint and typed frontend test sources:
 
 ```bash
 make test-frontend
@@ -250,6 +250,61 @@ Playwright E2E:
 ```bash
 make test-e2e
 ```
+
+Focused milestone suites:
+
+```bash
+make test-api
+make test-e2e-auth
+make test-e2e-ops
+make test-e2e-empty
+make test-e2e-boundary
+make test-smoke
+```
+
+### Performance / k6
+
+The repo now includes env-driven k6 suites under [performance/k6](/Users/yakupbulbul/Documents/codex/cold-mail/performance/k6):
+
+- `smoke`: auth, domains, mailboxes, ops health
+- `load`: sustained list/settings/health traffic
+- `stress`: list + readiness pressure
+- `soak`: auth/session and health stability
+
+Install k6 locally first, for example:
+
+```bash
+brew install k6
+```
+
+Then run:
+
+```bash
+make test-load-smoke
+make test-load-load
+make test-load-stress
+make test-load-soak
+make test-load
+```
+
+All k6 suites are env-driven and use only safe read-only endpoints. They do not trigger Mailcow mutations.
+
+### Release Readiness
+
+Use the release-readiness workflow to run the milestone checks as one pass:
+
+```bash
+make test-release
+```
+
+This runs:
+
+- auth / route protection coverage
+- ops / settings coverage
+- empty / error-state coverage
+- boundary / secret-safety coverage
+- backend API suite
+- k6 smoke checks
 
 ## Troubleshooting
 

@@ -7,10 +7,14 @@ COMPOSE := docker compose --env-file $(ENV_FILE)
 PYTHON_BIN := backend/.venv/bin/python
 PIP_BIN := backend/.venv/bin/pip
 NPM_BIN := npm
+K6_BIN := k6
 
 .PHONY: help setup up down logs migrate bootstrap-admin seed dev dev-full \
 	test reset full-up full-down test-infra-up test-infra-down \
-	test-backend test-frontend test-e2e smoke check-env check-docker host-check
+	test-backend test-frontend test-e2e test-api test-load test-smoke test-full \
+	test-e2e-auth test-e2e-ops test-e2e-empty test-e2e-boundary \
+	test-load-smoke test-load-load test-load-stress test-load-soak \
+	test-release smoke check-env check-docker host-check
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -56,17 +60,52 @@ dev-full: check-env host-check ## Run frontend, backend, worker, and scheduler o
 
 test: test-backend test-frontend test-e2e ## Run the local validation suite
 
+test-api: test-backend ## Alias for backend/API milestone coverage
+
 test-backend: check-env ## Run backend tests against the test infra
 	@/bin/zsh -lc 'set -a; source $(ENV_FILE); source .env.test.local 2>/dev/null || true; set +a; cd backend && ../$(PYTHON_BIN) -m pytest tests/api tests/integration -v'
 
 test-frontend: check-env ## Run frontend lint checks
-	cd frontend && $(NPM_BIN) run test:frontend
+	cd frontend && PATH=/opt/homebrew/bin:$$PATH $(NPM_BIN) run test:frontend
 
 test-e2e: check-env ## Run Playwright end-to-end tests
-	cd frontend && $(NPM_BIN) run test:e2e
+	cd frontend && PATH=/opt/homebrew/bin:$$PATH $(NPM_BIN) run test:e2e
+
+test-e2e-auth: check-env ## Run Playwright auth and route protection coverage
+	cd frontend && PATH=/opt/homebrew/bin:$$PATH PLAYWRIGHT_BASE_URL=$${FRONTEND_URL:-http://localhost:3010} npx playwright test tests/e2e/auth.spec.ts --project=chromium --reporter=list
+
+test-e2e-ops: check-env ## Run Playwright ops and settings coverage
+	cd frontend && PATH=/opt/homebrew/bin:$$PATH PLAYWRIGHT_BASE_URL=$${FRONTEND_URL:-http://localhost:3010} npx playwright test tests/e2e/ops.spec.ts tests/e2e/settings.spec.ts --project=chromium --reporter=list
+
+test-e2e-empty: check-env ## Run Playwright empty and error-state coverage
+	cd frontend && PATH=/opt/homebrew/bin:$$PATH PLAYWRIGHT_BASE_URL=$${FRONTEND_URL:-http://localhost:3010} npx playwright test tests/e2e/empty_error_states.spec.ts --project=chromium --reporter=list
+
+test-e2e-boundary: check-env ## Run Playwright boundary and secret-safety coverage
+	cd frontend && PATH=/opt/homebrew/bin:$$PATH PLAYWRIGHT_BASE_URL=$${FRONTEND_URL:-http://localhost:3010} npx playwright test tests/e2e/boundary_security.spec.ts --project=chromium --reporter=list
+
+test-smoke: smoke test-e2e-auth ## Run lightweight local smoke checks
+
+test-load: test-load-smoke test-load-load ## Run the main k6 milestone suites
+
+test-load-smoke: check-env ## Run k6 smoke checks
+	@/bin/zsh -lc 'if ! command -v $(K6_BIN) >/dev/null 2>&1; then echo "Missing k6. Install it first, for example: brew install k6"; exit 1; fi; set -a; source $(ENV_FILE); set +a; K6_BASE_URL="$${BACKEND_URL}" K6_ADMIN_EMAIL="$${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}" K6_ADMIN_PASSWORD="$${BOOTSTRAP_ADMIN_PASSWORD}" $(K6_BIN) run performance/k6/smoke/api_smoke.js'
+
+test-load-load: check-env ## Run k6 sustained load checks
+	@/bin/zsh -lc 'if ! command -v $(K6_BIN) >/dev/null 2>&1; then echo "Missing k6. Install it first, for example: brew install k6"; exit 1; fi; set -a; source $(ENV_FILE); set +a; K6_BASE_URL="$${BACKEND_URL}" K6_ADMIN_EMAIL="$${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}" K6_ADMIN_PASSWORD="$${BOOTSTRAP_ADMIN_PASSWORD}" $(K6_BIN) run performance/k6/load/api_load.js'
+
+test-load-stress: check-env ## Run k6 stress checks
+	@/bin/zsh -lc 'if ! command -v $(K6_BIN) >/dev/null 2>&1; then echo "Missing k6. Install it first, for example: brew install k6"; exit 1; fi; set -a; source $(ENV_FILE); set +a; K6_BASE_URL="$${BACKEND_URL}" K6_ADMIN_EMAIL="$${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}" K6_ADMIN_PASSWORD="$${BOOTSTRAP_ADMIN_PASSWORD}" $(K6_BIN) run performance/k6/stress/api_stress.js'
+
+test-load-soak: check-env ## Run k6 soak checks
+	@/bin/zsh -lc 'if ! command -v $(K6_BIN) >/dev/null 2>&1; then echo "Missing k6. Install it first, for example: brew install k6"; exit 1; fi; set -a; source $(ENV_FILE); set +a; K6_BASE_URL="$${BACKEND_URL}" K6_ADMIN_EMAIL="$${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}" K6_ADMIN_PASSWORD="$${BOOTSTRAP_ADMIN_PASSWORD}" $(K6_BIN) run performance/k6/soak/api_soak.js'
+
+test-full: test-backend test-frontend test-e2e test-load ## Run the full milestone test stack
+
+test-release: check-env ## Run the release-readiness milestone workflow
+	./scripts/test_release_readiness.sh
 
 smoke: check-env ## Run local backend connectivity smoke checks
-	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; curl -fsS "$${BACKEND_URL}/api/v1/health" && echo && curl -fsS "$${BACKEND_URL}/api/v1/health/db" && echo && curl -fsS "$${BACKEND_URL}/api/v1/health/redis" && echo'
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; curl -fsS "$${BACKEND_URL}/api/v1/health/" && echo && curl -fsS "$${BACKEND_URL}/api/v1/health/db" && echo && curl -fsS "$${BACKEND_URL}/api/v1/health/redis" && echo'
 
 reset: check-env check-docker ## Recreate local Postgres and Redis volumes
 	$(COMPOSE) down -v --remove-orphans
