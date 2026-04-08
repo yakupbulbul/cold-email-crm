@@ -23,9 +23,9 @@ function getBootstrapEnvValue(key: string): string | undefined {
   return undefined;
 }
 
-test("login succeeds with valid credentials and redirects to dashboard", async ({ page }) => {
-  // Clear stored auth to test fresh login
-  await page.context().clearCookies();
+test("login succeeds with valid credentials and redirects to dashboard", async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await ctx.newPage();
   await page.goto("/signin");
   await page.waitForLoadState("networkidle");
 
@@ -43,6 +43,7 @@ test("login succeeds with valid credentials and redirects to dashboard", async (
 
   await page.waitForURL((url) => !url.pathname.includes("/signin"), { timeout: 10_000 });
   expect(page.url()).not.toContain("/signin");
+  await ctx.close();
 });
 
 test("protected route redirects unauthenticated user to login", async ({ browser }) => {
