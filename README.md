@@ -38,6 +38,8 @@ Required local values:
 
 - `SECRET_KEY`
 - `BOOTSTRAP_ADMIN_PASSWORD`
+- `POSTGRES_PORT`
+- `REDIS_PORT`
 - `POSTGRES_URL`
 - `REDIS_URL`
 - `ALLOWED_ORIGINS`
@@ -64,6 +66,11 @@ make up
 ```
 
 This starts only local Postgres and Redis for hybrid development.
+
+The tracked defaults use dedicated Docker host ports so the app does not silently connect to another local Postgres or Redis instance:
+
+- Postgres: `127.0.0.1:55432`
+- Redis: `127.0.0.1:56379`
 
 ### 4. Run migrations and bootstrap local access
 
