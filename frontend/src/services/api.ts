@@ -7,6 +7,8 @@ import {
     LeadVerificationResult,
     CampaignActionResult,
     CampaignPreflightResult,
+    LeadList,
+    LeadListLeadResponse,
 } from "@/types/models";
 
 type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
@@ -45,6 +47,16 @@ type CampaignUpdatePayload = {
     template_subject: string;
     template_body: string;
     daily_limit: number;
+};
+
+type LeadListCreatePayload = {
+    name: string;
+    description?: string;
+};
+
+type LeadListUpdatePayload = {
+    name?: string;
+    description?: string;
 };
 
 /**
@@ -104,6 +116,20 @@ export function useApiService() {
     const getThreads = useCallback(() => request<Thread[]>("/inbox/threads"), [request]);
     const getMessages = useCallback((threadId: string) => request<Message[]>(`/inbox/threads/${threadId}/messages`), [request]);
 
+    // ── LISTS ──
+    const getLists = useCallback(() => request<LeadList[]>("/lists"), [request]);
+    const getListById = useCallback((id: string) => request<LeadList>(`/lists/${id}`), [request]);
+    const getListLeads = useCallback((id: string) => request<LeadListLeadResponse>(`/lists/${id}/leads`), [request]);
+    const createList = useCallback((data: LeadListCreatePayload) => requestOrThrow<LeadList>("/lists", { method: "POST", body: data }), [requestOrThrow]);
+    const updateList = useCallback((id: string, data: LeadListUpdatePayload) => requestOrThrow<LeadList>(`/lists/${id}`, { method: "PATCH", body: data }), [requestOrThrow]);
+    const deleteList = useCallback((id: string) => requestOrThrow<{ status: string; id: string }>(`/lists/${id}`, { method: "DELETE" }), [requestOrThrow]);
+    const addLeadToList = useCallback((listId: string, leadId: string) => requestOrThrow<LeadList>(`/lists/${listId}/leads`, { method: "POST", body: { lead_id: leadId } }), [requestOrThrow]);
+    const addLeadsToListBulk = useCallback((listId: string, leadIds: string[]) => requestOrThrow<LeadList>(`/lists/${listId}/leads/bulk`, { method: "POST", body: { lead_ids: leadIds } }), [requestOrThrow]);
+    const removeLeadFromList = useCallback((listId: string, leadId: string) => requestOrThrow<{ status: string; list_id: string; lead_id: string }>(`/lists/${listId}/leads/${leadId}`, { method: "DELETE" }), [requestOrThrow]);
+    const getCampaignLists = useCallback((campaignId: string) => request<CampaignListSummary>(`/campaigns/${campaignId}/lists`), [request]);
+    const attachListToCampaign = useCallback((campaignId: string, listId: string) => requestOrThrow<CampaignListSummary>(`/campaigns/${campaignId}/lists`, { method: "POST", body: { list_id: listId } }), [requestOrThrow]);
+    const removeListFromCampaign = useCallback((campaignId: string, listId: string) => requestOrThrow<CampaignListSummary>(`/campaigns/${campaignId}/lists/${listId}`, { method: "DELETE" }), [requestOrThrow]);
+
     return {
         loading,
         error,
@@ -123,6 +149,18 @@ export function useApiService() {
         verifyLead,
         verifyLeadsBulk,
         getLeadVerificationJob,
+        getLists,
+        getListById,
+        getListLeads,
+        createList,
+        updateList,
+        deleteList,
+        addLeadToList,
+        addLeadsToListBulk,
+        removeLeadFromList,
+        getCampaignLists,
+        attachListToCampaign,
+        removeListFromCampaign,
         getSuppressionList,
         addSuppression,
         deleteSuppression,

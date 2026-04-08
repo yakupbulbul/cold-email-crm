@@ -16,12 +16,43 @@ test("campaign cards expose activation controls and show honest lean-mode start 
         lead_count: 0,
         sent_count: 0,
         reply_rate: "0%",
+        lists_summary: {
+          lead_count: 0,
+          reachable_count: 0,
+          risky_count: 0,
+          invalid_count: 0,
+          suppressed_count: 0,
+          status_counts: {},
+          lists: [],
+        },
       },
     ];
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
   });
   await page.route("**/api/v1/mailboxes", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: "list-1",
+          name: "Verified High Score",
+          description: "Reusable list",
+          type: "static",
+          created_at: "2026-04-08T10:00:00Z",
+          updated_at: "2026-04-08T10:00:00Z",
+          lead_count: 5,
+          reachable_count: 4,
+          risky_count: 1,
+          invalid_count: 0,
+          suppressed_count: 0,
+          status_counts: { valid: 4, risky: 1 },
+        },
+      ]),
+    });
   });
   await page.route(`**/api/v1/campaigns/${campaignId}/start`, async (route) => {
     await route.fulfill({
@@ -39,6 +70,7 @@ test("campaign cards expose activation controls and show honest lean-mode start 
   await expect(card).toBeVisible();
   await expect(card.getByRole("button", { name: "Start" })).toBeVisible();
   await expect(card.getByRole("button", { name: "Preflight" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Attach list" })).toBeVisible();
   await card.getByRole("button", { name: "Start" }).click();
   await expect(card.locator('[data-testid^="campaign-message-"]')).toContainText("make dev or make dev-full");
 });
@@ -60,11 +92,23 @@ test("active campaigns show pause and update status after pause succeeds", async
         lead_count: 3,
         sent_count: 1,
         reply_rate: "0%",
+        lists_summary: {
+          lead_count: 3,
+          reachable_count: 3,
+          risky_count: 0,
+          invalid_count: 0,
+          suppressed_count: 0,
+          status_counts: { valid: 3 },
+          lists: [],
+        },
       },
     ];
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
   });
   await page.route("**/api/v1/mailboxes", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/lists", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
   });
   await page.route(`**/api/v1/campaigns/${campaignId}/pause`, async (route) => {
@@ -98,6 +142,15 @@ test("campaign cards can be edited and saved", async ({ page }) => {
     lead_count: 0,
     sent_count: 0,
     reply_rate: "0%",
+    lists_summary: {
+      lead_count: 0,
+      reachable_count: 0,
+      risky_count: 0,
+      invalid_count: 0,
+      suppressed_count: 0,
+      status_counts: {},
+      lists: [],
+    },
   };
 
   await page.route("**/api/v1/campaigns", async (route) => {
@@ -120,6 +173,9 @@ test("campaign cards can be edited and saved", async ({ page }) => {
         },
       ]),
     });
+  });
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
   });
   await page.route(`**/api/v1/campaigns/${campaignId}`, async (route) => {
     const payload = JSON.parse(route.request().postData() || "{}");
@@ -147,4 +203,105 @@ test("campaign cards can be edited and saved", async ({ page }) => {
   await expect(page.getByText("Campaign Updated Campaign updated.")).toBeVisible();
   await expect(card).toContainText("Updated Campaign");
   await expect(card).toContainText("40");
+});
+
+test("campaigns can attach reusable lists and show deduplicated summary", async ({ page }) => {
+  const campaignId = "44444444-4444-4444-4444-444444444444";
+  let attached = false;
+
+  await page.route("**/api/v1/campaigns", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: campaignId,
+          name: "List Driven Campaign",
+          status: "draft",
+          mailbox_id: "33333333-3333-3333-3333-333333333333",
+          template_subject: "Subject",
+          template_body: "Body",
+          daily_limit: 25,
+          created_at: "2026-04-08T10:00:00Z",
+          lead_count: attached ? 2 : 0,
+          sent_count: 0,
+          reply_rate: "0%",
+          lists_summary: {
+            lead_count: attached ? 2 : 0,
+            reachable_count: attached ? 1 : 0,
+            risky_count: attached ? 1 : 0,
+            invalid_count: 0,
+            suppressed_count: 0,
+            status_counts: attached ? { valid: 1, risky: 1 } : {},
+            lists: attached ? [{
+              id: "list-1",
+              name: "April Outreach Batch",
+              description: "Reusable list",
+              type: "static",
+              created_at: "2026-04-08T10:00:00Z",
+              updated_at: "2026-04-08T10:00:00Z",
+              lead_count: 2,
+              reachable_count: 1,
+              risky_count: 1,
+              invalid_count: 0,
+              suppressed_count: 0,
+              status_counts: { valid: 1, risky: 1 },
+            }] : [],
+          },
+        },
+      ]),
+    });
+  });
+  await page.route("**/api/v1/mailboxes", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: "list-1",
+          name: "April Outreach Batch",
+          description: "Reusable list",
+          type: "static",
+          created_at: "2026-04-08T10:00:00Z",
+          updated_at: "2026-04-08T10:00:00Z",
+          lead_count: 2,
+          reachable_count: 1,
+          risky_count: 1,
+          invalid_count: 0,
+          suppressed_count: 0,
+          status_counts: { valid: 1, risky: 1 },
+        },
+      ]),
+    });
+  });
+  await page.route(`**/api/v1/campaigns/${campaignId}/lists`, async (route) => {
+    attached = true;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        lead_count: 2,
+        reachable_count: 1,
+        risky_count: 1,
+        invalid_count: 0,
+        suppressed_count: 0,
+        status_counts: { valid: 1, risky: 1 },
+        lists: [],
+      }),
+    });
+  });
+
+  await page.goto("/campaigns");
+
+  const card = page.getByTestId(`campaign-card-${campaignId}`);
+  await card.getByRole("combobox").last().selectOption("list-1");
+  await card.getByRole("button", { name: "Attach list" }).click();
+
+  await expect(page.getByText("List attached to campaign.")).toBeVisible();
+  await expect(card).toContainText("April Outreach Batch");
+  await expect(card).toContainText("Deduped leads");
+  await expect(card).toContainText("2");
 });

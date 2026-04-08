@@ -3,6 +3,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.models.monitoring import JobLog
+from app.models.lists import LeadList, LeadListMember
 from app.models.verification import EmailVerificationLog
 
 
@@ -11,6 +12,24 @@ def test_list_contacts_supports_both_root_paths(client: TestClient, auth_headers
     resp_with_slash = client.get("/api/v1/leads/", headers=auth_headers)
     assert resp_without_slash.status_code == 200
     assert resp_with_slash.status_code == 200
+
+
+def test_list_contacts_includes_persisted_list_membership(client: TestClient, auth_headers: dict, db, contact_factory):
+    lead = contact_factory(email="person@example.com")
+    lead_list = LeadList(name="Verified High Score", description="Reusable list", type="static")
+    db.add(lead_list)
+    db.commit()
+    db.refresh(lead_list)
+
+    db.add(LeadListMember(list_id=lead_list.id, lead_id=lead.id))
+    db.commit()
+
+    resp = client.get("/api/v1/leads", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    row = next(item for item in payload if item["id"] == str(lead.id))
+    assert row["list_ids"] == [str(lead_list.id)]
+    assert row["list_names"] == ["Verified High Score"]
 
 
 def test_single_lead_verification_persists_real_status(client: TestClient, auth_headers: dict, db, contact_factory):

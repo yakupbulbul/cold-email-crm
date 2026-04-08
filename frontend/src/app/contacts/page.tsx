@@ -7,6 +7,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
+  ListPlus,
   LoaderCircle,
   MailCheck,
   ShieldAlert,
@@ -18,7 +19,7 @@ import {
 import Table, { TableCell, TableRow } from "@/components/ui/Table";
 import Spinner from "@/components/ui/Spinner";
 import { useApiService } from "@/services/api";
-import { Contact, LeadVerificationResult } from "@/types/models";
+import { Contact, LeadList, LeadVerificationResult } from "@/types/models";
 
 type BulkState = {
   jobId: string;
@@ -111,6 +112,9 @@ export default function ContactsPage() {
   const sourceJobId = searchParams.get("source_job");
   const {
     getLeads,
+    getLists,
+    addLeadToList,
+    addLeadsToListBulk,
     verifyLead,
     verifyLeadsBulk,
     getLeadVerificationJob,
@@ -119,24 +123,33 @@ export default function ContactsPage() {
   } = useApiService();
 
   const [leads, setLeads] = useState<Contact[]>([]);
+  const [lists, setLists] = useState<LeadList[]>([]);
   const [search, setSearch] = useState("");
+  const [listFilterId, setListFilterId] = useState("all");
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   const [verifyingLeadId, setVerifyingLeadId] = useState<string | null>(null);
+  const [addingLeadId, setAddingLeadId] = useState<string | null>(null);
+  const [bulkListTargetId, setBulkListTargetId] = useState("");
+  const [rowListTargets, setRowListTargets] = useState<Record<string, string>>({});
   const [bulkState, setBulkState] = useState<BulkState | null>(null);
   const [banner, setBanner] = useState<string | null>(sourceJobId ? "Imported leads are unverified until you run verification." : null);
 
   useEffect(() => {
     let ignore = false;
-    getLeads().then((data) => {
-      if (!ignore && data) {
-        setLeads(data);
+    Promise.all([getLeads(), getLists()]).then(([leadData, listData]) => {
+      if (!ignore && leadData) {
+        setLeads(leadData);
+      }
+      if (!ignore && listData) {
+        setLists(listData);
+        setBulkListTargetId((current) => current || listData[0]?.id || "");
       }
     });
     return () => {
       ignore = true;
     };
-  }, [getLeads]);
+  }, [getLeads, getLists]);
 
   useEffect(() => {
     if (!bulkState || bulkState.status === "completed" || bulkState.status === "failed") {
@@ -185,6 +198,9 @@ export default function ContactsPage() {
       if (sourceJobId && lead.source_import_job_id !== sourceJobId) {
         return false;
       }
+      if (listFilterId !== "all" && !(lead.list_ids || []).includes(listFilterId)) {
+        return false;
+      }
       if (!normalizedSearch) {
         return true;
       }
@@ -192,7 +208,7 @@ export default function ContactsPage() {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedSearch));
     });
-  }, [leads, search, sourceJobId]);
+  }, [leads, search, sourceJobId, listFilterId]);
 
   const expandedLead = leads.find((lead) => lead.id === expandedLeadId) || null;
   const allVisibleSelected = filteredLeads.length > 0 && filteredLeads.every((lead) => selectedLeadIds.includes(lead.id));
@@ -253,6 +269,48 @@ export default function ContactsPage() {
     }
   };
 
+  const handleAddLeadToList = async (leadId: string) => {
+    const listId = rowListTargets[leadId];
+    if (!listId) {
+      setBanner("Select a target list first.");
+      return;
+    }
+    setAddingLeadId(leadId);
+    try {
+      await addLeadToList(listId, leadId);
+      const refreshedLeads = await getLeads();
+      const refreshedLists = await getLists();
+      if (refreshedLeads) setLeads(refreshedLeads);
+      if (refreshedLists) setLists(refreshedLists);
+      setBanner("Lead added to list.");
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Lead add failed.");
+    } finally {
+      setAddingLeadId(null);
+    }
+  };
+
+  const handleBulkAddToList = async () => {
+    if (!bulkListTargetId || !selectedLeadIds.length) {
+      setBanner("Select one or more leads and choose a target list.");
+      return;
+    }
+    setAddingLeadId("__bulk__");
+    try {
+      await addLeadsToListBulk(bulkListTargetId, selectedLeadIds);
+      const refreshedLeads = await getLeads();
+      const refreshedLists = await getLists();
+      if (refreshedLeads) setLeads(refreshedLeads);
+      if (refreshedLists) setLists(refreshedLists);
+      setSelectedLeadIds([]);
+      setBanner("Selected leads added to list.");
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Bulk add failed.");
+    } finally {
+      setAddingLeadId(null);
+    }
+  };
+
   return (
     <div className="relative min-h-screen space-y-6 pb-12 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -288,6 +346,16 @@ export default function ContactsPage() {
           className="w-full rounded-xl bg-slate-50 px-5 py-3 font-medium text-slate-700 outline-none ring-0 focus:ring-2 focus:ring-blue-500 md:w-[420px]"
         />
         <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={listFilterId}
+            onChange={(event) => setListFilterId(event.target.value)}
+            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+          >
+            <option value="all">All lists</option>
+            {lists.map((list) => (
+              <option key={list.id} value={list.id}>{list.name}</option>
+            ))}
+          </select>
           <button
             type="button"
             disabled={!selectedLeadIds.length || !!bulkState && ["queued", "running"].includes(bulkState.status)}
@@ -296,6 +364,25 @@ export default function ContactsPage() {
           >
             {bulkState && ["queued", "running"].includes(bulkState.status) ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
             Verify selected
+          </button>
+          <select
+            value={bulkListTargetId}
+            onChange={(event) => setBulkListTargetId(event.target.value)}
+            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+          >
+            <option value="">Choose list</option>
+            {lists.map((list) => (
+              <option key={list.id} value={list.id}>{list.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!selectedLeadIds.length || !bulkListTargetId || addingLeadId === "__bulk__"}
+            onClick={() => void handleBulkAddToList()}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+          >
+            {addingLeadId === "__bulk__" ? <LoaderCircle size={16} className="animate-spin" /> : <ListPlus size={16} />}
+            Add selected to list
           </button>
           {sourceJobId && filteredLeads.length > 0 && (
             <button
@@ -342,10 +429,11 @@ export default function ContactsPage() {
         </div>
       ) : (
         <>
-          <Table columns={["", "Email Address", "Name", "Company", "Status", "Score", "Integrity", "Last verified", "Actions"]}>
+          <Table columns={["", "Email Address", "Name", "Company", "Lists", "Status", "Score", "Integrity", "Last verified", "Actions"]}>
             {filteredLeads.map((lead) => {
               const isSelected = selectedLeadIds.includes(lead.id);
               const isVerifying = verifyingLeadId === lead.id;
+              const rowListTarget = rowListTargets[lead.id] || "";
               return (
                 <TableRow key={lead.id}>
                   <TableCell className="w-12">
@@ -360,12 +448,25 @@ export default function ContactsPage() {
                   <TableCell className="font-bold text-slate-800">{lead.email}</TableCell>
                   <TableCell className="font-medium text-slate-600">{[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "-"}</TableCell>
                   <TableCell className="text-slate-600">{lead.company || "-"}</TableCell>
+                  <TableCell>
+                    <div className="flex max-w-[180px] flex-wrap gap-1">
+                      {(lead.list_names || []).length ? (
+                        lead.list_names?.map((listName) => (
+                          <span key={`${lead.id}-${listName}`} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                            {listName}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400">No lists</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{statusBadge(lead.email_status || "unverified")}</TableCell>
                   <TableCell>{scoreBadge(lead.verification_score)}</TableCell>
                   <TableCell>{integrityBadge(lead.verification_integrity)}</TableCell>
                   <TableCell className="text-slate-500">{lead.last_verified_at ? new Date(lead.last_verified_at).toLocaleString() : "Not checked"}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => void handleVerifyOne(lead.id)}
@@ -374,6 +475,27 @@ export default function ContactsPage() {
                       >
                         {isVerifying ? <LoaderCircle size={14} className="animate-spin" /> : <MailCheck size={14} />}
                         Verify
+                      </button>
+                      <select
+                        value={rowListTarget}
+                        onChange={(event) => setRowListTargets((current) => ({ ...current, [lead.id]: event.target.value }))}
+                        className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-medium text-slate-700"
+                      >
+                        <option value="">Choose list</option>
+                        {lists
+                          .filter((list) => !(lead.list_ids || []).includes(list.id))
+                          .map((list) => (
+                            <option key={list.id} value={list.id}>{list.name}</option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => void handleAddLeadToList(lead.id)}
+                        disabled={!rowListTarget || addingLeadId === lead.id}
+                        className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      >
+                        {addingLeadId === lead.id ? <LoaderCircle size={14} className="animate-spin" /> : <ListPlus size={14} />}
+                        Add to list
                       </button>
                       <button
                         type="button"
@@ -389,7 +511,7 @@ export default function ContactsPage() {
             })}
             {filteredLeads.length === 0 && (
               <TableRow>
-                <TableCell className="py-12 text-center" colSpan={9}>
+                <TableCell className="py-12 text-center" colSpan={10}>
                   <div className="space-y-2">
                     <div className="text-lg font-bold text-slate-500">No leads available</div>
                     <div className="text-sm text-slate-400">
@@ -443,6 +565,23 @@ export default function ContactsPage() {
                 <FlagBadge label="Role-based" value={expandedLead.is_role_based} />
                 <FlagBadge label="Suppressed" value={expandedLead.is_suppressed} />
                 <FlagBadge label="Source" value={expandedLead.source || "Manual"} positive />
+              </div>
+
+              <div className="mt-6">
+                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">List membership</div>
+                {(expandedLead.list_names || []).length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {expandedLead.list_names?.map((listName) => (
+                      <span key={`${expandedLead.id}-${listName}`} className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                        {listName}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    This lead is not assigned to any reusable list yet.
+                  </div>
+                )}
               </div>
 
               <div className="mt-6">

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
@@ -30,6 +30,9 @@ export default function Sidebar() {
         </Link>
         <Link href="/contacts" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
           <Users size={20} className="group-hover:scale-110 transition-transform"/> Contacts
+        </Link>
+        <Link href="/lists" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
+          <ListChecks size={20} className="group-hover:scale-110 transition-transform"/> Lists
         </Link>
         <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Intelligence</div>
         <Link href="/inbox" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">

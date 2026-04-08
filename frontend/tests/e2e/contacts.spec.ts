@@ -15,31 +15,104 @@ test.describe("contacts verification UI", () => {
   });
 
   test("contacts detail area opens", async ({ page }) => {
+    await page.route("**/api/v1/leads", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "lead-1",
+            email: "person@example.com",
+            first_name: "Test",
+            last_name: "Lead",
+            company: "Orbitworks",
+            email_status: "unverified",
+            verification_score: null,
+            verification_integrity: null,
+            last_verified_at: null,
+            is_disposable: false,
+            is_role_based: false,
+            is_suppressed: false,
+            verification_reasons: null,
+            list_ids: [],
+            list_names: [],
+            created_at: "2026-04-08T10:00:00Z",
+          },
+        ]),
+      });
+    });
+    await page.route("**/api/v1/lists", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    });
     await page.goto("/contacts");
-    const buttonTexts = (await page.locator("button").allTextContents()).map((value) => value.trim());
-    const detailsIndex = buttonTexts.findIndex((value) => value === "Details");
-    if (detailsIndex >= 0) {
-      const detailsButton = page.locator("button").nth(detailsIndex);
-      await expect(detailsButton).toBeVisible();
-      await detailsButton.click();
-      await expect(page.getByText("Latest verification state for this lead.")).toBeVisible();
-    } else {
-      await expect(page.getByText("No leads available")).toBeVisible();
-    }
+    const detailsButton = page.getByRole("button", { name: "Details" }).first();
+    await expect(detailsButton).toBeVisible();
+    await detailsButton.click();
+    await expect(page.getByText("Latest verification state for this lead.")).toBeVisible();
   });
 
   test("verify actions surface real backend progress", async ({ page }) => {
+    await page.route("**/api/v1/leads", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "lead-1",
+            email: "person@example.com",
+            first_name: "Test",
+            last_name: "Lead",
+            company: "Orbitworks",
+            email_status: "unverified",
+            verification_score: null,
+            verification_integrity: null,
+            last_verified_at: null,
+            is_disposable: false,
+            is_role_based: false,
+            is_suppressed: false,
+            verification_reasons: null,
+            list_ids: [],
+            list_names: [],
+            created_at: "2026-04-08T10:00:00Z",
+          },
+        ]),
+      });
+    });
+    await page.route("**/api/v1/lists", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    });
+    await page.route("**/api/v1/leads/verify", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          lead_id: "lead-1",
+          email: "person@example.com",
+          status: "valid",
+          score: 100,
+          integrity: "high",
+          reasons: ["Mailbox looks reachable."],
+          checked_at: "2026-04-08T10:00:00Z",
+          syntax_valid: true,
+          domain_valid: true,
+          mx_valid: true,
+          is_disposable: false,
+          is_role_based: false,
+          is_duplicate: false,
+          is_suppressed: false,
+        }),
+      });
+    });
     await page.goto("/contacts");
+    const verifyButton = page.locator('table button:has-text("Verify")').first();
+    await expect(verifyButton).toBeVisible();
+    await verifyButton.click();
+    await expect(page.getByText(/^Verified /)).toBeVisible({ timeout: 10_000 });
+  });
 
-    const buttonTexts = (await page.locator("button").allTextContents()).map((value) => value.trim());
-    const verifyIndex = buttonTexts.findIndex((value) => value === "Verify");
-    if (verifyIndex >= 0) {
-      const verifyButton = page.locator("button").nth(verifyIndex);
-      await expect(verifyButton).toBeVisible();
-      await verifyButton.click();
-      await expect(page.getByText(/^Verified /)).toBeVisible({ timeout: 10_000 });
-    } else {
-      await expect(page.getByText("No leads available")).toBeVisible();
-    }
+  test("contacts page exposes reusable list controls", async ({ page }) => {
+    await page.goto("/contacts");
+    await expect(page.getByRole("button", { name: "Add selected to list" })).toBeVisible();
+    await expect(page.getByRole("option", { name: "All lists" })).toBeAttached();
   });
 });

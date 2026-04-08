@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, BarChart2, Calendar, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Users, X } from 'lucide-react';
+import { AlertCircle, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Users, X } from 'lucide-react';
 
 import Spinner from '@/components/ui/Spinner';
 import { useApiService } from '@/services/api';
-import { Campaign, CampaignPreflightResult, Mailbox } from '@/types/models';
+import { Campaign, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
 
 type ActionState = {
-  type: 'start' | 'pause' | 'preflight' | 'save';
+  type: 'start' | 'pause' | 'preflight' | 'save' | 'attach-list' | 'remove-list';
   campaignId: string;
 };
 
@@ -25,19 +25,24 @@ export default function CampaignsPage() {
   const {
     getCampaigns,
     getMailboxes,
+    getLists,
     createCampaign,
     updateCampaign,
     startCampaign,
     pauseCampaign,
     runPreflight,
+    attachListToCampaign,
+    removeListFromCampaign,
   } = useApiService();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
+  const [lists, setLists] = useState<LeadList[]>([]);
   const [name, setName] = useState('');
   const [mailboxId, setMailboxId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [dailyLimit, setDailyLimit] = useState('50');
+  const [selectedCreateListIds, setSelectedCreateListIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
@@ -47,18 +52,20 @@ export default function CampaignsPage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
+  const [attachTargets, setAttachTargets] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchPageData = async () => {
       setIsPageLoading(true);
       setPageError(null);
-      const [campaignData, mailboxData] = await Promise.all([getCampaigns(), getMailboxes()]);
-      if (!campaignData || !mailboxData) {
-        setPageError('Failed to load campaigns or mailboxes. Check the backend response and try again.');
+      const [campaignData, mailboxData, listData] = await Promise.all([getCampaigns(), getMailboxes(), getLists()]);
+      if (!campaignData || !mailboxData || !listData) {
+        setPageError('Failed to load campaigns, mailboxes, or reusable lists. Check the backend response and try again.');
         setIsPageLoading(false);
         return;
       }
       setCampaigns(campaignData);
+      setLists(listData);
       if (mailboxData) {
         setMailboxes(mailboxData);
         setMailboxId((current) => current || mailboxData[0]?.id || '');
@@ -66,11 +73,16 @@ export default function CampaignsPage() {
       setIsPageLoading(false);
     };
     void fetchPageData();
-  }, [getCampaigns, getMailboxes]);
+  }, [getCampaigns, getMailboxes, getLists]);
 
   const refreshCampaigns = async () => {
     const refreshed = await getCampaigns();
     if (refreshed) setCampaigns(refreshed);
+  };
+
+  const refreshLists = async () => {
+    const refreshed = await getLists();
+    if (refreshed) setLists(refreshed);
   };
 
   const clearCampaignMessages = (campaignId: string) => {
@@ -113,7 +125,14 @@ export default function CampaignsPage() {
     setSubject('');
     setBody('');
     setDailyLimit('50');
+    if (selectedCreateListIds.length) {
+      for (const listId of selectedCreateListIds) {
+        await attachListToCampaign(created.id, listId);
+      }
+    }
+    setSelectedCreateListIds([]);
     await refreshCampaigns();
+    await refreshLists();
     setBanner({ tone: 'success', message: `Campaign ${created.name} created.` });
   };
 
@@ -249,6 +268,55 @@ export default function CampaignsPage() {
     }
   };
 
+  const toggleCreateList = (listId: string) => {
+    setSelectedCreateListIds((current) =>
+      current.includes(listId) ? current.filter((id) => id !== listId) : [...current, listId],
+    );
+  };
+
+  const handleAttachList = async (campaignId: string) => {
+    const listId = attachTargets[campaignId];
+    if (!listId) return;
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'attach-list', campaignId });
+    try {
+      await attachListToCampaign(campaignId, listId);
+      setAttachTargets((current) => ({ ...current, [campaignId]: '' }));
+      await refreshCampaigns();
+      await refreshLists();
+      setBanner({ tone: 'success', message: 'List attached to campaign.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'List attach failed.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleRemoveList = async (campaignId: string, listId: string) => {
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'remove-list', campaignId });
+    try {
+      await removeListFromCampaign(campaignId, listId);
+      await refreshCampaigns();
+      await refreshLists();
+      setBanner({ tone: 'success', message: 'List removed from campaign.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'List removal failed.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
       <div className="flex items-center justify-between">
@@ -291,6 +359,32 @@ export default function CampaignsPage() {
           <label htmlFor="campaign-body" className="block text-sm font-semibold text-slate-700 mb-2">Template Body</label>
           <textarea id="campaign-body" data-testid="campaign-body-input" value={body} onChange={(event) => setBody(event.target.value)} rows={5} placeholder="Hi {{first_name}}, ..." className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all resize-y" />
         </div>
+        <div className="md:col-span-2">
+          <div className="mb-2 text-sm font-semibold text-slate-700">Reusable lead lists</div>
+          <div className="flex flex-wrap gap-2">
+            {lists.length === 0 ? (
+              <div className="text-sm text-slate-500">No reusable lists yet. Create lists from the Lists page.</div>
+            ) : (
+              lists.map((list) => {
+                const selected = selectedCreateListIds.includes(list.id);
+                return (
+                  <button
+                    key={list.id}
+                    type="button"
+                    onClick={() => toggleCreateList(list.id)}
+                    className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                      selected
+                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {list.name} <span className="ml-1 text-xs text-slate-400">({list.lead_count})</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
           {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">Campaigns stay local until you explicitly start them with background workers enabled.</div>}
           <button data-testid="create-campaign-button" type="submit" disabled={isSubmitting || mailboxes.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
@@ -325,6 +419,8 @@ export default function CampaignsPage() {
             const canStart = campaign.status === 'draft' || campaign.status === 'paused';
             const canPause = campaign.status === 'active';
             const isEditing = editState?.campaignId === campaign.id;
+            const attachedLists = campaign.lists_summary?.lists || [];
+            const availableLists = lists.filter((list) => !attachedLists.some((attached) => attached.id === list.id));
 
             return (
               <div key={campaign.id} data-testid={`campaign-card-${campaign.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-7 group relative overflow-hidden">
@@ -418,6 +514,60 @@ export default function CampaignsPage() {
 
                   <div className="mt-4 text-sm font-medium text-slate-500">
                     Daily limit: <span className="font-semibold text-slate-800">{campaign.daily_limit}</span>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-700">
+                      <Link2 size={16} /> Reusable lists
+                    </div>
+                    {attachedLists.length > 0 ? (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {attachedLists.map((list) => (
+                          <div key={list.id} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                            <span>{list.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => void handleRemoveList(campaign.id, list.id)}
+                              disabled={isActionPending(campaign.id, 'remove-list')}
+                              className="text-slate-400 transition hover:text-red-600"
+                              aria-label={`Remove ${list.name}`}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mb-3 text-sm text-slate-500">No lists attached yet. Attach reusable lead groups to share contacts across campaigns.</div>
+                    )}
+
+                    <div className="grid gap-3 sm:grid-cols-[1fr,auto]">
+                      <select
+                        value={attachTargets[campaign.id] || ''}
+                        onChange={(event) => setAttachTargets((current) => ({ ...current, [campaign.id]: event.target.value }))}
+                        className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      >
+                        <option value="">Attach a list</option>
+                        {availableLists.map((list) => (
+                          <option key={list.id} value={list.id}>{list.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => void handleAttachList(campaign.id)}
+                        disabled={!attachTargets[campaign.id] || isActionPending(campaign.id, 'attach-list')}
+                        className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                      >
+                        {isActionPending(campaign.id, 'attach-list') ? 'Attaching...' : 'Attach list'}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                      <SummaryStat label="Deduped leads" value={campaign.lists_summary?.lead_count ?? 0} />
+                      <SummaryStat label="Reachable" value={campaign.lists_summary?.reachable_count ?? 0} />
+                      <SummaryStat label="Risky" value={campaign.lists_summary?.risky_count ?? 0} />
+                      <SummaryStat label="Blocked" value={(campaign.lists_summary?.invalid_count ?? 0) + (campaign.lists_summary?.suppressed_count ?? 0)} />
+                    </div>
                   </div>
 
                   <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -533,5 +683,14 @@ function PauseGlyph() {
       <span className="h-3.5 w-1 rounded bg-current" />
       <span className="h-3.5 w-1 rounded bg-current" />
     </span>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
+      <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="mt-1 text-lg font-bold text-slate-800">{value}</div>
+    </div>
   );
 }

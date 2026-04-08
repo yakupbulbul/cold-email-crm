@@ -35,6 +35,7 @@ export interface Campaign {
     id: string;
     name: string;
     status: string; // draft, active, paused, completed, etc.
+    mailbox_id?: string | null;
     template_subject: string;
     template_body: string;
     daily_limit: number;
@@ -43,6 +44,7 @@ export interface Campaign {
     sent_count?: number;
     lead_count?: number;
     reply_rate?: string | number;
+    lists_summary?: CampaignListSummary;
 }
 
 export interface CampaignActionResult {
@@ -79,7 +81,40 @@ export interface Contact {
     verification_reasons: string[] | null;
     source?: string;
     source_import_job_id?: string | null;
+    list_ids?: string[];
+    list_names?: string[];
     created_at: string;
+}
+
+export interface LeadList {
+    id: string;
+    name: string;
+    description?: string | null;
+    type: "static" | "smart";
+    filter_definition?: Record<string, unknown> | null;
+    created_at: string;
+    updated_at?: string | null;
+    lead_count: number;
+    reachable_count: number;
+    risky_count: number;
+    invalid_count: number;
+    suppressed_count: number;
+    status_counts: Record<string, number>;
+}
+
+export interface LeadListLeadResponse {
+    list: LeadList;
+    leads: Contact[];
+}
+
+export interface CampaignListSummary {
+    lead_count: number;
+    reachable_count: number;
+    risky_count: number;
+    invalid_count: number;
+    suppressed_count: number;
+    status_counts: Record<string, number>;
+    lists: LeadList[];
 }
 
 export interface LeadVerificationResult {
