@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     BACKEND_URL: str = "http://127.0.0.1:8050"
     NEXT_PUBLIC_API_URL: str = "/api/v1"
     BACKGROUND_WORKERS_ENABLED: bool = False
+    BACKGROUND_IMAP_SYNC_ENABLED: bool = False
 
     # Security
     SECRET_KEY: str = "dev-only-change-me"

@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.core.database import get_db
+from app.models.campaign import Campaign, CampaignLead, Contact
+from app.models.monitoring import JobLog
 from app.schemas.campaign import CampaignCreate, CampaignResponse
-from app.models.campaign import Campaign
+from app.workers.campaign_worker import run_campaign_cycle
 
 router = APIRouter()
 
@@ -38,10 +41,53 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
-        
+
+    eligible_leads = (
+        db.query(CampaignLead)
+        .join(Contact)
+        .filter(
+            CampaignLead.campaign_id == campaign_id,
+            CampaignLead.status == "scheduled",
+            Contact.is_suppressed == False,
+            Contact.verification_score >= 80,
+        )
+        .count()
+    )
+    if eligible_leads == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Campaign cannot start until it has at least one scheduled, verified, unsuppressed lead.",
+        )
+
     c.status = "active"
     db.commit()
-    return {"status": "started", "campaign": c.name}
+    job_id = None
+    try:
+        task = run_campaign_cycle.delay()
+        job_id = task.id
+        db.add(
+            JobLog(
+                job_id=task.id,
+                job_type="campaign_cycle",
+                status="queued",
+                payload_summary={
+                    "campaign_id": str(c.id),
+                    "campaign_name": c.name,
+                    "eligible_leads": eligible_leads,
+                },
+            )
+        )
+        db.commit()
+    except Exception:
+        job_id = None
+
+    return {
+        "status": "started",
+        "campaign": c.name,
+        "eligible_leads": eligible_leads,
+        "job_queued": bool(job_id),
+        "job_id": job_id,
+    }
     
 @router.post("/{campaign_id}/pause")
 def pause_campaign(campaign_id: str, db: Session = Depends(get_db)):

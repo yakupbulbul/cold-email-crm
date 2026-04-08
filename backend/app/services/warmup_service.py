@@ -65,10 +65,10 @@ class WarmupService:
     def __init__(self, db: Session):
         self.db = db
         
-    def process_all_active_pairs(self):
+    def process_all_active_pairs(self, *, force_send: bool = False):
         active_pairs = self.db.query(WarmupPair).filter(WarmupPair.is_active == True).all()
         sender = WarmupSender(self.db)
         for pair in active_pairs:
             # Add explicit random delays natively to avoid bulk spam patterns
-            if random.random() > 0.3:  # 70% chance to skip this cycle to randomize sending
+            if force_send or random.random() > 0.3:  # 70% chance to skip scheduled cycles to randomize sending
                 sender.send_warmup_email(pair)

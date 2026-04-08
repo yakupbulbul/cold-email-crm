@@ -1,6 +1,9 @@
 """test_ops.py — Ops/Telemetry endpoint tests."""
 from fastapi.testclient import TestClient
 from types import SimpleNamespace
+from datetime import datetime
+
+from app.models.monitoring import WorkerHeartbeat
 
 
 def test_health_endpoint_returns_200(client: TestClient, auth_headers: dict):
@@ -97,6 +100,55 @@ def test_worker_health_uses_live_celery_ping_when_enabled(client: TestClient, au
         "app.workers.celery_app.celery_app.control",
         SimpleNamespace(inspect=lambda timeout=1: FakeInspect()),
     )
+
+    resp = client.get("/api/v1/ops/health/workers", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["status"] == "healthy"
+    assert payload["enabled"] is True
+    assert payload["active_count"] == 1
+
+
+def test_worker_health_fails_when_enabled_but_no_workers_respond(client: TestClient, auth_headers: dict, monkeypatch):
+    monkeypatch.setattr("app.services.health_service.settings.BACKGROUND_WORKERS_ENABLED", True)
+
+    class FakeInspect:
+        def ping(self):
+            return {}
+
+    monkeypatch.setattr(
+        "app.workers.celery_app.celery_app.control",
+        SimpleNamespace(inspect=lambda timeout=1: FakeInspect()),
+    )
+
+    resp = client.get("/api/v1/ops/health/workers", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["status"] == "failed"
+    assert payload["enabled"] is True
+    assert payload["active_count"] == 0
+
+
+def test_worker_health_uses_db_heartbeat_fallback(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.services.health_service.settings.BACKGROUND_WORKERS_ENABLED", True)
+
+    class FakeInspect:
+        def ping(self):
+            return {}
+
+    monkeypatch.setattr(
+        "app.workers.celery_app.celery_app.control",
+        SimpleNamespace(inspect=lambda timeout=1: FakeInspect()),
+    )
+    db.add(
+        WorkerHeartbeat(
+            worker_name="celery@test-host",
+            worker_type="pipeline",
+            status="healthy",
+            last_seen_at=datetime.utcnow(),
+        )
+    )
+    db.commit()
 
     resp = client.get("/api/v1/ops/health/workers", headers=auth_headers)
     assert resp.status_code == 200

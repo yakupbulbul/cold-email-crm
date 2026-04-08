@@ -65,19 +65,33 @@ class SystemHealthService:
         threshold = datetime.utcnow() - timedelta(minutes=5)
         active_workers = self.db.query(WorkerHeartbeat).filter(WorkerHeartbeat.last_seen_at >= threshold).count()
         total_workers = self.db.query(WorkerHeartbeat).count()
-        
+
+        if total_workers == 0:
+            return {
+                "status": "failed",
+                "service": "workers",
+                "enabled": True,
+                "detail": "No Celery workers responded and no worker heartbeats were recorded.",
+                "active_count": 0,
+                "total_registered": 0,
+            }
+
         status = "healthy"
-        if active_workers == 0 and total_workers > 0:
+        detail = "Background workers are running."
+        if active_workers == 0:
             status = "failed"
+            detail = "Worker heartbeats are stale. Background jobs are not being processed."
         elif active_workers < total_workers:
             status = "degraded"
-            
+            detail = "Background workers are only partially healthy."
+
         return {
             "status": status,
             "service": "workers",
             "enabled": True,
             "active_count": active_workers,
-            "total_registered": total_workers
+            "total_registered": total_workers,
+            "detail": detail,
         }
 
     def check_smtp_health(self, host: str, port: int, secure: bool = True) -> Dict[str, Any]:
