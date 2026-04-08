@@ -24,6 +24,7 @@ os.environ.setdefault("APP_ENV", "test")
 from app.main import app
 from app.models.base import Base
 from app.core.database import get_db
+from app.api.v1.routes import auth as auth_routes
 
 engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -61,8 +62,14 @@ def client(db: Session) -> Generator[TestClient, None, None]:
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+    previous_app_limiter = getattr(app.state.limiter, "enabled", True)
+    previous_auth_limiter = getattr(auth_routes.limiter, "enabled", True)
+    app.state.limiter.enabled = False
+    auth_routes.limiter.enabled = False
     with TestClient(app) as c:
         yield c
+    app.state.limiter.enabled = previous_app_limiter
+    auth_routes.limiter.enabled = previous_auth_limiter
     app.dependency_overrides.clear()
 
 

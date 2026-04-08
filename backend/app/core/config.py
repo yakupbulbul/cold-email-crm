@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     MAILCOW_API_KEY: str | None = None
     MAILCOW_API_TIMEOUT_SECONDS: int = 10
     MAILCOW_VERIFY_SSL: bool = True
+    MAILCOW_ENABLE_MUTATIONS: bool = False
     MAILCOW_SMTP_HOST: str | None = None
     MAILCOW_SMTP_PORT: int = 587
     MAILCOW_IMAP_HOST: str | None = None

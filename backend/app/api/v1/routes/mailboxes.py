@@ -99,6 +99,8 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
     
     connection_defaults = resolve_mailbox_connection_defaults(req)
 
+    # Safe mode keeps mailbox creation local-only unless a future explicit
+    # Mailcow provisioning path is enabled server-side.
     mailbox = Mailbox(
         domain_id=req.domain_id,
         email=req.email,

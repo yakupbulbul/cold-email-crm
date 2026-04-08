@@ -17,3 +17,8 @@ def test_settings_allow_placeholder_secret_in_test_env():
 def test_settings_require_mailcow_url_and_key_together():
     with pytest.raises(ValueError):
         Settings(APP_ENV="test", SECRET_KEY="long-enough-test-secret", MAILCOW_API_URL="https://mail.example.com/api/v1")
+
+
+def test_mailcow_mutations_are_disabled_by_default():
+    settings = Settings(APP_ENV="test", SECRET_KEY="long-enough-test-secret")
+    assert settings.MAILCOW_ENABLE_MUTATIONS is False

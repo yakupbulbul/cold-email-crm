@@ -77,6 +77,7 @@ class SystemHealthService:
             "status": result.status,
             "service": "mailcow_api",
             "detail": result.detail,
+            "mutations_enabled": settings.MAILCOW_ENABLE_MUTATIONS,
         }
         if result.http_status is not None:
             payload["http_status"] = result.http_status
