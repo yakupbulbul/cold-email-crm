@@ -9,6 +9,8 @@ def test_mailcow_health_reports_unknown_when_not_configured(monkeypatch):
     monkeypatch.setattr("app.integrations.mailcow.client.settings.MAILCOW_API_KEY", None)
     health = MailcowClient().check_health()
     assert health.status == "unknown"
+    assert health.reason == "unconfigured"
+    assert health.configured is False
 
 
 def test_mailcow_health_reports_healthy_for_200(monkeypatch):
@@ -21,6 +23,9 @@ def test_mailcow_health_reports_healthy_for_200(monkeypatch):
     monkeypatch.setattr(MailcowClient, "_request", lambda self, method, path: Response())
     health = MailcowClient().check_health()
     assert health.status == "healthy"
+    assert health.reason == "healthy"
+    assert health.reachable is True
+    assert health.header_attached is True
 
 
 def test_mailcow_health_reports_failed_when_unreachable(monkeypatch):
@@ -33,3 +38,5 @@ def test_mailcow_health_reports_failed_when_unreachable(monkeypatch):
     monkeypatch.setattr(MailcowClient, "_request", raise_error)
     health = MailcowClient().check_health()
     assert health.status == "failed"
+    assert health.reason == "unreachable"
+    assert health.reachable is False

@@ -107,6 +107,11 @@ class SystemHealthService:
             "detail": result.detail,
             "mutations_enabled": settings.MAILCOW_ENABLE_MUTATIONS,
             "reason": result.reason,
+            "configured": result.configured,
+            "reachable": result.reachable,
+            "header_attached": result.header_attached,
+            "base_url": result.base_url,
+            "request_path": result.request_path,
         }
         if result.http_status is not None:
             payload["http_status"] = result.http_status

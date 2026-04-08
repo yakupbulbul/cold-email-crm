@@ -62,6 +62,10 @@ def test_mailcow_health_endpoint_returns_safe_payload(client: TestClient, auth_h
     assert payload["service"] == "mailcow_api"
     assert "status" in payload
     assert "reason" in payload
+    assert "configured" in payload
+    assert "reachable" in payload
+    assert "header_attached" in payload
+    assert "request_path" in payload
     assert payload["mutations_enabled"] is False
 
 
