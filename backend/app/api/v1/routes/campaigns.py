@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.monitoring import JobLog
-from app.schemas.campaign import CampaignCreate, CampaignResponse
+from app.schemas.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
 from app.services.verification_service import contact_is_reachable
 from app.workers.campaign_worker import run_campaign_cycle
 
@@ -30,6 +30,22 @@ def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(c)
     return c
+
+
+@router.put("/{campaign_id}")
+def update_campaign(campaign_id: str, req: CampaignUpdate, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    campaign.name = req.name
+    campaign.mailbox_id = req.mailbox_id
+    campaign.template_subject = req.template_subject
+    campaign.template_body = req.template_body
+    campaign.daily_limit = req.daily_limit
+    db.commit()
+    db.refresh(campaign)
+    return campaign
 
 @router.post("/{campaign_id}/start")
 def start_campaign(campaign_id: str, db: Session = Depends(get_db)):

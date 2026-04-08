@@ -1,15 +1,24 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, BarChart2, Calendar, LoaderCircle, Play, Plus, ShieldAlert, Users } from 'lucide-react';
+import { AlertCircle, BarChart2, Calendar, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Users, X } from 'lucide-react';
 
 import Spinner from '@/components/ui/Spinner';
 import { useApiService } from '@/services/api';
 import { Campaign, CampaignPreflightResult, Mailbox } from '@/types/models';
 
 type ActionState = {
-  type: 'start' | 'pause' | 'preflight';
+  type: 'start' | 'pause' | 'preflight' | 'save';
   campaignId: string;
+};
+
+type EditState = {
+  campaignId: string;
+  name: string;
+  mailboxId: string;
+  subject: string;
+  body: string;
+  dailyLimit: string;
 };
 
 export default function CampaignsPage() {
@@ -17,6 +26,7 @@ export default function CampaignsPage() {
     getCampaigns,
     getMailboxes,
     createCampaign,
+    updateCampaign,
     startCampaign,
     pauseCampaign,
     runPreflight,
@@ -36,6 +46,7 @@ export default function CampaignsPage() {
   const [preflightResults, setPreflightResults] = useState<Record<string, CampaignPreflightResult>>({});
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
+  const [editState, setEditState] = useState<EditState | null>(null);
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -173,6 +184,71 @@ export default function CampaignsPage() {
   const isActionPending = (campaignId: string, type: ActionState['type']) =>
     actionState?.campaignId === campaignId && actionState?.type === type;
 
+  const beginEdit = (campaign: Campaign) => {
+    setBanner(null);
+    clearCampaignMessages(campaign.id);
+    setEditState({
+      campaignId: campaign.id,
+      name: campaign.name,
+      mailboxId: campaign.mailbox_id || '',
+      subject: campaign.template_subject,
+      body: campaign.template_body,
+      dailyLimit: String(campaign.daily_limit),
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditState(null);
+  };
+
+  const handleSave = async (campaignId: string) => {
+    if (!editState || editState.campaignId !== campaignId) return;
+    const normalizedName = editState.name.trim();
+    const normalizedSubject = editState.subject.trim();
+    const normalizedBody = editState.body.trim();
+    const dailyLimitValue = Number(editState.dailyLimit);
+
+    if (!normalizedName || !editState.mailboxId || !normalizedSubject || !normalizedBody) {
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: 'Name, mailbox, subject, and body are required.',
+      }));
+      return;
+    }
+
+    if (!Number.isFinite(dailyLimitValue) || dailyLimitValue <= 0) {
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: 'Daily limit must be a positive number.',
+      }));
+      return;
+    }
+
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'save', campaignId });
+    try {
+      const updated = await updateCampaign(campaignId, {
+        name: normalizedName,
+        mailbox_id: editState.mailboxId,
+        template_subject: normalizedSubject,
+        template_body: normalizedBody,
+        daily_limit: dailyLimitValue,
+      });
+      setCampaigns((current) => current.map((campaign) => campaign.id === campaignId ? updated : campaign));
+      setEditState(null);
+      setBanner({ tone: 'success', message: `Campaign ${updated.name} updated.` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign update failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
       <div className="flex items-center justify-between">
@@ -248,6 +324,7 @@ export default function CampaignsPage() {
             const preflight = preflightResults[campaign.id];
             const canStart = campaign.status === 'draft' || campaign.status === 'paused';
             const canPause = campaign.status === 'active';
+            const isEditing = editState?.campaignId === campaign.id;
 
             return (
               <div key={campaign.id} data-testid={`campaign-card-${campaign.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-7 group relative overflow-hidden">
@@ -255,15 +332,74 @@ export default function CampaignsPage() {
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <h3 className="text-xl font-extrabold text-slate-800 mb-1.5 group-hover:text-blue-600 transition-colors">{campaign.name}</h3>
-                      <p className="text-sm font-semibold text-slate-400 flex items-center gap-1.5">
-                        <Calendar size={14}/> Created on {new Date(campaign.created_at).toLocaleDateString()}
-                      </p>
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <input
+                            data-testid={`edit-campaign-name-${campaign.id}`}
+                            value={editState.name}
+                            onChange={(event) => setEditState((current) => current ? { ...current, name: event.target.value } : current)}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          />
+                          <select
+                            data-testid={`edit-campaign-mailbox-${campaign.id}`}
+                            value={editState.mailboxId}
+                            onChange={(event) => setEditState((current) => current ? { ...current, mailboxId: event.target.value } : current)}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          >
+                            <option value="">Select a mailbox</option>
+                            {mailboxes.map((mailbox) => (
+                              <option key={mailbox.id} value={mailbox.id}>{mailbox.email}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <>
+                          <h3 className="text-xl font-extrabold text-slate-800 mb-1.5 group-hover:text-blue-600 transition-colors">{campaign.name}</h3>
+                          <p className="text-sm font-semibold text-slate-400 flex items-center gap-1.5">
+                            <Calendar size={14}/> Created on {new Date(campaign.created_at).toLocaleDateString()}
+                          </p>
+                        </>
+                      )}
                     </div>
                     <span data-testid={`campaign-status-${campaign.id}`} className={`px-4 py-1 text-xs font-bold tracking-wide rounded-full border shadow-sm ${campaign.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : campaign.status === 'paused' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                       {campaign.status}
                     </span>
                   </div>
+
+                  {isEditing ? (
+                    <div className="mb-6 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Subject</label>
+                        <input
+                          data-testid={`edit-campaign-subject-${campaign.id}`}
+                          value={editState.subject}
+                          onChange={(event) => setEditState((current) => current ? { ...current, subject: event.target.value } : current)}
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Body</label>
+                        <textarea
+                          data-testid={`edit-campaign-body-${campaign.id}`}
+                          value={editState.body}
+                          onChange={(event) => setEditState((current) => current ? { ...current, body: event.target.value } : current)}
+                          rows={4}
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Daily Limit</label>
+                        <input
+                          data-testid={`edit-campaign-limit-${campaign.id}`}
+                          type="number"
+                          min="1"
+                          value={editState.dailyLimit}
+                          onChange={(event) => setEditState((current) => current ? { ...current, dailyLimit: event.target.value } : current)}
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        />
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-6">
                     <div>
@@ -280,14 +416,53 @@ export default function CampaignsPage() {
                     </div>
                   </div>
 
+                  <div className="mt-4 text-sm font-medium text-slate-500">
+                    Daily limit: <span className="font-semibold text-slate-800">{campaign.daily_limit}</span>
+                  </div>
+
                   <div className="mt-6 flex flex-wrap items-center gap-3">
+                    {isEditing ? (
+                      <>
+                        <button
+                          data-testid={`save-campaign-${campaign.id}`}
+                          type="button"
+                          onClick={() => void handleSave(campaign.id)}
+                          disabled={!!actionState}
+                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isActionPending(campaign.id, 'save') ? <LoaderCircle size={16} className="animate-spin" /> : <Pencil size={16} />}
+                          Save
+                        </button>
+                        <button
+                          data-testid={`cancel-edit-campaign-${campaign.id}`}
+                          type="button"
+                          onClick={cancelEdit}
+                          disabled={!!actionState}
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <X size={16} />
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        data-testid={`edit-campaign-${campaign.id}`}
+                        type="button"
+                        onClick={() => beginEdit(campaign)}
+                        disabled={!!actionState || !!editState}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Pencil size={16} />
+                        Edit
+                      </button>
+                    )}
                     {canStart && (
                       <>
                         <button
                           data-testid={`start-campaign-${campaign.id}`}
                           type="button"
                           onClick={() => void handleStart(campaign.id)}
-                          disabled={!!actionState}
+                          disabled={!!actionState || isEditing}
                           className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isActionPending(campaign.id, 'start') ? <LoaderCircle size={16} className="animate-spin" /> : <Play size={16} />}
@@ -297,7 +472,7 @@ export default function CampaignsPage() {
                           data-testid={`preflight-campaign-${campaign.id}`}
                           type="button"
                           onClick={() => void handlePreflight(campaign.id)}
-                          disabled={!!actionState}
+                          disabled={!!actionState || isEditing}
                           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isActionPending(campaign.id, 'preflight') ? <LoaderCircle size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
@@ -310,7 +485,7 @@ export default function CampaignsPage() {
                         data-testid={`pause-campaign-${campaign.id}`}
                         type="button"
                         onClick={() => void handlePause(campaign.id)}
-                        disabled={!!actionState}
+                        disabled={!!actionState || isEditing}
                         className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/20 transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isActionPending(campaign.id, 'pause') ? <LoaderCircle size={16} className="animate-spin" /> : <PauseGlyph />}

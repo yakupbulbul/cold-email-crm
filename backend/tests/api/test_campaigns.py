@@ -182,3 +182,57 @@ def test_pause_campaign_updates_status(client: TestClient, auth_headers: dict, m
 
     paused_campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     assert paused_campaign.status == "paused"
+
+
+def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-edit.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-edit.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Editable Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Old Subject",
+            "template_body": "Old Body",
+            "daily_limit": 10,
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+
+    update_resp = client.put(
+        f"/api/v1/campaigns/{campaign_id}",
+        json={
+            "name": "Updated Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "New Subject",
+            "template_body": "New Body",
+            "daily_limit": 25,
+        },
+        headers=auth_headers,
+    )
+    assert update_resp.status_code == 200
+    payload = update_resp.json()
+    assert payload["name"] == "Updated Campaign"
+    assert payload["template_subject"] == "New Subject"
+    assert payload["template_body"] == "New Body"
+    assert payload["daily_limit"] == 25
+
+    refreshed = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    assert refreshed.name == "Updated Campaign"
+    assert refreshed.template_subject == "New Subject"
+    assert refreshed.template_body == "New Body"
+    assert refreshed.daily_limit == 25

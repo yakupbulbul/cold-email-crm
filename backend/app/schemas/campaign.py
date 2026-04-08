@@ -9,6 +9,14 @@ class CampaignCreate(BaseModel):
     template_body: str
     daily_limit: int = 50
 
+
+class CampaignUpdate(BaseModel):
+    name: str
+    mailbox_id: UUID4
+    template_subject: str
+    template_body: str
+    daily_limit: int
+
 class CampaignResponse(BaseModel):
     id: UUID4
     name: str

@@ -39,6 +39,14 @@ type CampaignCreatePayload = {
     daily_limit?: number;
 };
 
+type CampaignUpdatePayload = {
+    name: string;
+    mailbox_id: string;
+    template_subject: string;
+    template_body: string;
+    daily_limit: number;
+};
+
 /**
  * Service API wrapping backend endpoints. Provides typed data fetching abstractions.
  */
@@ -56,6 +64,7 @@ export function useApiService() {
     const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
     const getCampaignById = useCallback((id: string) => request<Campaign>(`/campaigns/${id}`), [request]);
     const createCampaign = useCallback((data: CampaignCreatePayload) => request<Campaign>("/campaigns", { method: "POST", body: data }), [request]);
+    const updateCampaign = useCallback((id: string, data: CampaignUpdatePayload) => requestOrThrow<Campaign>(`/campaigns/${id}`, { method: "PUT", body: data }), [requestOrThrow]);
     const startCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/start`, { method: "POST" }), [requestOrThrow]);
     const pauseCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/pause`, { method: "POST" }), [requestOrThrow]);
     const runPreflight = useCallback((id: string) => requestOrThrow<CampaignPreflightResult>(`/campaigns/${id}/preflight`, { method: "POST" }), [requestOrThrow]);
@@ -106,6 +115,7 @@ export function useApiService() {
         getCampaigns,
         getCampaignById,
         createCampaign,
+        updateCampaign,
         startCampaign,
         pauseCampaign,
         runPreflight,
