@@ -1,5 +1,6 @@
 """test_ops.py — Ops/Telemetry endpoint tests."""
 from fastapi.testclient import TestClient
+from types import SimpleNamespace
 
 
 def test_health_endpoint_returns_200(client: TestClient, auth_headers: dict):
@@ -78,3 +79,23 @@ def test_readiness_reports_disabled_workers_as_warning(client: TestClient, auth_
     payload = resp.json()
     worker_check = next(item for item in payload["checklist"] if item["check"] == "Worker and Beat Processes")
     assert worker_check["status"] == "warning"
+
+
+def test_worker_health_uses_live_celery_ping_when_enabled(client: TestClient, auth_headers: dict, monkeypatch):
+    monkeypatch.setattr("app.services.health_service.settings.BACKGROUND_WORKERS_ENABLED", True)
+
+    class FakeInspect:
+        def ping(self):
+            return {"celery@test-host": {"ok": "pong"}}
+
+    monkeypatch.setattr(
+        "app.workers.celery_app.celery_app.control",
+        SimpleNamespace(inspect=lambda timeout=1: FakeInspect()),
+    )
+
+    resp = client.get("/api/v1/ops/health/workers", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["status"] == "healthy"
+    assert payload["enabled"] is True
+    assert payload["active_count"] == 1

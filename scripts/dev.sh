@@ -18,6 +18,11 @@ set +a
 : "${FRONTEND_PORT:=3000}"
 : "${NODE_OPTIONS:=--max-old-space-size=2048}"
 
+BACKGROUND_WORKERS_ENABLED_VALUE=false
+if [[ "${MODE}" == "full" ]]; then
+  BACKGROUND_WORKERS_ENABLED_VALUE=true
+fi
+
 if [[ ! -x backend/.venv/bin/python ]]; then
   echo "Missing backend/.venv. Run 'make setup' first."
   exit 1
@@ -38,7 +43,7 @@ echo "Beat:     cd backend && ../backend/.venv/bin/python -m celery -A app.worke
 
 (
   cd backend
-  BACKGROUND_WORKERS_ENABLED=false ../backend/.venv/bin/python -m uvicorn app.main:app --reload --reload-dir app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}"
+  BACKGROUND_WORKERS_ENABLED="${BACKGROUND_WORKERS_ENABLED_VALUE}" ../backend/.venv/bin/python -m uvicorn app.main:app --reload --reload-dir app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}"
 ) &
 
 if [[ "${MODE}" == "full" ]]; then

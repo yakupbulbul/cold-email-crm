@@ -45,6 +45,23 @@ class SystemHealthService:
                 "total_registered": 0,
             }
 
+        try:
+            from app.workers.celery_app import celery_app
+
+            responses = celery_app.control.inspect(timeout=1).ping() or {}
+            if responses:
+                return {
+                    "status": "healthy",
+                    "service": "workers",
+                    "enabled": True,
+                    "detail": "Celery workers responded to a broker ping.",
+                    "active_count": len(responses),
+                    "total_registered": len(responses),
+                    "workers": sorted(responses.keys()),
+                }
+        except Exception as exc:
+            logger.warning(f"Celery worker ping failed, falling back to DB heartbeats: {exc}")
+
         threshold = datetime.utcnow() - timedelta(minutes=5)
         active_workers = self.db.query(WorkerHeartbeat).filter(WorkerHeartbeat.last_seen_at >= threshold).count()
         total_workers = self.db.query(WorkerHeartbeat).count()
