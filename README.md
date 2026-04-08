@@ -2,6 +2,37 @@
 
 Cold outreach CRM built with Next.js, FastAPI, PostgreSQL, Redis, Celery, and Mailcow.
 
+## Unified B2B + B2C Model
+
+This app is one shared outreach platform, not separate B2B and B2C products.
+
+Shared primitives:
+
+- contacts / leads
+- reusable static lists
+- campaigns
+- verification and scoring
+- suppression
+- preflight and execution
+- mailbox / domain infrastructure
+
+Typed behavior:
+
+- contacts can carry `contact_type`, consent, unsubscribe, company/persona, engagement, and tags
+- campaigns can carry `campaign_type`, `goal_type`, `compliance_mode`, and reusable attached lists
+- B2B campaigns allow risky contacts as warnings when otherwise eligible
+- B2C campaigns apply stricter hygiene and compliance checks
+- `strict_b2c` blocks contacts with unusable consent states such as `unknown`, `revoked`, or `unsubscribed`
+- global suppression remains a universal blocker for both campaign types
+
+Audience reuse:
+
+- static lists are the primary reusable audience unit
+- one contact can belong to multiple lists
+- one campaign can attach multiple lists
+- attached-list audiences are deduplicated before scheduling
+- blocked contacts stay visible in summaries and preflight instead of being silently treated as healthy
+
 The local development model is:
 
 - local frontend -> local backend
