@@ -1,45 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useApiService } from "@/services/api";
-import { SystemHealth, Alert, DeliverabilitySummary } from "@/types/models";
+import { ReactNode, useEffect, useState } from "react";
+import { SystemHealth, Alert, DeliverabilitySummary, HealthComponent } from "@/types/models";
 import { Activity, Database, Server, ServerCrash, CheckCircle2, AlertTriangle, XCircle, MailWarning, Network } from "lucide-react";
 import Link from "next/link";
 
-export default function OpsDashboard() {
-    const { getHealth, getAlerts, getDeliverabilitySummary, loading, error } = useApiService();
-    const [health, setHealth] = useState<SystemHealth | null>(null);
-    const [alerts, setAlerts] = useState<Alert[]>([]);
-    const [deliverability, setDeliverability] = useState<DeliverabilitySummary | null>(null);
+function getStatusIcon(status: string) {
+    if (status === "healthy") return <CheckCircle2 className="text-emerald-500" size={24} />;
+    if (status === "degraded") return <AlertTriangle className="text-amber-500" size={24} />;
+    return <XCircle className="text-red-500" size={24} />;
+}
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            const h = await getHealth();
-            if (h) setHealth(h);
-            const a = await getAlerts();
-            if (a) setAlerts(a);
-            const d = await getDeliverabilitySummary();
-            if (d) setDeliverability(d);
-        };
-        fetchDashboardData();
-    }, [getHealth, getAlerts, getDeliverabilitySummary]);
-
-    const getStatusIcon = (status: string) => {
-        if (status === "healthy") return <CheckCircle2 className="text-emerald-500" size={24} />;
-        if (status === "degraded") return <AlertTriangle className="text-amber-500" size={24} />;
-        return <XCircle className="text-red-500" size={24} />;
-    };
-
-    const StatusCard = ({ title, icon, data }: { title: string, icon: any, data: any }) => (
+function StatusCard({ title, icon, data }: { title: string; icon: ReactNode; data?: HealthComponent | null }) {
+    return (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow h-full">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-slate-50 rounded-xl text-slate-600">{icon}</div>
                     <span className="font-bold text-slate-800 tracking-tight">{title}</span>
                 </div>
-                {data ? getStatusIcon(data.status) : <div className="w-6 h-6 bg-slate-100 rounded-full animate-pulse"/>}
+                {data ? getStatusIcon(data.status) : <div className="w-6 h-6 bg-slate-100 rounded-full animate-pulse" />}
             </div>
-            
+
             <div className="space-y-2 mt-2 flex-grow">
                 {data?.status === "failed" && (
                     <div className="text-xs font-bold text-red-600 bg-red-50 p-2 rounded-lg">Error details available in logs.</div>
@@ -56,13 +39,38 @@ export default function OpsDashboard() {
                         <span className="font-bold text-slate-800">{data.latency_ms}ms</span>
                     </div>
                 )}
-                {/* Fallback for components without metrics */}
                 {data?.status === "healthy" && data?.active_count === undefined && data?.latency_ms === undefined && (
-                     <div className="text-xs font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg mt-auto">Component Online.</div>
+                    <div className="text-xs font-bold text-emerald-600 bg-emerald-50 p-2 rounded-lg mt-auto">Component Online.</div>
                 )}
             </div>
         </div>
     );
+}
+
+export default function OpsDashboard() {
+    const { getHealth, getAlerts, getDeliverabilitySummary, loading } = useApiService();
+    const [health, setHealth] = useState<SystemHealth | null>(null);
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [deliverability, setDeliverability] = useState<DeliverabilitySummary | null>(null);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            const h = await getHealth();
+            if (h) setHealth(h);
+            const a = await getAlerts();
+            if (a) setAlerts(a);
+            const d = await getDeliverabilitySummary();
+            if (d) setDeliverability(d);
+        };
+        fetchDashboardData();
+    }, [getHealth, getAlerts, getDeliverabilitySummary]);
+
+    const liveMetrics = [
+        { label: "Valid Contacts", value: deliverability?.valid_contacts ?? 0, tone: "text-emerald-600" },
+        { label: "Suppressed Contacts", value: deliverability?.suppressed_contacts ?? 0, tone: "text-amber-600" },
+        { label: "Unsubscribed Contacts", value: deliverability?.unsubscribed_contacts ?? 0, tone: "text-rose-600" },
+        { label: "B2C Campaigns", value: deliverability?.b2c_campaigns ?? 0, tone: "text-violet-600" },
+    ];
 
     return (
         <div className="space-y-6 animate-fade-in relative min-h-screen pb-12">
@@ -125,10 +133,12 @@ export default function OpsDashboard() {
                             <span className="text-slate-500 font-bold text-xs uppercase">Bounces Blocked</span>
                             <span className="text-amber-600 font-black text-xl">{deliverability?.suppressed || 0}</span>
                         </div>
-                        <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
-                            <span className="text-slate-500 font-bold text-xs uppercase">Queue Backlog</span>
-                            <span className="text-slate-700 font-black text-xl">0</span>
-                        </div>
+                        {liveMetrics.map((metric) => (
+                            <div key={metric.label} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
+                                <span className="text-slate-500 font-bold text-xs uppercase">{metric.label}</span>
+                                <span className={`${metric.tone} font-black text-xl`}>{metric.value}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

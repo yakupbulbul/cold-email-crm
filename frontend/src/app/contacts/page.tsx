@@ -14,6 +14,7 @@ import {
   ShieldX,
   Sparkles,
   Upload,
+  Tags,
 } from "lucide-react";
 
 import Table, { TableCell, TableRow } from "@/components/ui/Table";
@@ -118,6 +119,8 @@ export default function ContactsPage() {
     verifyLead,
     verifyLeadsBulk,
     getLeadVerificationJob,
+    assignLeadTagsBulk,
+    suppressLeadsBulk,
     loading,
     error,
   } = useApiService();
@@ -126,11 +129,15 @@ export default function ContactsPage() {
   const [lists, setLists] = useState<LeadList[]>([]);
   const [search, setSearch] = useState("");
   const [listFilterId, setListFilterId] = useState("all");
+  const [contactTypeFilter, setContactTypeFilter] = useState("all");
+  const [consentFilter, setConsentFilter] = useState("all");
+  const [unsubscribeFilter, setUnsubscribeFilter] = useState("all");
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   const [verifyingLeadId, setVerifyingLeadId] = useState<string | null>(null);
   const [addingLeadId, setAddingLeadId] = useState<string | null>(null);
   const [bulkListTargetId, setBulkListTargetId] = useState("");
+  const [bulkTags, setBulkTags] = useState("");
   const [rowListTargets, setRowListTargets] = useState<Record<string, string>>({});
   const [bulkState, setBulkState] = useState<BulkState | null>(null);
   const [banner, setBanner] = useState<string | null>(sourceJobId ? "Imported leads are unverified until you run verification." : null);
@@ -201,14 +208,26 @@ export default function ContactsPage() {
       if (listFilterId !== "all" && !(lead.list_ids || []).includes(listFilterId)) {
         return false;
       }
+      if (contactTypeFilter !== "all") {
+        const normalizedType = lead.contact_type || "mixed";
+        if (normalizedType !== contactTypeFilter) {
+          return false;
+        }
+      }
+      if (consentFilter !== "all" && (lead.consent_status || "unknown") !== consentFilter) {
+        return false;
+      }
+      if (unsubscribeFilter !== "all" && (lead.unsubscribe_status || "subscribed") !== unsubscribeFilter) {
+        return false;
+      }
       if (!normalizedSearch) {
         return true;
       }
-      return [lead.email, lead.first_name, lead.last_name, lead.company]
+      return [lead.email, lead.first_name, lead.last_name, lead.company, lead.persona, lead.industry, ...(lead.tags || [])]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedSearch));
     });
-  }, [leads, search, sourceJobId, listFilterId]);
+  }, [leads, search, sourceJobId, listFilterId, contactTypeFilter, consentFilter, unsubscribeFilter]);
 
   const expandedLead = leads.find((lead) => lead.id === expandedLeadId) || null;
   const allVisibleSelected = filteredLeads.length > 0 && filteredLeads.every((lead) => selectedLeadIds.includes(lead.id));
@@ -311,6 +330,72 @@ export default function ContactsPage() {
     }
   };
 
+  const handleBulkTagAssign = async () => {
+    const tags = bulkTags.split(",").map((value) => value.trim()).filter(Boolean);
+    if (!selectedLeadIds.length || !tags.length) {
+      setBanner("Select leads and enter one or more tags.");
+      return;
+    }
+    setAddingLeadId("__bulk_tags__");
+    try {
+      await assignLeadTagsBulk(selectedLeadIds, tags);
+      const refreshedLeads = await getLeads();
+      if (refreshedLeads) setLeads(refreshedLeads);
+      setBulkTags("");
+      setSelectedLeadIds([]);
+      setBanner("Tags assigned to selected leads.");
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Bulk tag assignment failed.");
+    } finally {
+      setAddingLeadId(null);
+    }
+  };
+
+  const handleBulkSuppress = async () => {
+    if (!selectedLeadIds.length) {
+      setBanner("Select one or more leads to suppress.");
+      return;
+    }
+    setAddingLeadId("__bulk_suppress__");
+    try {
+      await suppressLeadsBulk(selectedLeadIds, "bulk_contact_action");
+      const refreshedLeads = await getLeads();
+      if (refreshedLeads) setLeads(refreshedLeads);
+      setSelectedLeadIds([]);
+      setBanner("Selected leads suppressed.");
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Bulk suppression failed.");
+    } finally {
+      setAddingLeadId(null);
+    }
+  };
+
+  const handleExportFiltered = () => {
+    const rows = [
+      ["Email", "Name", "Company", "Contact Type", "Consent", "Unsubscribe", "Status", "Score", "Quality Tier", "Tags"],
+      ...filteredLeads.map((lead) => [
+        lead.email,
+        [lead.first_name, lead.last_name].filter(Boolean).join(" "),
+        lead.company || "",
+        lead.contact_type || "mixed",
+        lead.consent_status || "unknown",
+        lead.unsubscribe_status || "subscribed",
+        lead.email_status || "unverified",
+        String(lead.verification_score ?? ""),
+        lead.contact_quality_tier || "",
+        (lead.tags || []).join("|"),
+      ]),
+    ];
+    const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "filtered_contacts.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="relative min-h-screen space-y-6 pb-12 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -321,7 +406,7 @@ export default function ContactsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 font-bold text-slate-700 shadow-sm transition-all active:scale-95 hover:bg-slate-50">
+          <button onClick={handleExportFiltered} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 font-bold text-slate-700 shadow-sm transition-all active:scale-95 hover:bg-slate-50">
             <Download size={18} /> Export CSV
           </button>
           <Link href="/contacts/import" className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 font-bold text-white shadow-lg shadow-blue-600/30 transition-all active:scale-95 hover:bg-blue-700">
@@ -356,6 +441,25 @@ export default function ContactsPage() {
               <option key={list.id} value={list.id}>{list.name}</option>
             ))}
           </select>
+          <select value={contactTypeFilter} onChange={(event) => setContactTypeFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700">
+            <option value="all">All contact types</option>
+            <option value="b2b">B2B</option>
+            <option value="b2c">B2C</option>
+            <option value="mixed">Mixed / imported</option>
+          </select>
+          <select value={consentFilter} onChange={(event) => setConsentFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700">
+            <option value="all">All consent states</option>
+            <option value="granted">Granted</option>
+            <option value="unknown">Unknown</option>
+            <option value="revoked">Revoked</option>
+            <option value="not_required">Not required</option>
+          </select>
+          <select value={unsubscribeFilter} onChange={(event) => setUnsubscribeFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700">
+            <option value="all">All subscription states</option>
+            <option value="subscribed">Subscribed</option>
+            <option value="unsubscribed">Unsubscribed</option>
+            <option value="suppressed">Suppressed</option>
+          </select>
           <button
             type="button"
             disabled={!selectedLeadIds.length || !!bulkState && ["queued", "running"].includes(bulkState.status)}
@@ -383,6 +487,30 @@ export default function ContactsPage() {
           >
             {addingLeadId === "__bulk__" ? <LoaderCircle size={16} className="animate-spin" /> : <ListPlus size={16} />}
             Add selected to list
+          </button>
+          <input
+            value={bulkTags}
+            onChange={(event) => setBulkTags(event.target.value)}
+            placeholder="vip, newsletter"
+            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+          />
+          <button
+            type="button"
+            disabled={!selectedLeadIds.length || addingLeadId === "__bulk_tags__"}
+            onClick={() => void handleBulkTagAssign()}
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+          >
+            <Tags size={16} />
+            Assign tags
+          </button>
+          <button
+            type="button"
+            disabled={!selectedLeadIds.length || addingLeadId === "__bulk_suppress__"}
+            onClick={() => void handleBulkSuppress()}
+            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+          >
+            <ShieldX size={16} />
+            Suppress selected
           </button>
           {sourceJobId && filteredLeads.length > 0 && (
             <button
@@ -429,7 +557,7 @@ export default function ContactsPage() {
         </div>
       ) : (
         <>
-          <Table columns={["", "Email Address", "Name", "Company", "Lists", "Status", "Score", "Integrity", "Last verified", "Actions"]}>
+          <Table columns={["", "Email Address", "Profile", "Audience", "Lists", "Status", "Score", "Integrity", "Last verified", "Actions"]}>
             {filteredLeads.map((lead) => {
               const isSelected = selectedLeadIds.includes(lead.id);
               const isVerifying = verifyingLeadId === lead.id;
@@ -446,8 +574,18 @@ export default function ContactsPage() {
                     />
                   </TableCell>
                   <TableCell className="font-bold text-slate-800">{lead.email}</TableCell>
-                  <TableCell className="font-medium text-slate-600">{[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "-"}</TableCell>
-                  <TableCell className="text-slate-600">{lead.company || "-"}</TableCell>
+                  <TableCell className="font-medium text-slate-600">
+                    <div>{[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "-"}</div>
+                    <div className="text-xs text-slate-400">{lead.company || "No company"}{lead.persona ? ` • ${lead.persona}` : ""}</div>
+                  </TableCell>
+                  <TableCell className="text-slate-600">
+                    <div className="flex flex-wrap gap-1">
+                      <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{lead.contact_type || "mixed"}</span>
+                      <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">{lead.consent_status || "unknown"}</span>
+                      <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${(lead.unsubscribe_status || "subscribed") === "subscribed" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{lead.unsubscribe_status || "subscribed"}</span>
+                      <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${(lead.contact_quality_tier || "low") === "high" ? "bg-emerald-50 text-emerald-700" : (lead.contact_quality_tier || "low") === "medium" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"}`}>{lead.contact_quality_tier || "low"} quality</span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex max-w-[180px] flex-wrap gap-1">
                       {(lead.list_names || []).length ? (
@@ -565,6 +703,26 @@ export default function ContactsPage() {
                 <FlagBadge label="Role-based" value={expandedLead.is_role_based} />
                 <FlagBadge label="Suppressed" value={expandedLead.is_suppressed} />
                 <FlagBadge label="Source" value={expandedLead.source || "Manual"} positive />
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-4">
+                <DetailCard label="Contact type"><span className="text-sm font-medium text-slate-700">{expandedLead.contact_type || "mixed"}</span></DetailCard>
+                <DetailCard label="Consent"><span className="text-sm font-medium text-slate-700">{expandedLead.consent_status || "unknown"}</span></DetailCard>
+                <DetailCard label="Subscription"><span className="text-sm font-medium text-slate-700">{expandedLead.unsubscribe_status || "subscribed"}</span></DetailCard>
+                <DetailCard label="Engagement"><span className="text-sm font-medium text-slate-700">{expandedLead.engagement_score ?? 0}</span></DetailCard>
+              </div>
+
+              <div className="mt-6">
+                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Tags</div>
+                {(expandedLead.tags || []).length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {expandedLead.tags?.map((tag) => (
+                      <span key={`${expandedLead.id}-${tag}`} className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700">{tag}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">No tags assigned yet.</div>
+                )}
               </div>
 
               <div className="mt-6">

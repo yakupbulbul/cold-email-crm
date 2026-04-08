@@ -39,6 +39,13 @@ type CampaignCreatePayload = {
     template_subject: string;
     template_body: string;
     daily_limit?: number;
+    campaign_type?: string;
+    channel_type?: string;
+    goal_type?: string;
+    list_strategy?: string;
+    compliance_mode?: string;
+    schedule_window?: Record<string, unknown> | null;
+    send_window_timezone?: string | null;
 };
 
 type CampaignUpdatePayload = {
@@ -47,6 +54,13 @@ type CampaignUpdatePayload = {
     template_subject: string;
     template_body: string;
     daily_limit: number;
+    campaign_type?: string;
+    channel_type?: string;
+    goal_type?: string;
+    list_strategy?: string;
+    compliance_mode?: string;
+    schedule_window?: Record<string, unknown> | null;
+    send_window_timezone?: string | null;
 };
 
 type LeadListCreatePayload = {
@@ -84,9 +98,12 @@ export function useApiService() {
 
     // ── LEADS / CONTACTS ──
     const getLeads = useCallback(() => request<Contact[]>("/leads"), [request]);
+    const getLeadsWithFilters = useCallback((query: string) => request<Contact[]>(`/leads${query ? `?${query}` : ""}`), [request]);
     const verifyLead = useCallback((lead_id: string) => request<LeadVerificationResult>("/leads/verify", { method: "POST", body: { lead_id } }), [request]);
     const verifyLeadsBulk = useCallback((lead_ids: string[]) => request<{ job_id: string; status: string; requested_count: number; worker_mode: "lean" | "full" }>("/leads/verify/bulk", { method: "POST", body: { lead_ids } }), [request]);
     const getLeadVerificationJob = useCallback((jobId: string) => request<LeadVerificationJob>(`/leads/verify/${jobId}`), [request]);
+    const assignLeadTagsBulk = useCallback((lead_ids: string[], tags: string[]) => requestOrThrow<{ status: string; lead_count: number; tags: string[] }>("/leads/bulk/tags", { method: "PATCH", body: { lead_ids, tags } }), [requestOrThrow]);
+    const suppressLeadsBulk = useCallback((lead_ids: string[], reason: string) => requestOrThrow<{ status: string; lead_count: number }>("/leads/bulk/suppress", { method: "POST", body: { lead_ids, reason } }), [requestOrThrow]);
 
     // ── SUPPRESSION ──
     const getSuppressionList = useCallback(() => request<SuppressionEntry[]>("/suppression"), [request]);
@@ -148,9 +165,12 @@ export function useApiService() {
         pauseCampaign,
         runPreflight,
         getLeads,
+        getLeadsWithFilters,
         verifyLead,
         verifyLeadsBulk,
         getLeadVerificationJob,
+        assignLeadTagsBulk,
+        suppressLeadsBulk,
         getLists,
         getListById,
         getListLeads,

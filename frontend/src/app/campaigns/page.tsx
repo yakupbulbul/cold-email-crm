@@ -19,6 +19,9 @@ type EditState = {
   subject: string;
   body: string;
   dailyLimit: string;
+  campaignType: string;
+  goalType: string;
+  complianceMode: string;
 };
 
 export default function CampaignsPage() {
@@ -43,6 +46,9 @@ export default function CampaignsPage() {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [dailyLimit, setDailyLimit] = useState('50');
+  const [campaignType, setCampaignType] = useState<'b2b' | 'b2c'>('b2b');
+  const [goalType, setGoalType] = useState('outreach');
+  const [complianceMode, setComplianceMode] = useState('standard');
   const [selectedCreateListIds, setSelectedCreateListIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -116,6 +122,11 @@ export default function CampaignsPage() {
       template_subject: subject.trim(),
       template_body: body.trim(),
       daily_limit: Number(dailyLimit) || 50,
+      campaign_type: campaignType,
+      channel_type: 'email',
+      goal_type: goalType,
+      list_strategy: 'list_based',
+      compliance_mode: complianceMode,
     });
     setIsSubmitting(false);
     if (!created) {
@@ -126,6 +137,9 @@ export default function CampaignsPage() {
     setSubject('');
     setBody('');
     setDailyLimit('50');
+    setCampaignType('b2b');
+    setGoalType('outreach');
+    setComplianceMode('standard');
     if (selectedCreateListIds.length) {
       for (const listId of selectedCreateListIds) {
         await attachListToCampaign(created.id, listId);
@@ -214,6 +228,9 @@ export default function CampaignsPage() {
       subject: campaign.template_subject,
       body: campaign.template_body,
       dailyLimit: String(campaign.daily_limit),
+      campaignType: campaign.campaign_type,
+      goalType: campaign.goal_type,
+      complianceMode: campaign.compliance_mode,
     });
   };
 
@@ -223,6 +240,14 @@ export default function CampaignsPage() {
 
   const handleSave = async (campaignId: string) => {
     if (!editState || editState.campaignId !== campaignId) return;
+    const currentCampaign = campaigns.find((campaign) => campaign.id === campaignId);
+    if (!currentCampaign) {
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: 'Campaign could not be found for editing. Refresh and try again.',
+      }));
+      return;
+    }
     const normalizedName = editState.name.trim();
     const normalizedSubject = editState.subject.trim();
     const normalizedBody = editState.body.trim();
@@ -254,6 +279,11 @@ export default function CampaignsPage() {
         template_subject: normalizedSubject,
         template_body: normalizedBody,
         daily_limit: dailyLimitValue,
+        campaign_type: editState.campaignType,
+        channel_type: currentCampaign.channel_type,
+        goal_type: editState.goalType,
+        list_strategy: currentCampaign.list_strategy,
+        compliance_mode: editState.complianceMode,
       });
       setCampaigns((current) => current.map((campaign) => campaign.id === campaignId ? updated : campaign));
       setEditState(null);
@@ -375,6 +405,29 @@ export default function CampaignsPage() {
           <input id="campaign-subject" data-testid="campaign-subject-input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Quick introduction" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
         </div>
         <div>
+          <label htmlFor="campaign-type" className="block text-sm font-semibold text-slate-700 mb-2">Campaign Type</label>
+          <select id="campaign-type" value={campaignType} onChange={(event) => setCampaignType(event.target.value as 'b2b' | 'b2c')} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+            <option value="b2b">B2B</option>
+            <option value="b2c">B2C</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="campaign-goal" className="block text-sm font-semibold text-slate-700 mb-2">Goal Type</label>
+          <select id="campaign-goal" value={goalType} onChange={(event) => setGoalType(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+            <option value="outreach">Outreach</option>
+            <option value="promotion">Promotion</option>
+            <option value="newsletter">Newsletter</option>
+            <option value="reactivation">Reactivation</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="campaign-compliance" className="block text-sm font-semibold text-slate-700 mb-2">Compliance Mode</label>
+          <select id="campaign-compliance" value={complianceMode} onChange={(event) => setComplianceMode(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+            <option value="standard">Standard</option>
+            <option value="strict_b2c">Strict B2C</option>
+          </select>
+        </div>
+        <div>
           <label htmlFor="campaign-daily-limit" className="block text-sm font-semibold text-slate-700 mb-2">Daily Limit</label>
           <input id="campaign-daily-limit" data-testid="campaign-daily-limit-input" type="number" min="1" value={dailyLimit} onChange={(event) => setDailyLimit(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
         </div>
@@ -409,7 +462,7 @@ export default function CampaignsPage() {
           </div>
         </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
-          {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">Campaigns stay local until you explicitly start them with background workers enabled.</div>}
+          {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">{campaignType === 'b2c' ? 'B2C campaigns surface stricter consent and unsubscribe blockers in preflight.' : 'B2B campaigns allow risky leads with warnings when compliance stays standard.'}</div>}
           <button data-testid="create-campaign-button" type="submit" disabled={isSubmitting || mailboxes.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
             <Plus size={18} strokeWidth={3} /> {isSubmitting ? 'Creating...' : 'Create Campaign'}
           </button>
@@ -470,6 +523,34 @@ export default function CampaignsPage() {
                               <option key={mailbox.id} value={mailbox.id}>{mailbox.email}</option>
                             ))}
                           </select>
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <select
+                              value={editState.campaignType}
+                              onChange={(event) => setEditState((current) => current ? { ...current, campaignType: event.target.value } : current)}
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            >
+                              <option value="b2b">B2B</option>
+                              <option value="b2c">B2C</option>
+                            </select>
+                            <select
+                              value={editState.goalType}
+                              onChange={(event) => setEditState((current) => current ? { ...current, goalType: event.target.value } : current)}
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            >
+                              <option value="outreach">Outreach</option>
+                              <option value="promotion">Promotion</option>
+                              <option value="newsletter">Newsletter</option>
+                              <option value="reactivation">Reactivation</option>
+                            </select>
+                            <select
+                              value={editState.complianceMode}
+                              onChange={(event) => setEditState((current) => current ? { ...current, complianceMode: event.target.value } : current)}
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            >
+                              <option value="standard">Standard</option>
+                              <option value="strict_b2c">Strict B2C</option>
+                            </select>
+                          </div>
                         </div>
                       ) : (
                         <>
@@ -477,6 +558,11 @@ export default function CampaignsPage() {
                           <p className="text-sm font-semibold text-slate-400 flex items-center gap-1.5">
                             <Calendar size={14}/> Created on {new Date(campaign.created_at).toLocaleDateString()}
                           </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{campaign.campaign_type}</span>
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{campaign.goal_type}</span>
+                            <span className={`rounded-full px-3 py-1 text-xs font-bold ${campaign.compliance_mode === 'strict_b2c' ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>{campaign.compliance_mode}</span>
+                          </div>
                         </>
                       )}
                     </div>
@@ -591,6 +677,12 @@ export default function CampaignsPage() {
                       <SummaryStat label="Risky" value={campaign.lists_summary?.risky_count ?? 0} />
                       <SummaryStat label="Blocked" value={(campaign.lists_summary?.invalid_count ?? 0) + (campaign.lists_summary?.suppressed_count ?? 0)} />
                     </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                      <SummaryStat label="Unsubscribed" value={campaign.lists_summary?.unsubscribed_count ?? 0} />
+                      <SummaryStat label="Consent unknown" value={campaign.lists_summary?.consent_unknown_count ?? 0} />
+                      <SummaryStat label="Type mismatch" value={campaign.lists_summary?.type_mismatch_count ?? 0} />
+                      <SummaryStat label="High quality" value={campaign.lists_summary?.high_quality_count ?? 0} />
+                    </div>
                   </div>
 
                   <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -699,6 +791,11 @@ export default function CampaignsPage() {
                             <span className="font-semibold text-slate-800">{check.name}</span>: {check.message}
                           </div>
                         ))}
+                        {preflight.audience_summary && (
+                          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                            Audience summary: {preflight.audience_summary.reachable_count} reachable, {preflight.audience_summary.risky_count} risky, {preflight.audience_summary.unsubscribed_count ?? 0} unsubscribed, {preflight.audience_summary.consent_unknown_count ?? 0} consent unknown.
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

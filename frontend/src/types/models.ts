@@ -41,6 +41,13 @@ export interface Campaign {
     template_subject: string;
     template_body: string;
     daily_limit: number;
+    campaign_type: "b2b" | "b2c";
+    channel_type: string;
+    goal_type: string;
+    list_strategy: string;
+    compliance_mode: string;
+    schedule_window?: Record<string, unknown> | null;
+    send_window_timezone?: string | null;
     created_at: string;
     // Computed fields for UI
     sent_count?: number;
@@ -53,6 +60,7 @@ export interface CampaignActionResult {
     status: string;
     campaign?: string;
     eligible_leads?: number;
+    blocked_leads?: Record<string, number>;
     job_queued?: boolean;
     job_id?: string | null;
 }
@@ -60,6 +68,7 @@ export interface CampaignActionResult {
 export interface CampaignPreflightResult {
     status: string;
     blocked: boolean;
+    audience_summary?: CampaignListSummary;
     checks: Array<{
         name: string;
         status: string;
@@ -73,15 +82,30 @@ export interface Contact {
     first_name: string | null;
     last_name: string | null;
     company: string | null;
+    job_title?: string | null;
+    website?: string | null;
+    country?: string | null;
+    industry?: string | null;
+    persona?: string | null;
+    contact_type?: "b2b" | "b2c" | "mixed" | null;
+    consent_status?: "unknown" | "granted" | "revoked" | "not_required";
+    unsubscribe_status?: "subscribed" | "unsubscribed" | "suppressed";
+    engagement_score?: number;
+    contact_status?: string;
     email_status: string;
     verification_score: number | null;
     verification_integrity: "high" | "medium" | "low" | null;
+    contact_quality_tier?: "high" | "medium" | "low";
     last_verified_at: string | null;
+    last_contacted_at?: string | null;
+    last_replied_at?: string | null;
     is_disposable: boolean;
     is_role_based: boolean;
     is_suppressed: boolean;
     verification_reasons: string[] | null;
     source?: string;
+    source_file_name?: string | null;
+    tags?: string[];
     source_import_job_id?: string | null;
     list_ids?: string[];
     list_names?: string[];
@@ -101,7 +125,17 @@ export interface LeadList {
     risky_count: number;
     invalid_count: number;
     suppressed_count: number;
+    unsubscribed_count?: number;
+    consent_unknown_count?: number;
+    type_mismatch_count?: number;
     status_counts: Record<string, number>;
+    contact_type_counts?: Record<string, number>;
+    consent_counts?: Record<string, number>;
+    unsubscribe_counts?: Record<string, number>;
+    quality_tier_counts?: Record<string, number>;
+    high_quality_count?: number;
+    medium_quality_count?: number;
+    low_quality_count?: number;
 }
 
 export interface LeadListLeadResponse {
@@ -111,11 +145,25 @@ export interface LeadListLeadResponse {
 
 export interface CampaignListSummary {
     lead_count: number;
+    deduped_count?: number;
     reachable_count: number;
     risky_count: number;
     invalid_count: number;
     suppressed_count: number;
+    unsubscribed_count?: number;
+    consent_unknown_count?: number;
+    type_mismatch_count?: number;
     status_counts: Record<string, number>;
+    contact_type_counts?: Record<string, number>;
+    consent_counts?: Record<string, number>;
+    unsubscribe_counts?: Record<string, number>;
+    quality_tier_counts?: Record<string, number>;
+    blocked_breakdown?: Record<string, number>;
+    high_quality_count?: number;
+    medium_quality_count?: number;
+    low_quality_count?: number;
+    industry_counts?: Record<string, number>;
+    persona_counts?: Record<string, number>;
     lists: LeadList[];
 }
 
@@ -230,6 +278,17 @@ export interface DeliverabilitySummary {
     bounced?: number;
     replied?: number;
     suppressed?: number;
+    total_contacts?: number;
+    valid_contacts?: number;
+    risky_contacts?: number;
+    invalid_contacts?: number;
+    suppressed_contacts?: number;
+    unsubscribed_contacts?: number;
+    b2b_campaigns?: number;
+    b2c_campaigns?: number;
+    active_campaigns?: number;
+    mailbox_count?: number;
+    domain_count?: number;
     [key: string]: number | undefined;
 }
 

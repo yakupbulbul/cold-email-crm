@@ -209,7 +209,7 @@ export default function ListsPage() {
       ) : (
         <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
           <div className="space-y-4">
-            <Table columns={["Name", "Type", "Leads", "Reachable", "Suppressed", "Actions"]}>
+            <Table columns={["Name", "Type", "Leads", "Reachable", "Audience Mix", "Actions"]}>
               {lists.map((list) => (
                 <TableRow key={list.id}>
                   <TableCell>
@@ -221,7 +221,13 @@ export default function ListsPage() {
                   <TableCell>{list.type}</TableCell>
                   <TableCell>{list.lead_count}</TableCell>
                   <TableCell>{list.reachable_count}</TableCell>
-                  <TableCell>{list.suppressed_count}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1 text-xs text-slate-600">
+                      <div>B2B: {list.contact_type_counts?.b2b ?? 0}</div>
+                      <div>B2C: {list.contact_type_counts?.b2c ?? 0}</div>
+                      <div>Unknown: {list.contact_type_counts?.mixed ?? 0}</div>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <button
@@ -283,11 +289,19 @@ export default function ListsPage() {
                   </div>
                 ) : null}
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
                   <Stat label="Lead count" value={selectedListLeads.list.lead_count} />
                   <Stat label="Reachable" value={selectedListLeads.list.reachable_count} />
                   <Stat label="Invalid" value={selectedListLeads.list.invalid_count} />
                   <Stat label="Suppressed" value={selectedListLeads.list.suppressed_count} />
+                  <Stat label="Unsubscribed" value={selectedListLeads.list.unsubscribed_count || 0} />
+                  <Stat label="Consent unknown" value={selectedListLeads.list.consent_unknown_count || 0} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <Stat label="High quality" value={selectedListLeads.list.high_quality_count || 0} />
+                  <Stat label="Medium quality" value={selectedListLeads.list.medium_quality_count || 0} />
+                  <Stat label="Low quality" value={selectedListLeads.list.low_quality_count || 0} />
                 </div>
 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -305,12 +319,16 @@ export default function ListsPage() {
                   </div>
                 </div>
 
-                <Table columns={["Lead", "Status", "Score", "Actions"]}>
+                <Table columns={["Lead", "Audience", "Status", "Score", "Actions"]}>
                   {selectedListLeads.leads.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell>
                         <div className="font-semibold text-slate-800">{lead.email}</div>
                         <div className="text-xs text-slate-500">{lead.company || "No company"}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs text-slate-600">{lead.contact_type || "mixed"} • {lead.consent_status || "unknown"}</div>
+                        <div className="text-xs text-slate-400">{lead.unsubscribe_status || "subscribed"} • {lead.contact_quality_tier || "low"} quality</div>
                       </TableCell>
                       <TableCell>{lead.email_status}</TableCell>
                       <TableCell>{lead.verification_score ?? "Not scored"}</TableCell>
