@@ -8,10 +8,10 @@
 
 | # | Check | Result | Notes |
 |---|-------|--------|-------|
-| 1 | Login with admin credentials works | ☐ | |
+| 1 | Login with admin credentials works at `/signin` | ☐ | |
 | 2 | Protected routes redirect unauthenticated users | ☐ | |
 | 3 | Domain creation form submits and records appear | ☐ | |
-| 4 | Mailbox creation stores encrypted SMTP credentials | ☐ | |
+| 4 | Mailbox creation stores mailbox credentials server-side only and never returns them in API responses | ☐ | |
 | 5 | SMTP connectivity test for a mailbox returns healthy | ☐ | |
 | 6 | IMAP sync triggers and messages appear in inbox | ☐ | |
 | 7 | Warm-up can be started and stopped for a mailbox | ☐ | |
@@ -33,6 +33,7 @@
 | 16 | `/api/v1/ops/health` returns `healthy` status for DB | ☐ | |
 | 17 | `/api/v1/ops/health/redis` returns `healthy` | ☐ | |
 | 18 | Worker heartbeat count > 0 | ☐ | |
+| 18a | `/api/v1/ops/health/mailcow` returns a safe status payload | ☐ | |
 | 19 | `/ops/jobs` shows job logs table | ☐ | |
 | 20 | Failed job retry button changes status to `queued` | ☐ | |
 | 21 | `/ops/alerts` renders active alerts list | ☐ | |
@@ -64,7 +65,7 @@
 | 33 | `DEBUG=false` in production container | ☐ | |
 | 34 | `/api/v1/ops/readiness` reports `ready` status | ☐ | |
 | 35 | HTTPS termination configured at Nginx/proxy layer | ☐ | |
-| 36 | `CORS_ORIGINS` contains only production domains | ☐ | |
+| 36 | `ALLOWED_ORIGINS` contains only production domains | ☐ | |
 | 37 | Postgres backup schedule verified | ☐ | |
 | 38 | Mailcow DKIM/SPF/DMARC records validated in DNS | ☐ | |
 

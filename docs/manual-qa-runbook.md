@@ -8,11 +8,11 @@
 
 | Step | Action | Expected Result | ✅/❌ | Notes |
 |------|--------|----------------|-------|-------|
-| 1.1 | Navigate to `/login` | Login form displayed | | |
+| 1.1 | Navigate to `/signin` | Login form displayed | | |
 | 1.2 | Submit invalid credentials | Error message shown, no redirect | | |
 | 1.3 | Submit valid admin credentials | Redirect to dashboard | | |
-| 1.4 | Navigate to `/domains` while logged out (new window) | Redirect to `/login` | | |
-| 1.5 | Click logout (if available) | Session cleared, redirect to login | | |
+| 1.4 | Navigate to `/domains` while logged out (new window) | Redirect to `/signin` | | |
+| 1.5 | Click logout (if available) | Session cleared, redirect to `/signin` | | |
 
 ---
 
@@ -24,8 +24,8 @@
 | 2.2 | Submit an invalid domain name (e.g. `not@domain`) | Validation error shown | | |
 | 2.3 | Submit a valid domain (e.g. `qa-test.example.com`) | Domain appears in list | | |
 | 2.4 | Go to `/mailboxes`, click Add Mailbox | Mailbox creation form opens | | |
-| 2.5 | Submit mailbox with missing SMTP fields | Validation error shown | | |
-| 2.6 | Submit valid mailbox credentials | Mailbox appears in list | | |
+| 2.5 | Submit mailbox without SMTP/IMAP hosts and without server defaults configured | Validation error shown | | |
+| 2.6 | Submit valid mailbox credentials | Mailbox appears in list and no passwords are echoed back in the API response | | |
 
 ---
 
@@ -106,6 +106,7 @@
 | 9.4 | Go to `/ops/alerts` | Alert list or "all clear" message visible | | |
 | 9.5 | Go to `/ops/deliverability` | KPI cards and mailbox table visible | | |
 | 9.6 | Go to `/ops/readiness` | Checklist cards render | | |
+| 9.7 | GET `/api/v1/ops/health/mailcow` as admin | Safe Mailcow health payload returned without exposing credentials | | |
 
 ---
 

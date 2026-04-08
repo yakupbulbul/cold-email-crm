@@ -1,90 +1,238 @@
-# 🚀 AI-Powered Cold Email CRM
+# AI-Powered Cold Email CRM
 
-Enterprise-grade open-source cold outreach automation platform. Natively integrates with **Mailcow** for infrastructure and **OpenAI** for intelligence.
+Cold outreach CRM built with Next.js, FastAPI, PostgreSQL, Redis, Celery, and Mailcow.
 
-## 🏗️ Architecture Stack
+The local development model is:
 
-- **Frontend**: Next.js 14 (App Router), Tailwind CSS, Lucide React.
-- **Backend**: FastAPI (Python), SQLAlchemy, Pydantic.
-- **Database**: PostgreSQL 15.
-- **Async Tasks**: Celery with Redis as the broker.
-- **Mailing Infrastructure**: Mailcow (Dockerized).
+- local frontend -> local backend
+- local backend -> local Postgres / Redis
+- local backend -> remote Mailcow
+- Mailcow credentials stay server-side in local `.env`
 
----
+## Local Development
 
-## 🛠️ Local Setup Instructions
+### Prerequisites
 
-Follow these steps to get the full stack running on your local machine.
+- Docker Desktop or another working Docker daemon
+- Python 3.11+
+- Node.js 20+
 
-### 1. Prerequisites
-- [Docker](https://www.docker.com/get-started) & Docker Compose.
-- [Git](https://git-scm.com/).
+### 1. Clone and create local env
 
-### 2. Clone and Environment Setup
 ```bash
 git clone https://github.com/yakupbulbul/cold-email-crm.git
 cd cold-email-crm
-
-# Copy the example environment file
 cp .env.example .env
 ```
 
-### 3. Configure Environment Variables
-Edit your `.env` file with the following required values:
+Use your private local setup reference to fill in real values in `.env`.
 
-- **Security**: `SECRET_KEY` (Generate a random string).
-- **AI**: `OPENAI_API_KEY` (Required for lead categorization and draft generation).
-- **Mailcow API**:
-  - `MAILCOW_API_URL`: `https://mail.example.com/api/v1` (or your local instance).
-  - `MAILCOW_API_KEY`: Your API key from the Mailcow admin panel.
+Rules:
 
-### 4. Launch the Application
-The project includes a `Makefile` for simplified management:
+- Never commit `.env`
+- Never copy secrets into tracked files
+- Keep `README_PRIVATE.md` local-only
+- Use placeholders only in tracked docs and examples
+
+Required local values:
+
+- `SECRET_KEY`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+- `POSTGRES_URL`
+- `REDIS_URL`
+- `ALLOWED_ORIGINS`
+- `MAILCOW_API_URL` and `MAILCOW_API_KEY` if you want live remote Mailcow checks
+
+Optional:
+
+- `OPENAI_API_KEY`
+- `MAILCOW_SMTP_HOST`, `MAILCOW_SMTP_PORT`
+- `MAILCOW_IMAP_HOST`, `MAILCOW_IMAP_PORT`
+
+### 2. Install host dependencies
 
 ```bash
-# Build and start all services in the background
+make setup
+```
+
+This creates `backend/.venv` and installs frontend dependencies.
+
+### 3. Start local infrastructure
+
+```bash
 make up
-
-# Run database migrations
-make migrate
 ```
 
-### 5. Initialize Admin User
-To access the dashboard, you must create an initial admin user:
+This starts only local Postgres and Redis for hybrid development.
+
+### 4. Run migrations and seed local access
 
 ```bash
-docker compose exec api python scripts/create_user.py --email admin@example.com --password YourSecurePassword --admin
+make migrate
+make seed
 ```
 
----
+`make seed` creates the bootstrap admin from `.env` and inserts safe deterministic demo records.
 
-## 📬 Mailcow Online Integration
+### 5. Run the app locally
 
-This CRM is designed to connect to any Mailcow instance. 
-1. Log in to your Mailcow Admin Panel (`https://mail.example.com`).
-2. Navigate to **System -> Configuration -> API**.
-3. Enable the API and generate an **API Key**.
-4. Add the Key and your instance URL to the CRM's `.env` file.
+```bash
+make dev
+```
 
-Once connected, the CRM will be able to synchronize domains and provision mailboxes automatically.
+This runs:
 
----
+- FastAPI on `BACKEND_URL`
+- Celery worker on the host
+- Celery beat on the host
+- Next.js on `http://localhost:3000` by default
 
-## 💡 Common Commands (Command Prompt Reference)
+Sign in locally at `/signin`.
 
-| Action | Command |
-| :--- | :--- |
-| **Start Services** | `docker compose up -d` |
-| **Stop Services** | `docker compose down` |
-| **View Backend Logs** | `docker compose logs -f api` |
-| **View Worker Logs** | `docker compose logs -f worker` |
-| **Reset Database** | `docker compose down -v && docker compose up -d` |
-| **Shell Access (API)** | `docker compose exec api bash` |
+## Make Targets
 
----
+```bash
+make setup
+make up
+make down
+make migrate
+make seed
+make dev
+make smoke
+make test
+make reset
+make full-up
+make full-down
+```
 
-## 🤝 Contributing
-Contributions are welcome! Please open an issue or submit a pull request for any improvements.
+Notes:
 
-## 📄 License
-This project is licensed under the MIT License.
+- `make up` and `make reset` require Docker
+- `make full-up` runs the entire stack in Docker
+- `make smoke` checks local backend, DB, and Redis endpoints
+- `make test` runs backend tests plus focused frontend auth/runtime checks
+
+## Mailcow Integration
+
+This repo does not replace Mailcow.
+
+Use the existing remote Mailcow instance by setting:
+
+- `MAILCOW_API_URL`
+- `MAILCOW_API_KEY`
+- optional default SMTP / IMAP host values
+
+Security boundaries:
+
+- The frontend never receives Mailcow API keys
+- The frontend only calls the local backend
+- Mailcow API checks happen server-side only
+- Mailbox credentials remain server-side and are never returned in API responses
+
+The admin health endpoint for Mailcow is:
+
+```text
+/api/v1/ops/health/mailcow
+```
+
+The readiness endpoint includes Mailcow connectivity state:
+
+```text
+/api/v1/ops/readiness
+```
+
+If `MAILCOW_SMTP_HOST` and `MAILCOW_IMAP_HOST` are configured server-side, mailbox creation can omit explicit host fields and use those defaults automatically.
+
+## Testing
+
+### Backend
+
+Database-backed backend tests expect the isolated test services from `docker-compose.test.yml`.
+
+```bash
+make test-infra-up
+make test-backend
+make test-infra-down
+```
+
+DB-free backend checks can run without Docker:
+
+```bash
+cd backend
+../backend/.venv/bin/python -m pytest tests/api/test_config.py tests/api/test_mailcow.py -v
+```
+
+### Frontend
+
+Focused frontend auth/runtime checks:
+
+```bash
+make test-frontend
+```
+
+Playwright E2E:
+
+```bash
+make test-e2e
+```
+
+## Troubleshooting
+
+### Docker daemon is not running
+
+Symptom:
+
+- `make up` or `make test-infra-up` fails immediately
+
+Fix:
+
+- Start Docker Desktop or your Docker service
+- rerun the command
+
+### Backend fails on startup with config validation errors
+
+Symptom:
+
+- app refuses to boot because env values are missing or placeholders are still in use
+
+Fix:
+
+- set a real `SECRET_KEY`
+- set `BOOTSTRAP_ADMIN_PASSWORD`
+- ensure `MAILCOW_API_URL` and `MAILCOW_API_KEY` are either both set or both empty
+
+### Frontend cannot reach backend
+
+Symptom:
+
+- sign-in fails
+- dashboard shows backend connection errors
+
+Fix:
+
+- confirm backend is running on `BACKEND_URL`
+- keep `NEXT_PUBLIC_API_URL=/api/v1`
+- keep frontend pointed at the local backend, not Mailcow directly
+
+### Mailcow health is degraded or failed
+
+Symptom:
+
+- `/api/v1/ops/health/mailcow` reports `degraded` or `failed`
+
+Fix:
+
+- verify local `.env` has the correct remote Mailcow URL and API key
+- confirm the remote API is reachable from your machine
+- verify SSL settings if your environment requires a custom certificate path or disabled verification
+
+## Security Checklist
+
+- `.env` stays local and untracked
+- `README_PRIVATE.md` stays ignored
+- tracked docs use placeholders only
+- Mailcow credentials are never exposed to the browser
+
+## License
+
+MIT
