@@ -169,6 +169,8 @@ Security boundaries:
 - The frontend only calls the local backend
 - Mailcow API checks happen server-side only
 - Mailbox credentials remain server-side and are never returned in API responses
+- Use a read-only Mailcow API key for the default local workflow
+- `MAILCOW_ENABLE_MUTATIONS=false` keeps the integration in safe mode by default
 
 The admin health endpoint for Mailcow is:
 
@@ -183,6 +185,39 @@ The readiness endpoint includes Mailcow connectivity state:
 ```
 
 If `MAILCOW_SMTP_HOST` and `MAILCOW_IMAP_HOST` are configured server-side, mailbox creation can omit explicit host fields and use those defaults automatically.
+
+### Domain Verification
+
+Adding a domain does more than insert a local row.
+
+The backend now:
+
+- creates the local record first
+- checks whether the domain exists in remote Mailcow
+- runs DNS checks for `MX`, `SPF`, `DKIM`, and `DMARC`
+- stores the verification result in the local DB
+- computes an honest readiness state
+
+Domain states:
+
+- `pending`: verification has not finished yet
+- `local_only`: stored locally but not verified in Mailcow
+- `mailcow_verified`: found in Mailcow, but DNS is still incomplete
+- `dns_partial`: some required DNS records are present, but not all
+- `ready`: Mailcow verification passed and all required DNS checks passed
+- `blocked`: verification could not complete safely, usually because Mailcow is unconfigured, unreachable, or unauthorized
+- `failed`: verification ran but at least one check failed unexpectedly
+
+The Domains UI exposes:
+
+- overall status
+- Mailcow verification status
+- DNS status summary
+- last checked time
+- missing requirements
+- `Verify`, `Refresh`, and `Details` actions
+
+This means a domain is not treated as connected just because it exists in the local database.
 
 ## Testing
 
@@ -253,6 +288,31 @@ Fix:
 - set a real `SECRET_KEY`
 - set `BOOTSTRAP_ADMIN_PASSWORD`
 - ensure `MAILCOW_API_URL` and `MAILCOW_API_KEY` are either both set or both empty
+
+### Domain stays blocked after creation
+
+Symptom:
+
+- domain create succeeds
+- status shows `blocked`
+- Mailcow details mention unconfigured, unauthorized, or unreachable
+
+Fix:
+
+- confirm `MAILCOW_API_URL` points to the remote Mailcow API base URL
+- confirm `MAILCOW_API_KEY` is a valid backend-only read-only key
+- re-run verification from the Domains page or `POST /api/v1/domains/{id}/refresh`
+
+### Domain is in Mailcow but not ready
+
+Symptom:
+
+- status shows `mailcow_verified` or `dns_partial`
+
+Fix:
+
+- add or correct the domain `MX`, `SPF`, `DKIM`, and `DMARC` DNS records
+- rerun `Verify` or `Refresh` after DNS propagation
 
 ### Frontend cannot reach backend
 
