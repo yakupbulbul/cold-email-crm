@@ -114,6 +114,7 @@ export default function ContactsPage() {
   const {
     getLeads,
     getLists,
+    updateLead,
     addLeadToList,
     addLeadsToListBulk,
     verifyLead,
@@ -141,6 +142,8 @@ export default function ContactsPage() {
   const [rowListTargets, setRowListTargets] = useState<Record<string, string>>({});
   const [bulkState, setBulkState] = useState<BulkState | null>(null);
   const [banner, setBanner] = useState<string | null>(sourceJobId ? "Imported leads are unverified until you run verification." : null);
+  const [contactTypeDraft, setContactTypeDraft] = useState<"b2b" | "b2c" | "mixed">("mixed");
+  const [updatingLeadId, setUpdatingLeadId] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -231,6 +234,11 @@ export default function ContactsPage() {
 
   const expandedLead = leads.find((lead) => lead.id === expandedLeadId) || null;
   const allVisibleSelected = filteredLeads.length > 0 && filteredLeads.every((lead) => selectedLeadIds.includes(lead.id));
+
+  useEffect(() => {
+    if (!expandedLead) return;
+    setContactTypeDraft((expandedLead.contact_type || "mixed") as "b2b" | "b2c" | "mixed");
+  }, [expandedLead]);
 
   const toggleLead = (leadId: string) => {
     setSelectedLeadIds((current) =>
@@ -394,6 +402,20 @@ export default function ContactsPage() {
     anchor.download = "filtered_contacts.csv";
     anchor.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleUpdateContactType = async () => {
+    if (!expandedLead) return;
+    setUpdatingLeadId(expandedLead.id);
+    try {
+      const updated = await updateLead(expandedLead.id, { contact_type: contactTypeDraft });
+      setLeads((current) => current.map((lead) => lead.id === updated.id ? updated : lead));
+      setBanner(`Updated ${updated.email} contact type to ${updated.contact_type || "mixed"}.`);
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Contact type update failed.");
+    } finally {
+      setUpdatingLeadId(null);
+    }
   };
 
   return (
@@ -706,7 +728,29 @@ export default function ContactsPage() {
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-4">
-                <DetailCard label="Contact type"><span className="text-sm font-medium text-slate-700">{expandedLead.contact_type || "mixed"}</span></DetailCard>
+                <DetailCard label="Contact type">
+                  <div className="space-y-3">
+                    <select
+                      value={contactTypeDraft}
+                      onChange={(event) => setContactTypeDraft(event.target.value as "b2b" | "b2c" | "mixed")}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                      disabled={updatingLeadId === expandedLead.id}
+                    >
+                      <option value="b2b">B2B</option>
+                      <option value="b2c">B2C</option>
+                      <option value="mixed">Mixed</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleUpdateContactType()}
+                      disabled={updatingLeadId === expandedLead.id || contactTypeDraft === (expandedLead.contact_type || "mixed")}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {updatingLeadId === expandedLead.id ? <LoaderCircle size={14} className="animate-spin" /> : null}
+                      Save
+                    </button>
+                  </div>
+                </DetailCard>
                 <DetailCard label="Consent"><span className="text-sm font-medium text-slate-700">{expandedLead.consent_status || "unknown"}</span></DetailCard>
                 <DetailCard label="Subscription"><span className="text-sm font-medium text-slate-700">{expandedLead.unsubscribe_status || "subscribed"}</span></DetailCard>
                 <DetailCard label="Engagement"><span className="text-sm font-medium text-slate-700">{expandedLead.engagement_score ?? 0}</span></DetailCard>

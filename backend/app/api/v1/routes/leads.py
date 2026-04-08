@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
@@ -184,6 +185,23 @@ class LeadBulkTagsRequest(BaseModel):
 class LeadBulkSuppressRequest(BaseModel):
     lead_ids: list[UUID]
     reason: str = "manual_bulk_action"
+
+
+class LeadUpdateRequest(BaseModel):
+    contact_type: Literal["b2b", "b2c", "mixed"] | None
+
+
+@router.patch("/{lead_id}")
+def update_lead(lead_id: UUID, req: LeadUpdateRequest, db: Session = Depends(get_db)):
+    contact = db.query(Contact).filter(Contact.id == lead_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    contact.contact_type = None if req.contact_type in {None, "mixed"} else req.contact_type
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+    return _serialize_contact(db, contact)
 
 @router.post("/verify")
 def verify_email(req: VerifyRequest, db: Session = Depends(get_db)):

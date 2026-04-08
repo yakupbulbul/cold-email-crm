@@ -73,6 +73,10 @@ type LeadListUpdatePayload = {
     description?: string;
 };
 
+type LeadUpdatePayload = {
+    contact_type: "b2b" | "b2c" | "mixed" | null;
+};
+
 /**
  * Service API wrapping backend endpoints. Provides typed data fetching abstractions.
  */
@@ -99,6 +103,7 @@ export function useApiService() {
     // ── LEADS / CONTACTS ──
     const getLeads = useCallback(() => request<Contact[]>("/leads"), [request]);
     const getLeadsWithFilters = useCallback((query: string) => request<Contact[]>(`/leads${query ? `?${query}` : ""}`), [request]);
+    const updateLead = useCallback((leadId: string, data: LeadUpdatePayload) => requestOrThrow<Contact>(`/leads/${leadId}`, { method: "PATCH", body: data }), [requestOrThrow]);
     const verifyLead = useCallback((lead_id: string) => request<LeadVerificationResult>("/leads/verify", { method: "POST", body: { lead_id } }), [request]);
     const verifyLeadsBulk = useCallback((lead_ids: string[]) => request<{ job_id: string; status: string; requested_count: number; worker_mode: "lean" | "full" }>("/leads/verify/bulk", { method: "POST", body: { lead_ids } }), [request]);
     const getLeadVerificationJob = useCallback((jobId: string) => request<LeadVerificationJob>(`/leads/verify/${jobId}`), [request]);
@@ -166,6 +171,7 @@ export function useApiService() {
         runPreflight,
         getLeads,
         getLeadsWithFilters,
+        updateLead,
         verifyLead,
         verifyLeadsBulk,
         getLeadVerificationJob,

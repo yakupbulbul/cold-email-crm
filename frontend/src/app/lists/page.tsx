@@ -19,6 +19,7 @@ export default function ListsPage() {
     getLists,
     getLeads,
     getListLeads,
+    updateLead,
     createList,
     updateList,
     deleteList,
@@ -39,6 +40,7 @@ export default function ListsPage() {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [leadTypeDrafts, setLeadTypeDrafts] = useState<Record<string, "b2b" | "b2c" | "mixed">>({});
 
   useEffect(() => {
     const load = async () => {
@@ -62,6 +64,18 @@ export default function ListsPage() {
       if (detail) setSelectedListLeads(detail);
     })();
   }, [selectedListId, getListLeads]);
+
+  useEffect(() => {
+    if (!selectedListLeads) {
+      setLeadTypeDrafts({});
+      return;
+    }
+    setLeadTypeDrafts(
+      Object.fromEntries(
+        selectedListLeads.leads.map((lead) => [lead.id, (lead.contact_type || "mixed") as "b2b" | "b2c" | "mixed"]),
+      ),
+    );
+  }, [selectedListLeads]);
 
   const availableLeads = useMemo(() => {
     const currentIds = new Set(selectedListLeads?.leads.map((lead) => lead.id) || []);
@@ -162,6 +176,23 @@ export default function ListsPage() {
       await removeLeadFromList(selectedListId, leadId);
       setBanner("Lead removed from list.");
       await refreshLists(selectedListId);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleUpdateLeadType = async (leadId: string) => {
+    const contactType = leadTypeDrafts[leadId];
+    if (!contactType) return;
+    setBusyId(leadId);
+    try {
+      const updated = await updateLead(leadId, { contact_type: contactType });
+      setBanner(`Updated ${updated.email} contact type to ${updated.contact_type || "mixed"}.`);
+      await refreshLists(selectedListId);
+      const refreshedLeads = await getLeads();
+      if (refreshedLeads) setLeads(refreshedLeads);
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Lead update failed.");
     } finally {
       setBusyId(null);
     }
@@ -319,7 +350,7 @@ export default function ListsPage() {
                   </div>
                 </div>
 
-                <Table columns={["Lead", "Audience", "Status", "Score", "Actions"]}>
+                <Table columns={["Lead", "Audience", "Contact Type", "Status", "Score", "Actions"]}>
                   {selectedListLeads.leads.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell>
@@ -327,8 +358,29 @@ export default function ListsPage() {
                         <div className="text-xs text-slate-500">{lead.company || "No company"}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-xs text-slate-600">{lead.contact_type || "mixed"} • {lead.consent_status || "unknown"}</div>
+                        <div className="text-xs text-slate-600">{lead.consent_status || "unknown"}</div>
                         <div className="text-xs text-slate-400">{lead.unsubscribe_status || "subscribed"} • {lead.contact_quality_tier || "low"} quality</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={leadTypeDrafts[lead.id] || (lead.contact_type || "mixed")}
+                            onChange={(event) => setLeadTypeDrafts((current) => ({ ...current, [lead.id]: event.target.value as "b2b" | "b2c" | "mixed" }))}
+                            className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-medium text-slate-700"
+                            disabled={busyId === lead.id}
+                          >
+                            <option value="b2b">B2B</option>
+                            <option value="b2c">B2C</option>
+                            <option value="mixed">Mixed</option>
+                          </select>
+                          <button
+                            onClick={() => void handleUpdateLeadType(lead.id)}
+                            disabled={busyId === lead.id || (leadTypeDrafts[lead.id] || (lead.contact_type || "mixed")) === (lead.contact_type || "mixed")}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {busyId === lead.id ? <LoaderCircle size={14} className="animate-spin" /> : "Save"}
+                          </button>
+                        </div>
                       </TableCell>
                       <TableCell>{lead.email_status}</TableCell>
                       <TableCell>{lead.verification_score ?? "Not scored"}</TableCell>
@@ -341,7 +393,7 @@ export default function ListsPage() {
                   ))}
                   {selectedListLeads.leads.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="py-10 text-center text-slate-500">
+                      <TableCell colSpan={6} className="py-10 text-center text-slate-500">
                         This list has no leads yet.
                       </TableCell>
                     </TableRow>

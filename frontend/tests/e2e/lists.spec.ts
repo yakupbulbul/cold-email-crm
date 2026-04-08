@@ -139,3 +139,91 @@ test("edit button opens the selected list in edit mode", async ({ page }) => {
   await expect(page.locator('input[value="Reusable list"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
 });
+
+test("list members can update contact type", async ({ page }) => {
+  let listLead = {
+    id: "lead-1",
+    email: "one@example.com",
+    first_name: "One",
+    last_name: "Lead",
+    company: "Example",
+    contact_type: "b2c",
+    consent_status: "granted",
+    unsubscribe_status: "subscribed",
+    contact_quality_tier: "medium",
+    email_status: "valid",
+    verification_score: 100,
+    verification_integrity: "high",
+    last_verified_at: "2026-04-08T10:00:00Z",
+    is_disposable: false,
+    is_role_based: false,
+    is_suppressed: false,
+    verification_reasons: ["Mailbox looks reachable."],
+    list_ids: ["list-1"],
+    list_names: ["April Outreach Batch"],
+    created_at: "2026-04-08T10:00:00Z",
+  };
+
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: "list-1",
+          name: "April Outreach Batch",
+          description: "Reusable list",
+          type: "static",
+          created_at: "2026-04-08T10:00:00Z",
+          updated_at: "2026-04-08T10:00:00Z",
+          lead_count: 1,
+          reachable_count: 1,
+          risky_count: 0,
+          invalid_count: 0,
+          suppressed_count: 0,
+          contact_type_counts: { b2c: 1 },
+          status_counts: { valid: 1 },
+        },
+      ]),
+    });
+  });
+  await page.route("**/api/v1/leads", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([listLead]) });
+  });
+  await page.route("**/api/v1/lists/list-1/leads", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        list: {
+          id: "list-1",
+          name: "April Outreach Batch",
+          description: "Reusable list",
+          type: "static",
+          created_at: "2026-04-08T10:00:00Z",
+          updated_at: "2026-04-08T10:00:00Z",
+          lead_count: 1,
+          reachable_count: 1,
+          risky_count: 0,
+          invalid_count: 0,
+          suppressed_count: 0,
+          contact_type_counts: { b2c: 1 },
+          status_counts: { valid: 1 },
+        },
+        leads: [listLead],
+      }),
+    });
+  });
+  await page.route("**/api/v1/leads/lead-1", async (route) => {
+    listLead = { ...listLead, ...JSON.parse(route.request().postData() || "{}") };
+    if (listLead.contact_type === "mixed") listLead.contact_type = null;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(listLead) });
+  });
+
+  await page.goto("/lists");
+  await page.getByText("April Outreach Batch").click();
+  await page.locator("select").filter({ has: page.getByRole("option", { name: "B2B" }) }).last().selectOption("b2b");
+  await page.getByRole("button", { name: "Save" }).last().click();
+
+  await expect(page.getByText("Updated one@example.com contact type to b2b.")).toBeVisible();
+});
