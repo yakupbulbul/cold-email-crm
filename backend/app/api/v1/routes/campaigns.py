@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.core.database import get_db
 from app.schemas.campaign import CampaignCreate, CampaignResponse
 from app.models.campaign import Campaign
@@ -7,10 +8,12 @@ from app.models.campaign import Campaign
 router = APIRouter()
 
 @router.get("/")
+@router.get("")  # Handle both /campaigns and /campaigns/ without redirect
 def list_campaigns(db: Session = Depends(get_db)):
     return db.query(Campaign).all()
 
 @router.post("/", response_model=CampaignResponse)
+@router.post("")  # Handle both /campaigns and /campaigns/ without redirect
 def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
     c = Campaign(
         name=req.name,
@@ -26,6 +29,12 @@ def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
 
 @router.post("/{campaign_id}/start")
 def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    if not settings.BACKGROUND_WORKERS_ENABLED:
+        raise HTTPException(
+            status_code=409,
+            detail="Background workers are disabled in lean development mode. Run make dev-full before starting campaigns.",
+        )
+
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")

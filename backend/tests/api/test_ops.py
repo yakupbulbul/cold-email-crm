@@ -61,3 +61,20 @@ def test_mailcow_health_endpoint_returns_safe_payload(client: TestClient, auth_h
     assert payload["service"] == "mailcow_api"
     assert "status" in payload
     assert payload["mutations_enabled"] is False
+
+
+def test_worker_health_reports_disabled_in_lean_mode(client: TestClient, auth_headers: dict):
+    resp = client.get("/api/v1/ops/health/workers", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["service"] == "workers"
+    assert payload["status"] == "disabled"
+    assert payload["enabled"] is False
+
+
+def test_readiness_reports_disabled_workers_as_warning(client: TestClient, auth_headers: dict):
+    resp = client.get("/api/v1/ops/readiness", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    worker_check = next(item for item in payload["checklist"] if item["check"] == "Worker and Beat Processes")
+    assert worker_check["status"] == "warning"

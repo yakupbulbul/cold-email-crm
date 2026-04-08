@@ -34,7 +34,17 @@ class SystemHealthService:
     def check_worker_health(self) -> Dict[str, Any]:
         from app.models.monitoring import WorkerHeartbeat
         from datetime import datetime, timedelta
-        
+
+        if not settings.BACKGROUND_WORKERS_ENABLED:
+            return {
+                "status": "disabled",
+                "service": "workers",
+                "enabled": False,
+                "detail": "Background workers are disabled in lean development mode. Run make dev-full to enable worker and beat.",
+                "active_count": 0,
+                "total_registered": 0,
+            }
+
         threshold = datetime.utcnow() - timedelta(minutes=5)
         active_workers = self.db.query(WorkerHeartbeat).filter(WorkerHeartbeat.last_seen_at >= threshold).count()
         total_workers = self.db.query(WorkerHeartbeat).count()
@@ -48,6 +58,7 @@ class SystemHealthService:
         return {
             "status": status,
             "service": "workers",
+            "enabled": True,
             "active_count": active_workers,
             "total_registered": total_workers
         }
@@ -95,7 +106,11 @@ class SystemHealthService:
         overall = "healthy"
         if is_any_failed:
             overall = "failed"
-        elif not is_all_healthy or worker_stat["status"] == "degraded" or mailcow_stat["status"] in {"degraded", "unknown"}:
+        elif (
+            not is_all_healthy
+            or worker_stat["status"] in {"degraded", "disabled"}
+            or mailcow_stat["status"] in {"degraded", "unknown"}
+        ):
             overall = "degraded"
             
         return {

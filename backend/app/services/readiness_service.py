@@ -30,6 +30,26 @@ class ReadinessService:
             "detail": "Queue and cache store is reachable." if rd["status"] == "healthy" else "Redis offline."
         })
 
+        workers = health_stat["components"]["workers"]
+        worker_status = "pass"
+        worker_detail = "Background workers are running."
+        if workers["status"] == "disabled":
+            worker_status = "warning"
+            worker_detail = workers["detail"]
+        elif workers["status"] == "degraded":
+            worker_status = "warning"
+            worker_detail = "Background workers are only partially healthy."
+        elif workers["status"] == "failed":
+            worker_status = "fail"
+            worker_detail = "Background workers are expected but unavailable."
+
+        checks.append({
+            "category": "Background Jobs",
+            "check": "Worker and Beat Processes",
+            "status": worker_status,
+            "detail": worker_detail,
+        })
+
         # Secrets & Keys
         has_secret = bool(settings.SECRET_KEY)
         has_openai = bool(settings.OPENAI_API_KEY)
@@ -58,7 +78,13 @@ class ReadinessService:
 
         total = len(checks)
         passed = sum(1 for c in checks if c["status"] == "pass")
-        overall = "ready" if passed == total else ("degraded" if passed > 2 else "failed")
+        warnings = sum(1 for c in checks if c["status"] == "warning")
+        if passed == total:
+            overall = "ready"
+        elif passed + warnings == total and passed >= 3:
+            overall = "degraded"
+        else:
+            overall = "failed"
 
         return {
             "status": overall,
