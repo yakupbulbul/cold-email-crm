@@ -17,6 +17,7 @@ class MailcowHealth:
     status: str
     detail: str
     http_status: int | None = None
+    reason: str | None = None
 
 
 @dataclass
@@ -62,27 +63,39 @@ class MailcowClient:
             return MailcowHealth(
                 status="unknown",
                 detail="Mailcow API credentials are not configured for this environment.",
+                reason="unconfigured",
             )
 
         try:
             response = self._request("GET", "/get/status/containers")
         except httpx.HTTPError as exc:
-            return MailcowHealth(status="failed", detail=f"Mailcow API unreachable: {exc}")
+            return MailcowHealth(
+                status="failed",
+                detail=f"Mailcow API unreachable: {exc}",
+                reason="unreachable",
+            )
         except MailcowError as exc:
-            return MailcowHealth(status="failed", detail=str(exc))
+            return MailcowHealth(status="failed", detail=str(exc), reason="misconfigured")
 
         if response.status_code == 200:
-            return MailcowHealth(status="healthy", detail="Mailcow API responded successfully.", http_status=200)
+            return MailcowHealth(
+                status="healthy",
+                detail="Mailcow API responded successfully.",
+                http_status=200,
+                reason="healthy",
+            )
         if response.status_code in {401, 403}:
             return MailcowHealth(
                 status="failed",
                 detail="Mailcow API rejected the configured credentials.",
                 http_status=response.status_code,
+                reason="unauthorized",
             )
         return MailcowHealth(
             status="degraded",
             detail=f"Mailcow API returned an unexpected status code ({response.status_code}).",
             http_status=response.status_code,
+            reason="unexpected_response",
         )
 
     def domain_exists(self, domain_name: str) -> bool | None:
