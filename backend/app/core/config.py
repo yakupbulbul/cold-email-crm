@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = 8050
     BACKEND_URL: str = "http://127.0.0.1:8050"
     NEXT_PUBLIC_API_URL: str = "/api/v1"
+    BACKGROUND_WORKERS_ENABLED: bool = False
 
     # Security
     SECRET_KEY: str = "dev-only-change-me"

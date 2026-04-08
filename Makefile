@@ -8,9 +8,9 @@ PYTHON_BIN := backend/.venv/bin/python
 PIP_BIN := backend/.venv/bin/pip
 NPM_BIN := npm
 
-.PHONY: help setup up down logs migrate bootstrap-admin seed dev test reset \
-	full-up full-down test-infra-up test-infra-down \
-	test-backend test-frontend test-e2e smoke check-env check-docker
+.PHONY: help setup up down logs migrate bootstrap-admin seed dev dev-full \
+	test reset full-up full-down test-infra-up test-infra-down \
+	test-backend test-frontend test-e2e smoke check-env check-docker host-check
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -20,6 +20,9 @@ check-env: ## Ensure the local .env file exists
 
 check-docker: ## Ensure the Docker daemon is available
 	@docker info >/dev/null 2>&1 || (echo "Docker daemon is not running. Start Docker Desktop (or your Docker service) and retry." && exit 1)
+
+host-check: check-env ## Verify host Postgres and Redis are reachable for no-Docker development
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; $(PYTHON_BIN) -c "import os, redis; from urllib.parse import urlparse; from sqlalchemy import create_engine, text; pg_url=os.environ[\"POSTGRES_URL\"]; redis_url=os.environ[\"REDIS_URL\"]; engine=create_engine(pg_url); conn=engine.connect(); conn.execute(text(\"SELECT 1\")); conn.close(); pg=urlparse(pg_url); print(f\"Host PostgreSQL reachable at {pg.hostname or '\''127.0.0.1'\''}:{pg.port or 5432}\"); client=redis.Redis.from_url(redis_url, socket_timeout=2); client.ping(); rd=urlparse(redis_url); print(f\"Host Redis reachable at {rd.hostname or '\''127.0.0.1'\''}:{rd.port or 6379}\")"'
 
 setup: check-env ## Install host development dependencies
 	python3 -m venv backend/.venv
@@ -45,8 +48,11 @@ bootstrap-admin: check-env ## Create only the local bootstrap admin user
 seed: check-env ## Insert deterministic safe demo data (no admin bootstrap)
 	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; cd backend && ../$(PYTHON_BIN) scripts/seed_test_data.py --reset'
 
-dev: check-env ## Run frontend, backend, worker, and scheduler on the host
-	./scripts/dev.sh $(ENV_FILE)
+dev: check-env host-check ## Run frontend and backend on the host (lean mode)
+	./scripts/dev.sh $(ENV_FILE) lean
+
+dev-full: check-env host-check ## Run frontend, backend, worker, and scheduler on the host
+	./scripts/dev.sh $(ENV_FILE) full
 
 test: test-backend test-frontend test-e2e ## Run the local validation suite
 
