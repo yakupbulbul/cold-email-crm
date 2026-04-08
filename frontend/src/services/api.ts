@@ -2,7 +2,9 @@ import { useApi } from "@/hooks/useApi";
 import { useCallback } from "react";
 import { 
     Domain, Mailbox, Campaign, Contact, SuppressionEntry, 
-    SystemHealth, Alert, JobLog, DeliverabilitySummary, Thread, Message, SettingsSummary 
+    SystemHealth, Alert, JobLog, DeliverabilitySummary, Thread, Message, SettingsSummary,
+    LeadVerificationJob,
+    LeadVerificationResult,
 } from "@/types/models";
 
 type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
@@ -50,6 +52,9 @@ export function useApiService() {
 
     // ── LEADS / CONTACTS ──
     const getLeads = useCallback(() => request<Contact[]>("/leads"), [request]);
+    const verifyLead = useCallback((lead_id: string) => request<LeadVerificationResult>("/leads/verify", { method: "POST", body: { lead_id } }), [request]);
+    const verifyLeadsBulk = useCallback((lead_ids: string[]) => request<{ job_id: string; status: string; requested_count: number; worker_mode: "lean" | "full" }>("/leads/verify/bulk", { method: "POST", body: { lead_ids } }), [request]);
+    const getLeadVerificationJob = useCallback((jobId: string) => request<LeadVerificationJob>(`/leads/verify/${jobId}`), [request]);
 
     // ── SUPPRESSION ──
     const getSuppressionList = useCallback(() => request<SuppressionEntry[]>("/suppression"), [request]);
@@ -91,6 +96,9 @@ export function useApiService() {
         createCampaign,
         runPreflight,
         getLeads,
+        verifyLead,
+        verifyLeadsBulk,
+        getLeadVerificationJob,
         getSuppressionList,
         addSuppression,
         deleteSuppression,

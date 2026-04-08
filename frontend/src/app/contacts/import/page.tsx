@@ -10,7 +10,6 @@ export default function LeadImportPage() {
     const [step, setStep] = useState<1 | 2 | 3>(1);
     
     // Upload state
-    const [file, setFile] = useState<File | null>(null);
     const [headers, setHeaders] = useState<string[]>([]);
     const [jobId, setJobId] = useState<string | null>(null);
     
@@ -23,11 +22,14 @@ export default function LeadImportPage() {
     });
 
     // Validation State
-    const [validationResult, setValidationResult] = useState<any>(null);
+    const [validationResult, setValidationResult] = useState<{
+        valid_rows: number;
+        invalid_rows: number;
+        duplicate_rows: number;
+    } | null>(null);
 
-    const handleUploadSuccess = async (csvHeaders: string[], rawRows: any[], uploadedFile: File) => {
+    const handleUploadSuccess = async (csvHeaders: string[], _rawRows: unknown[], uploadedFile: File) => {
         setHeaders(csvHeaders);
-        setFile(uploadedFile);
         
         // Auto-map common names
         const newMap = { ...mappings };
@@ -80,7 +82,7 @@ export default function LeadImportPage() {
             method: "POST"
         });
         if (data && data.status === "completed") {
-            window.location.href = "/contacts";
+            window.location.href = `/contacts?source_job=${jobId}`;
         }
     };
 

@@ -50,10 +50,45 @@ export interface Contact {
     first_name: string | null;
     last_name: string | null;
     company: string | null;
+    email_status: string;
     verification_score: number | null;
+    verification_integrity: "high" | "medium" | "low" | null;
+    last_verified_at: string | null;
+    is_disposable: boolean;
+    is_role_based: boolean;
     is_suppressed: boolean;
+    verification_reasons: string[] | null;
     source?: string;
+    source_import_job_id?: string | null;
     created_at: string;
+}
+
+export interface LeadVerificationResult {
+    lead_id: string;
+    email: string;
+    status: string;
+    score: number;
+    integrity: "high" | "medium" | "low";
+    reasons: string[];
+    checked_at: string;
+    syntax_valid: boolean;
+    domain_valid: boolean;
+    mx_valid: boolean;
+    is_disposable: boolean;
+    is_role_based: boolean;
+    is_duplicate: boolean;
+    is_suppressed: boolean;
+}
+
+export interface LeadVerificationJob {
+    job_id: string;
+    status: string;
+    requested_count: number;
+    processed_count: number;
+    results: LeadVerificationResult[];
+    error?: string | null;
+    started_at?: string | null;
+    finished_at?: string | null;
 }
 
 export interface SuppressionEntry {

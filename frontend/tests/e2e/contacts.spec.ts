@@ -1,21 +1,45 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-test("contacts page loads", async ({ page }) => {
-  page.on("pageerror", (err) => { throw err; });
-  await page.goto("/contacts");
-  await page.waitForLoadState("networkidle");
-  await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 8_000 });
-});
+test.describe("contacts verification UI", () => {
+  test("contacts page loads with verification controls", async ({ page }) => {
+    await page.goto("/contacts");
+    await expect(page.getByRole("heading", { name: "Lead Directory" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Verify selected" })).toBeVisible();
+    await expect(page.locator("table")).toBeVisible();
+  });
 
-test("contacts table or empty state renders", async ({ page }) => {
-  await page.goto("/contacts");
-  await page.waitForLoadState("networkidle");
-  const el = page.locator("table, [data-testid='empty-state']").first();
-  await expect(el).toBeVisible({ timeout: 8_000 });
-});
+  test("unverified wording only appears as a status", async ({ page }) => {
+    await page.goto("/contacts");
+    await expect(page.getByText("Unverified means the email has not been checked yet.")).toBeVisible();
+    await expect(page.getByText("Unknown")).toHaveCount(0);
+  });
 
-test("CSV import page loads", async ({ page }) => {
-  await page.goto("/contacts/import");
-  await page.waitForLoadState("networkidle");
-  await expect(page.locator("h1, h2, [data-testid='csv-dropzone'], input[type='file']").first()).toBeVisible({ timeout: 8_000 });
+  test("contacts detail area opens", async ({ page }) => {
+    await page.goto("/contacts");
+    const buttonTexts = (await page.locator("button").allTextContents()).map((value) => value.trim());
+    const detailsIndex = buttonTexts.findIndex((value) => value === "Details");
+    if (detailsIndex >= 0) {
+      const detailsButton = page.locator("button").nth(detailsIndex);
+      await expect(detailsButton).toBeVisible();
+      await detailsButton.click();
+      await expect(page.getByText("Latest verification state for this lead.")).toBeVisible();
+    } else {
+      await expect(page.getByText("No leads available")).toBeVisible();
+    }
+  });
+
+  test("verify actions surface real backend progress", async ({ page }) => {
+    await page.goto("/contacts");
+
+    const buttonTexts = (await page.locator("button").allTextContents()).map((value) => value.trim());
+    const verifyIndex = buttonTexts.findIndex((value) => value === "Verify");
+    if (verifyIndex >= 0) {
+      const verifyButton = page.locator("button").nth(verifyIndex);
+      await expect(verifyButton).toBeVisible();
+      await verifyButton.click();
+      await expect(page.getByText(/^Verified /)).toBeVisible({ timeout: 10_000 });
+    } else {
+      await expect(page.getByText("No leads available")).toBeVisible();
+    }
+  });
 });

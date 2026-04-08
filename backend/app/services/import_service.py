@@ -139,6 +139,8 @@ class LeadImportJobService:
                 last_name=row.mapped_last_name,
                 company=row.mapped_company,
                 source="CSV Import",
+                source_file_name=job.file_name,
+                source_import_job_id=job.id,
                 notes=f"Imported from job {job_id}"
             )
             self.db.add(contact)
