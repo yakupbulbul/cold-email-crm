@@ -22,6 +22,12 @@ class MailboxCreate(BaseModel):
     imap_password: str
     daily_send_limit: int = 50
 
+
+class MailboxUpdate(BaseModel):
+    display_name: str
+    daily_send_limit: int = 50
+    status: str = "active"
+
 class MailboxResponse(BaseModel):
     id: str
     domain_id: str
@@ -126,3 +132,29 @@ def get_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
     return mailbox_to_response(mailbox)
+
+
+@router.put("/{mailbox_id}")
+def update_mailbox(mailbox_id: str, req: MailboxUpdate, db: Session = Depends(get_db)):
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    if not mailbox:
+        raise HTTPException(status_code=404, detail="Mailbox not found")
+
+    mailbox.display_name = req.display_name.strip()
+    mailbox.daily_send_limit = req.daily_send_limit
+    mailbox.status = req.status
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+    return mailbox_to_response(mailbox)
+
+
+@router.delete("/{mailbox_id}")
+def delete_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    if not mailbox:
+        raise HTTPException(status_code=404, detail="Mailbox not found")
+
+    db.delete(mailbox)
+    db.commit()
+    return {"status": "deleted", "id": mailbox_id}

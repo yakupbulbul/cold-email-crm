@@ -23,6 +23,12 @@ type MailboxCreatePayload = {
     daily_send_limit?: number;
 };
 
+type MailboxUpdatePayload = {
+    display_name: string;
+    daily_send_limit: number;
+    status: string;
+};
+
 type CampaignCreatePayload = {
     name: string;
     mailbox_id: string;
@@ -78,6 +84,8 @@ export function useApiService() {
     // ── MAILBOXES ──
     const getMailboxes = useCallback(() => request<Mailbox[]>("/mailboxes"), [request]);
     const createMailbox = useCallback((data: MailboxCreatePayload) => request<Mailbox>("/mailboxes", { method: "POST", body: data }), [request]);
+    const updateMailbox = useCallback((id: string, data: MailboxUpdatePayload) => request<Mailbox>(`/mailboxes/${id}`, { method: "PUT", body: data }), [request]);
+    const deleteMailbox = useCallback((id: string) => request<{ status: string; id: string }>(`/mailboxes/${id}`, { method: "DELETE" }), [request]);
 
     // ── INBOX & THREADS (Missing Backend - Graceful Fallback) ──
     const getThreads = useCallback(() => request<Thread[]>("/inbox/threads"), [request]);
@@ -114,6 +122,8 @@ export function useApiService() {
         getDomainStatus,
         getMailboxes,
         createMailbox,
+        updateMailbox,
+        deleteMailbox,
         getThreads,
         getMessages
     };

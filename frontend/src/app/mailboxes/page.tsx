@@ -7,7 +7,7 @@ import Spinner from '@/components/ui/Spinner';
 
 export default function MailboxesPage() {
   const [activeTab, setActiveTab] = useState('mailboxes');
-  const { getMailboxes, getDomains, createMailbox, loading, error } = useApiService();
+  const { getMailboxes, getDomains, createMailbox, updateMailbox, deleteMailbox, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [selectedDomainId, setSelectedDomainId] = useState('');
@@ -16,6 +16,12 @@ export default function MailboxesPage() {
   const [password, setPassword] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingMailboxId, setEditingMailboxId] = useState<string | null>(null);
+  const [editingDisplayName, setEditingDisplayName] = useState('');
+  const [editingDailyLimit, setEditingDailyLimit] = useState('50');
+  const [editingStatus, setEditingStatus] = useState('active');
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyMailboxId, setBusyMailboxId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -30,6 +36,11 @@ export default function MailboxesPage() {
   }, [getMailboxes, getDomains]);
 
   const selectedDomain = domains.find((domain) => domain.id === selectedDomainId);
+
+  const refreshMailboxes = async () => {
+    const refreshed = await getMailboxes();
+    if (refreshed) setMailboxes(refreshed);
+  };
 
   const handleCreateMailbox = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -59,8 +70,69 @@ export default function MailboxesPage() {
     setLocalPart('');
     setDisplayName('');
     setPassword('');
-    const refreshed = await getMailboxes();
-    if (refreshed) setMailboxes(refreshed);
+    await refreshMailboxes();
+  };
+
+  const beginEditMailbox = (mailbox: Mailbox) => {
+    setActionError(null);
+    setEditingMailboxId(mailbox.id);
+    setEditingDisplayName(mailbox.display_name);
+    setEditingDailyLimit(String(mailbox.daily_send_limit));
+    setEditingStatus(mailbox.status);
+  };
+
+  const cancelEditMailbox = () => {
+    setEditingMailboxId(null);
+    setEditingDisplayName('');
+    setEditingDailyLimit('50');
+    setEditingStatus('active');
+    setActionError(null);
+  };
+
+  const handleUpdateMailbox = async (mailboxId: string) => {
+    setActionError(null);
+    if (!editingDisplayName.trim()) {
+      setActionError('Display name is required.');
+      return;
+    }
+    const dailySendLimit = Number(editingDailyLimit);
+    if (!Number.isFinite(dailySendLimit) || dailySendLimit <= 0) {
+      setActionError('Daily limit must be a positive number.');
+      return;
+    }
+
+    setBusyMailboxId(mailboxId);
+    const updated = await updateMailbox(mailboxId, {
+      display_name: editingDisplayName.trim(),
+      daily_send_limit: dailySendLimit,
+      status: editingStatus,
+    });
+    setBusyMailboxId(null);
+
+    if (!updated) {
+      setActionError('Mailbox update failed. Check the backend response and try again.');
+      return;
+    }
+
+    setMailboxes((current) => current.map((mailbox) => mailbox.id === mailboxId ? updated : mailbox));
+    cancelEditMailbox();
+  };
+
+  const handleDeleteMailbox = async (mailboxId: string) => {
+    setActionError(null);
+    setBusyMailboxId(mailboxId);
+    const removed = await deleteMailbox(mailboxId);
+    setBusyMailboxId(null);
+
+    if (!removed) {
+      setActionError('Mailbox delete failed. Check the backend response and try again.');
+      return;
+    }
+
+    setMailboxes((current) => current.filter((mailbox) => mailbox.id !== mailboxId));
+    if (editingMailboxId === mailboxId) {
+      cancelEditMailbox();
+    }
   };
 
   return (
@@ -134,6 +206,12 @@ export default function MailboxesPage() {
             <Spinner size="lg" />
          </div>
       ) : activeTab === 'mailboxes' && mailboxes.length > 0 ? (
+        <div className="space-y-4">
+          {actionError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {actionError}
+            </div>
+          )}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -145,7 +223,10 @@ export default function MailboxesPage() {
               </tr>
             </thead>
             <tbody>
-              {mailboxes.map((mb) => (
+              {mailboxes.map((mb) => {
+                const isEditing = editingMailboxId === mb.id;
+                const isBusy = busyMailboxId === mb.id;
+                return (
                 <tr key={mb.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
@@ -159,35 +240,93 @@ export default function MailboxesPage() {
                     </div>
                   </td>
                   <td className="py-4 px-6">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold tracking-wide border ${mb.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200 shadow-sm'}`}>
-                      {mb.status}
-                    </span>
+                    {isEditing ? (
+                      <select value={editingStatus} onChange={(event) => setEditingStatus(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500">
+                        <option value="active">active</option>
+                        <option value="paused">paused</option>
+                        <option value="disabled">disabled</option>
+                      </select>
+                    ) : (
+                      <span className={`px-3 py-1.5 rounded-full text-xs font-bold tracking-wide border ${mb.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200 shadow-sm'}`}>
+                        {mb.status}
+                      </span>
+                    )}
                   </td>
                   <td className="py-4 px-6">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between items-center text-xs font-semibold text-slate-600">
-                        <span>Max {mb.daily_send_limit}</span>
-                        <span>0%</span>
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <input
+                          value={editingDisplayName}
+                          onChange={(event) => setEditingDisplayName(event.target.value)}
+                          placeholder="Display name"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                        />
+                        <input
+                          value={editingDailyLimit}
+                          onChange={(event) => setEditingDailyLimit(event.target.value)}
+                          type="number"
+                          min="1"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                        />
                       </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                        <div className={`h-full rounded-full ${mb.status === 'active' ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-yellow-400 to-amber-500'}`} style={{ width: '0%' }}></div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center text-xs font-semibold text-slate-600">
+                          <span>{mb.display_name || 'Mailbox'}</span>
+                          <span>Max {mb.daily_send_limit}</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                          <div className={`h-full rounded-full ${mb.status === 'active' ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-yellow-400 to-amber-500'}`} style={{ width: '0%' }}></div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100">
-                        <Edit2 size={16} />
-                      </button>
-                      <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100">
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      {isEditing ? (
+                        <>
+                          <button
+                            data-testid={`save-mailbox-${mb.id}`}
+                            disabled={isBusy}
+                            onClick={() => void handleUpdateMailbox(mb.id)}
+                            className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
+                          >
+                            {isBusy ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            data-testid={`cancel-mailbox-${mb.id}`}
+                            onClick={cancelEditMailbox}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            data-testid={`edit-mailbox-${mb.id}`}
+                            onClick={() => beginEditMailbox(mb)}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            data-testid={`delete-mailbox-${mb.id}`}
+                            disabled={isBusy}
+                            onClick={() => void handleDeleteMailbox(mb.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 disabled:opacity-50"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
+        </div>
         </div>
       ) : activeTab === 'mailboxes' ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col items-center justify-center p-16">

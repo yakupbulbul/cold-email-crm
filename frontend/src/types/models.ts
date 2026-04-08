@@ -21,6 +21,7 @@ export interface Domain {
 
 export interface Mailbox {
     id: string;
+    domain_id?: string;
     email: string;
     display_name: string;
     status: string;

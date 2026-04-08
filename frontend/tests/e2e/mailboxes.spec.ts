@@ -9,6 +9,19 @@ test("mailboxes page loads", async ({ page }) => {
 test("create mailbox button is visible", async ({ page }) => {
   await page.goto("/mailboxes");
   await page.waitForLoadState("networkidle");
-  const btn = page.locator("button, a").filter({ hasText: /add|create|new mailbox/i }).first();
+  const btn = page.getByTestId("create-mailbox-button");
   await expect(btn).toBeVisible({ timeout: 6_000 });
+});
+
+test("mailbox row actions render when mailboxes exist", async ({ page }) => {
+  await page.goto("/mailboxes");
+  await page.waitForLoadState("networkidle");
+  const editButtons = page.locator('[data-testid^="edit-mailbox-"]');
+  const deleteButtons = page.locator('[data-testid^="delete-mailbox-"]');
+  if ((await editButtons.count()) > 0) {
+    await expect(editButtons.first()).toBeVisible();
+    await expect(deleteButtons.first()).toBeVisible();
+  } else {
+    await expect(page.getByText("No Mailboxes Found")).toBeVisible();
+  }
 });
