@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 interface User {
@@ -23,9 +23,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const isMountedRef = useRef(true);
     const router = useRouter();
     const pathname = usePathname();
     const isAuthRoute = pathname === "/signin" || pathname === "/login";
+
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     const fetchMe = useCallback(async (authToken: string) => {
         try {
@@ -37,17 +44,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
             if (res.ok) {
                 const userData = await res.json();
-                setUser(userData);
+                if (isMountedRef.current) {
+                    setUser(userData);
+                }
             } else {
                 // If token is invalid, clear it
                 localStorage.removeItem("token");
-                setToken(null);
-                setUser(null);
+                if (isMountedRef.current) {
+                    setToken(null);
+                    setUser(null);
+                }
             }
         } catch (error) {
             console.error("Failed to fetch user:", error);
         } finally {
-            setIsLoading(false);
+            if (isMountedRef.current) {
+                setIsLoading(false);
+            }
         }
     }, []);
 
@@ -69,16 +82,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const login = async (newToken: string) => {
         localStorage.setItem("token", newToken);
-        setToken(newToken);
+        if (isMountedRef.current) {
+            setToken(newToken);
+        }
         await fetchMe(newToken);
-        router.push("/");
+        router.replace("/");
     };
 
     const logout = () => {
         localStorage.removeItem("token");
-        setToken(null);
-        setUser(null);
-        router.push("/signin");
+        if (isMountedRef.current) {
+            setToken(null);
+            setUser(null);
+        }
+        router.replace("/signin");
     };
 
     return (

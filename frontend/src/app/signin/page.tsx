@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Mail, Lock, LogIn, AlertCircle } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
@@ -11,6 +11,13 @@ export default function SignInPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,9 +40,13 @@ export default function SignInPage() {
             const { access_token } = await res.json();
             await login(access_token);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            if (isMountedRef.current) {
+                setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            }
         } finally {
-            setLoading(false);
+            if (isMountedRef.current) {
+                setLoading(false);
+            }
         }
     };
 
