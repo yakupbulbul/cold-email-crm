@@ -7,10 +7,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
+from app.models.base import Base
 from app.models.user import User
 from app.core.security import get_password_hash
+from app.core.database import engine
 
 def create_user(email: str, password: str, is_admin: bool = False):
+    Base.metadata.create_all(bind=engine)
     db: Session = SessionLocal()
     try:
         user = db.query(User).filter(User.email == email).first()

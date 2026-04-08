@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=True,
         extra="ignore",
+        enable_decoding=False,
     )
 
     PROJECT_NAME: str = "AI-Powered Cold Email CRM"
