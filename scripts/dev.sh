@@ -26,6 +26,45 @@ set +a
 : "${CELERY_WORKER_POOL:=solo}"
 : "${BACKEND_RELOAD:=auto}"
 
+resolve_bin() {
+  local name="$1"
+  shift
+  local candidate
+  if candidate="$(command -v "${name}" 2>/dev/null)"; then
+    echo "${candidate}"
+    return 0
+  fi
+  for candidate in "$@"; do
+    if [[ -x "${candidate}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+NODE_BIN="$(resolve_bin node \
+  /opt/homebrew/bin/node \
+  /usr/local/bin/node \
+  "$HOME/.nvm/versions/node/v22.20.0/bin/node" \
+  "$HOME/.nvm/versions/node/v20.19.2/bin/node" \
+  "$HOME/.nvm/versions/node/v18.20.8/bin/node" \
+  "$HOME/.nvm/versions/node/v18.20.4/bin/node")" || {
+    echo "Missing node. Install Node.js or add it to PATH."
+    exit 1
+  }
+
+NPM_BIN="$(resolve_bin npm \
+  /opt/homebrew/bin/npm \
+  /usr/local/bin/npm \
+  "$HOME/.nvm/versions/node/v22.20.0/bin/npm" \
+  "$HOME/.nvm/versions/node/v20.19.2/bin/npm" \
+  "$HOME/.nvm/versions/node/v18.20.8/bin/npm" \
+  "$HOME/.nvm/versions/node/v18.20.4/bin/npm")" || {
+    echo "Missing npm. Install Node.js or add it to PATH."
+    exit 1
+  }
+
 BACKGROUND_WORKERS_ENABLED_VALUE=false
 if [[ "${MODE}" == "full" ]]; then
   BACKGROUND_WORKERS_ENABLED_VALUE=true
@@ -96,7 +135,7 @@ fi
 
 echo "Starting host development mode: ${MODE}"
 echo "Backend:  ${BACKEND_CMD[*]}"
-echo "Frontend: cd frontend && NODE_OPTIONS='${NODE_OPTIONS}' npm run dev -- --${NEXT_DEV_BUNDLER} --hostname 0.0.0.0 --port ${FRONTEND_PORT}"
+echo "Frontend: cd frontend && NODE_OPTIONS='${NODE_OPTIONS}' ${NPM_BIN} run dev -- --${NEXT_DEV_BUNDLER} --hostname 0.0.0.0 --port ${FRONTEND_PORT}"
 echo "Worker:   cd backend && ../backend/.venv/bin/python -m celery -A app.workers.celery_app worker --loglevel=${CELERY_LOGLEVEL} --pool=${CELERY_WORKER_POOL} --concurrency=${CELERY_WORKER_CONCURRENCY}"
 echo "Beat:     cd backend && ../backend/.venv/bin/python -m celery -A app.workers.celery_app beat --loglevel=${CELERY_LOGLEVEL}"
 echo "Logs:     ${BACKEND_LOG} ${FRONTEND_LOG} ${WORKER_LOG} ${BEAT_LOG}"
@@ -130,7 +169,7 @@ fi
 
 (
   cd frontend
-  NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS="${NODE_OPTIONS}" npm run dev -- --"${NEXT_DEV_BUNDLER}" --hostname 0.0.0.0 --port "${FRONTEND_PORT}" >> "../${FRONTEND_LOG}" 2>&1
+  PATH="$(dirname "${NODE_BIN}"):${PATH}" NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS="${NODE_OPTIONS}" "${NPM_BIN}" run dev -- --"${NEXT_DEV_BUNDLER}" --hostname 0.0.0.0 --port "${FRONTEND_PORT}" >> "../${FRONTEND_LOG}" 2>&1
 ) &
 echo $! > "${FRONTEND_PID_FILE}"
 
