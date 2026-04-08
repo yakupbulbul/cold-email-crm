@@ -42,7 +42,7 @@ def test_warmup_start_requires_background_workers(client: TestClient, auth_heade
         headers=auth_headers,
     )
     assert resp.status_code == 409
-    assert "make dev-full" in resp.json()["detail"]
+    assert "make dev or make dev-full" in resp.json()["detail"]
 
 
 def test_warmup_start_requires_peer_mailbox(client: TestClient, auth_headers: dict, monkeypatch):

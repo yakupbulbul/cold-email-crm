@@ -40,7 +40,7 @@ class SystemHealthService:
                 "status": "disabled",
                 "service": "workers",
                 "enabled": False,
-                "detail": "Background workers are disabled in lean development mode. Run make dev-full to enable worker and beat.",
+                "detail": "Background workers are disabled in low-RAM mode. Run make dev or make dev-full to enable worker and beat.",
                 "active_count": 0,
                 "total_registered": 0,
             }

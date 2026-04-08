@@ -305,16 +305,16 @@ export default function SettingsPage() {
                     <DetailRow label="Workers available" value={summary.worker_available ? "Yes" : "No"} />
                     <DetailRow
                         label="Warmup execution"
-                        value={summary.worker_available ? "Available" : "Run make dev-full"}
+                        value={summary.worker_available ? "Available" : "Run make dev or make dev-full"}
                     />
                     <DetailRow
                         label="Campaign execution"
-                        value={summary.worker_available ? "Available" : "Run make dev-full"}
+                        value={summary.worker_available ? "Available" : "Run make dev or make dev-full"}
                     />
                     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                         {summary.worker_available
                             ? "Worker-backed flows are active in this runtime."
-                            : summary.worker_detail || "Lean mode keeps worker-backed flows unavailable."}
+                            : summary.worker_detail || "Low-RAM mode keeps worker-backed flows unavailable until you restart with make dev or make dev-full."}
                     </div>
                 </SettingCard>
 
@@ -356,7 +356,7 @@ export default function SettingsPage() {
                         <div className="mt-2">
                             {summary.worker_available
                                 ? "Warmup and campaign execution can be processed in this runtime."
-                                : "Warmup execution and campaign sending require worker availability. Start full mode to process queued work."}
+                                : "Warmup execution and campaign sending require worker availability. Restart with make dev or make dev-full to process queued work."}
                         </div>
                     </div>
                 </div>

@@ -56,7 +56,7 @@ def test_start_campaign_requires_background_workers(client: TestClient, auth_hea
 
     resp = client.post(f"/api/v1/campaigns/{campaign_resp.json()['id']}/start", headers=auth_headers)
     assert resp.status_code == 409
-    assert "make dev-full" in resp.json()["detail"]
+    assert "make dev or make dev-full" in resp.json()["detail"]
 
 
 def test_start_campaign_requires_scheduled_lead(client: TestClient, auth_headers: dict, monkeypatch):

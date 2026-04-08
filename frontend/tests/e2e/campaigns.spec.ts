@@ -28,7 +28,7 @@ test("campaign cards expose activation controls and show honest lean-mode start 
       status: 409,
       contentType: "application/json",
       body: JSON.stringify({
-        detail: "Background workers are disabled in lean development mode. Run make dev-full before starting campaigns.",
+        detail: "Background workers are disabled in low-RAM mode. Run make dev or make dev-full before starting campaigns.",
       }),
     });
   });
@@ -40,7 +40,7 @@ test("campaign cards expose activation controls and show honest lean-mode start 
   await expect(card.getByRole("button", { name: "Start" })).toBeVisible();
   await expect(card.getByRole("button", { name: "Preflight" })).toBeVisible();
   await card.getByRole("button", { name: "Start" }).click();
-  await expect(card.locator('[data-testid^="campaign-message-"]')).toContainText("make dev-full");
+  await expect(card.locator('[data-testid^="campaign-message-"]')).toContainText("make dev or make dev-full");
 });
 
 test("active campaigns show pause and update status after pause succeeds", async ({ page }) => {

@@ -9,7 +9,7 @@ PIP_BIN := backend/.venv/bin/pip
 NPM_BIN := npm
 K6_BIN := k6
 
-.PHONY: help setup up down logs migrate bootstrap-admin seed dev dev-full \
+.PHONY: help setup up down logs migrate bootstrap-admin seed dev dev-lean dev-full \
 	test reset full-up full-down test-infra-up test-infra-down \
 	test-backend test-frontend test-e2e test-api test-load test-smoke test-full \
 	test-e2e-auth test-e2e-ops test-e2e-empty test-e2e-boundary \
@@ -52,10 +52,13 @@ bootstrap-admin: check-env ## Create only the local bootstrap admin user
 seed: check-env ## Insert deterministic safe demo data (no admin bootstrap)
 	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; cd backend && ../$(PYTHON_BIN) scripts/seed_test_data.py --reset'
 
-dev: check-env host-check ## Run frontend and backend on the host (lean mode)
+dev: check-env host-check ## Run frontend, backend, worker, and scheduler on the host
+	./scripts/dev.sh $(ENV_FILE) full
+
+dev-lean: check-env host-check ## Run frontend and backend on the host (low-RAM mode)
 	./scripts/dev.sh $(ENV_FILE) lean
 
-dev-full: check-env host-check ## Run frontend, backend, worker, and scheduler on the host
+dev-full: check-env host-check ## Alias for the worker-enabled host runtime
 	./scripts/dev.sh $(ENV_FILE) full
 
 test: test-backend test-frontend test-e2e ## Run the local validation suite

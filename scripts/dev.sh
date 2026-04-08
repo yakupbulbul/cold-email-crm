@@ -133,7 +133,12 @@ if [[ "${BACKEND_RELOAD}" == "true" ]]; then
   BACKEND_CMD=(../backend/.venv/bin/python -m uvicorn app.main:app --reload --reload-dir app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --log-level "${UVICORN_LOG_LEVEL}")
 fi
 
-echo "Starting host development mode: ${MODE}"
+DISPLAY_MODE="${MODE}"
+if [[ "${MODE}" == "lean" ]]; then
+  DISPLAY_MODE="low-ram"
+fi
+
+echo "Starting host development mode: ${DISPLAY_MODE}"
 echo "Backend:  ${BACKEND_CMD[*]}"
 echo "Frontend: cd frontend && NODE_OPTIONS='${NODE_OPTIONS}' ${NPM_BIN} run dev -- --${NEXT_DEV_BUNDLER} --hostname 0.0.0.0 --port ${FRONTEND_PORT}"
 echo "Worker:   cd backend && ../backend/.venv/bin/python -m celery -A app.workers.celery_app worker --loglevel=${CELERY_LOGLEVEL} --pool=${CELERY_WORKER_POOL} --concurrency=${CELERY_WORKER_CONCURRENCY}"
@@ -164,7 +169,7 @@ if [[ "${MODE}" == "full" ]]; then
   ) &
   echo $! > "${BEAT_PID_FILE}"
 else
-  echo "Lean mode leaves workers disabled. Use 'make dev-full' to run worker and beat."
+  echo "Low-RAM mode leaves workers disabled. Use 'make dev' or 'make dev-full' to run worker and beat."
 fi
 
 (
@@ -177,6 +182,11 @@ sleep 2
 echo "Ready checks:"
 echo "  Backend URL:  http://${BACKEND_HOST}:${BACKEND_PORT}"
 echo "  Frontend URL: http://localhost:${FRONTEND_PORT}"
+if [[ "${MODE}" == "full" ]]; then
+  echo "  Worker mode:  enabled (campaigns and warmup can run)"
+else
+  echo "  Worker mode:  disabled (campaigns and warmup stay read-only)"
+fi
 echo "Use 'tail -f ${BACKEND_LOG}' or 'tail -f ${FRONTEND_LOG}' for live logs."
 
 wait

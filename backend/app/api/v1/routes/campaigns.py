@@ -36,7 +36,7 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
     if not settings.BACKGROUND_WORKERS_ENABLED:
         raise HTTPException(
             status_code=409,
-            detail="Background workers are disabled in lean development mode. Run make dev-full before starting campaigns.",
+            detail="Background workers are disabled in low-RAM mode. Run make dev or make dev-full before starting campaigns.",
         )
 
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()

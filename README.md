@@ -106,20 +106,22 @@ make seed
 make dev
 ```
 
-`make dev` is the lean default. It runs:
+`make dev` is the normal worker-enabled local runtime. It runs:
 
 - FastAPI on `BACKEND_URL`
 - Next.js on `http://localhost:3000` by default
+- Celery worker on host
+- Celery beat on host
 
-It also prints the exact host-run commands for backend, frontend, worker, and beat. Worker and beat are intentionally disabled in lean mode to reduce memory and process count.
+It also prints the exact host-run commands for backend, frontend, worker, and beat.
 
-When you need queue processing, use:
+If you want the lower-RAM backend+frontend-only workflow instead, use:
 
 ```bash
-make dev-full
+make dev-lean
 ```
 
-`make dev-full` starts backend, frontend, Celery worker, and Celery beat together on the host.
+`make dev-lean` keeps worker-backed flows unavailable on purpose. `make dev-full` remains available as a compatibility alias for the same worker-enabled runtime as `make dev`.
 
 Sign in locally at `/signin`.
 
@@ -134,6 +136,7 @@ make migrate
 make bootstrap-admin
 make seed
 make dev
+make dev-lean
 make dev-full
 make smoke
 make test
@@ -145,8 +148,9 @@ make full-down
 Notes:
 
 - `make host-check` is the default no-Docker preflight
-- `make dev` is lean mode: backend + frontend only
-- `make dev-full` enables Celery worker + beat on the host
+- `make dev` is the default host runtime: backend + frontend + worker + beat
+- `make dev-lean` is the low-RAM host runtime: backend + frontend only
+- `make dev-full` is an alias for the worker-enabled host runtime
 - `make up` and `make reset` require Docker
 - `make bootstrap-admin` is the primary no-seed login path
 - `make full-up` runs the entire stack in Docker
@@ -391,8 +395,8 @@ Symptom:
 
 Fix:
 
-- this is expected in lean mode
-- run `make dev-full` when you need queue-backed processing
+- this is expected only in `make dev-lean`
+- restart with `make dev` or `make dev-full` when you need queue-backed processing
 
 ### Mailcow health is degraded or failed
 

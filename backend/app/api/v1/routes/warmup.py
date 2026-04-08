@@ -37,7 +37,7 @@ def start_warmup(req: WarmupControlRequest, db: Session = Depends(get_db)):
     if not settings.BACKGROUND_WORKERS_ENABLED:
         raise HTTPException(
             status_code=409,
-            detail="Background workers are disabled in lean development mode. Run make dev-full before starting warmup.",
+            detail="Background workers are disabled in low-RAM mode. Run make dev or make dev-full before starting warmup.",
         )
 
     mailbox = db.query(Mailbox).filter(Mailbox.id == req.mailbox_id).first()
@@ -110,7 +110,7 @@ def stop_warmup(req: WarmupControlRequest, db: Session = Depends(get_db)):
     if not settings.BACKGROUND_WORKERS_ENABLED:
         raise HTTPException(
             status_code=409,
-            detail="Background workers are disabled in lean development mode. Run make dev-full before stopping warmup.",
+            detail="Background workers are disabled in low-RAM mode. Run make dev or make dev-full before stopping warmup.",
         )
 
     mailbox = db.query(Mailbox).filter(Mailbox.id == req.mailbox_id).first()

@@ -4,18 +4,44 @@ import { useEffect, useState } from 'react';
 import { Activity, Play, Pause, Thermometer, Zap, AlertCircle } from 'lucide-react';
 import { useApiService } from '@/services/api';
 import Spinner from '@/components/ui/Spinner';
+import { SettingsSummary } from '@/types/models';
+
+type WarmupPair = {
+  id?: string;
+  mailbox_id?: string;
+  mailbox_a: string;
+  mailbox_b: string;
+  is_active?: boolean;
+  sent: number;
+  limit: number;
+  updated_at?: string | null;
+};
+
+type WarmupStatus = {
+  active_pairs: WarmupPair[];
+  global_health?: number;
+  total_sent?: number;
+  workers_enabled?: boolean;
+  warming_mailboxes?: number;
+};
 
 export default function WarmupPage() {
-  const { getWarmupStatus, loading, error } = useApiService();
-  const [stats, setStats] = useState<any>(null);
+  const { getWarmupStatus, getSettingsSummary, loading, error } = useApiService();
+  const [stats, setStats] = useState<WarmupStatus | null>(null);
+  const [summary, setSummary] = useState<SettingsSummary | null>(null);
 
   useEffect(() => {
     const loadWarmup = async () => {
-      const data = await getWarmupStatus();
+      const [data, runtimeSummary] = await Promise.all([getWarmupStatus(), getSettingsSummary()]);
       if (data) setStats(data);
+      if (runtimeSummary) setSummary(runtimeSummary);
     };
     loadWarmup();
-  }, [getWarmupStatus]);
+  }, [getWarmupStatus, getSettingsSummary]);
+
+  const warmupGuidance = summary?.worker_available
+    ? "Worker-backed warm-up execution is available in the normal local runtime."
+    : "Low-RAM mode keeps warm-up controls read-only. Restart with make dev or make dev-full before starting mailbox warm-up cycles.";
 
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
@@ -23,7 +49,7 @@ export default function WarmupPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Warm-up Engine</h1>
           <p className="text-sm text-slate-500 mt-2 font-medium">
-            Lean mode keeps warm-up controls read-only. Run <code>make dev-full</code> before starting mailbox warm-up cycles.
+            {warmupGuidance}
           </p>
         </div>
         <div className="flex gap-3">
@@ -105,7 +131,7 @@ export default function WarmupPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.active_pairs.map((pair: any, i: number) => (
+                    {stats.active_pairs.map((pair: WarmupPair, i: number) => (
                         <tr key={i} className="hover:bg-slate-50 transition-colors">
                           <td className="py-4 px-6 font-bold border-b border-slate-50">{pair.mailbox_a}</td>
                           <td className="py-4 px-6 font-bold border-b border-slate-50">{pair.mailbox_b}</td>
