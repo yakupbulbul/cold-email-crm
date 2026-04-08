@@ -7,8 +7,16 @@ import AppLayout from '@/components/AppLayout'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AI Cold Email CRM',
-  description: 'AI-Powered Cold Email Platform',
+  title: 'Campaign Manager',
+  description: 'B2B and B2C outreach operations platform',
+  icons: {
+    icon: [
+      { url: '/icon.png', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [{ url: '/apple-icon.png', type: 'image/png' }],
+    shortcut: ['/icon.png'],
+  },
 }
 
 export default function RootLayout({
