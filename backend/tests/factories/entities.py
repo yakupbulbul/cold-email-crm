@@ -5,7 +5,7 @@ from itertools import count
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
-from app.models.campaign import Campaign
+from app.models.campaign import Campaign, Contact
 from app.models.core import Domain, Mailbox
 from app.models.suppression import SuppressionList
 from app.models.user import User
@@ -109,6 +109,40 @@ def create_campaign(
     db.commit()
     db.refresh(campaign)
     return campaign
+
+
+def create_contact(
+    db: Session,
+    *,
+    email: str | None = None,
+    first_name: str | None = "Test",
+    last_name: str | None = "Lead",
+    company: str | None = "Example Co",
+    email_status: str = "unverified",
+    verification_score: int | None = None,
+    verification_integrity: str | None = None,
+    is_disposable: bool = False,
+    is_role_based: bool = False,
+    is_suppressed: bool = False,
+    verification_reasons: list[str] | None = None,
+) -> Contact:
+    contact = Contact(
+        email=email or f"{_next('lead')}@example.com",
+        first_name=first_name,
+        last_name=last_name,
+        company=company,
+        email_status=email_status,
+        verification_score=verification_score,
+        verification_integrity=verification_integrity,
+        is_disposable=is_disposable,
+        is_role_based=is_role_based,
+        is_suppressed=is_suppressed,
+        verification_reasons=verification_reasons,
+    )
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+    return contact
 
 
 def campaign_payload(*, mailbox_id: str, name: str | None = None) -> dict:

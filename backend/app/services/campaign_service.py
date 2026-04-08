@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.campaign import Campaign, CampaignLead, SendLog
 from app.services.smtp_service import SMTPManagerService
+from app.services.verification_service import contact_is_reachable
 from app.schemas.email import SendEmailRequest
 from datetime import datetime
 import logging
@@ -35,9 +36,8 @@ class CampaignService:
         pending_leads = self.db.query(CampaignLead).join(Contact).filter(
             CampaignLead.campaign_id == campaign.id,
             CampaignLead.status == "scheduled",
-            Contact.is_suppressed == False,
-            Contact.verification_score >= 80
         ).limit(campaign.daily_limit - sent_today).all()
+        pending_leads = [lead for lead in pending_leads if contact_is_reachable(lead.contact)]
 
         for lead in pending_leads:
             subject = campaign.template_subject.replace("{{first_name}}", lead.contact.first_name or "")

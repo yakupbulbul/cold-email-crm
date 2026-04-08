@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.monitoring import JobLog
 from app.schemas.campaign import CampaignCreate, CampaignResponse
+from app.services.verification_service import contact_is_reachable
 from app.workers.campaign_worker import run_campaign_cycle
 
 router = APIRouter()
@@ -42,17 +43,16 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
-    eligible_leads = (
+    scheduled_leads = (
         db.query(CampaignLead)
         .join(Contact)
         .filter(
             CampaignLead.campaign_id == campaign_id,
             CampaignLead.status == "scheduled",
-            Contact.is_suppressed == False,
-            Contact.verification_score >= 80,
         )
-        .count()
+        .all()
     )
+    eligible_leads = sum(1 for lead in scheduled_leads if contact_is_reachable(lead.contact))
     if eligible_leads == 0:
         raise HTTPException(
             status_code=409,
@@ -104,9 +104,9 @@ def lead_quality_report(campaign_id: str, db: Session = Depends(get_db)):
     from app.models.campaign import CampaignLead, Contact
     leads = db.query(Contact).join(CampaignLead).filter(CampaignLead.campaign_id == campaign_id).all()
     
-    valid = sum(1 for c in leads if c.verification_score == 100)
-    risky = sum(1 for c in leads if c.verification_score >= 80 and c.verification_score < 100)
-    invalid = sum(1 for c in leads if c.verification_score < 80)
+    valid = sum(1 for c in leads if c.email_status == "valid")
+    risky = sum(1 for c in leads if c.email_status == "risky")
+    invalid = sum(1 for c in leads if c.email_status not in {"valid", "risky"})
     suppressed = sum(1 for c in leads if c.is_suppressed)
     
     return {
@@ -137,9 +137,8 @@ def export_ready_campaign_leads(campaign_id: str, db: Session = Depends(get_db))
     leads = db.query(Contact).join(CampaignLead).filter(
         CampaignLead.campaign_id == campaign_id,
         CampaignLead.status == "scheduled",
-        Contact.is_suppressed == False,
-        Contact.verification_score >= 80
     ).all()
+    leads = [lead for lead in leads if contact_is_reachable(lead)]
     
     from fastapi.responses import StreamingResponse
     import io, csv

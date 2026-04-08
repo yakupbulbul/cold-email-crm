@@ -8,6 +8,7 @@ from app.core.config import settings
 TASK_MODULES = [
     "app.workers.heartbeat_worker",
     "app.workers.imap_sync_worker",
+    "app.workers.lead_verification_worker",
     "app.workers.warmup_worker",
     "app.workers.campaign_worker",
 ]

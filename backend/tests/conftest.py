@@ -28,6 +28,7 @@ from app.api.v1.routes import auth as auth_routes
 from tests.factories import (
     campaign_payload,
     create_campaign,
+    create_contact,
     create_domain,
     create_mailbox,
     create_suppression_entry,
@@ -136,6 +137,14 @@ def mailbox_factory(db: Session):
 def campaign_factory(db: Session):
     def factory(**kwargs):
         return create_campaign(db, **kwargs)
+
+    return factory
+
+
+@pytest.fixture()
+def contact_factory(db: Session):
+    def factory(**kwargs):
+        return create_contact(db, **kwargs)
 
     return factory
 

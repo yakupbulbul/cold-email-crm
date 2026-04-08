@@ -1,8 +1,16 @@
+from datetime import datetime
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
+
+from app.core.config import settings
 from app.core.database import get_db
-from app.services.verification_service import EmailVerificationService
+from app.models.monitoring import JobLog
+from app.services.verification_service import EmailVerificationService, contact_is_reachable, verification_result_payload
 from app.services.import_service import CSVParserService, LeadImportJobService
+from app.workers.lead_verification_worker import run_lead_verification_bulk
 from app.schemas.import_job import ImportMappingRules
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
@@ -79,18 +87,88 @@ def get_import_job(job_id: str, db: Session = Depends(get_db)):
     }
 
 class VerifyRequest(BaseModel):
-    email: str
+    lead_id: UUID
+
+
+class VerifyBulkRequest(BaseModel):
+    lead_ids: list[UUID]
 
 @router.post("/verify")
 def verify_email(req: VerifyRequest, db: Session = Depends(get_db)):
     service = EmailVerificationService(db)
-    log = service.verify_email(req.email)
-    
+    try:
+        result = service.verify_lead(str(req.lead_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return verification_result_payload(result)
+
+
+@router.post("/verify/bulk")
+def verify_leads_bulk(req: VerifyBulkRequest, db: Session = Depends(get_db)):
+    lead_ids = [str(lead_id) for lead_id in req.lead_ids]
+    if not lead_ids:
+        raise HTTPException(status_code=400, detail="At least one lead_id is required")
+
+    job = JobLog(
+        job_id=f"lead-verify-{datetime.utcnow().timestamp()}",
+        job_type="lead_verification_bulk",
+        status="queued",
+        payload_summary={"lead_ids": lead_ids, "requested_count": len(lead_ids), "processed_count": 0, "results": []},
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    if settings.BACKGROUND_WORKERS_ENABLED:
+        task = run_lead_verification_bulk.delay(lead_ids)
+        job.job_id = task.id
+        db.commit()
+        db.refresh(job)
+    else:
+        service = EmailVerificationService(db)
+        job.status = "running"
+        job.started_at = datetime.utcnow()
+        db.commit()
+        results = [verification_result_payload(result) for result in service.verify_leads(lead_ids)]
+        job.status = "completed"
+        job.finished_at = datetime.utcnow()
+        job.payload_summary = {
+            "lead_ids": lead_ids,
+            "requested_count": len(lead_ids),
+            "processed_count": len(results),
+            "results": results,
+            "worker_mode": "lean",
+        }
+        flag_modified(job, "payload_summary")
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+
     return {
-        "status": log.final_status,
-        "score": log.verification_score,
-        "syntax_valid": log.syntax_valid,
-        "mx_valid": log.mx_valid,
+        "job_id": job.job_id,
+        "status": job.status,
+        "requested_count": len(lead_ids),
+        "worker_mode": "full" if settings.BACKGROUND_WORKERS_ENABLED else "lean",
+    }
+
+
+@router.get("/verify/{job_id}")
+def get_verify_job(job_id: str, db: Session = Depends(get_db)):
+    job = db.query(JobLog).filter(JobLog.job_id == job_id, JobLog.job_type == "lead_verification_bulk").first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Verification job not found")
+
+    payload_summary = job.payload_summary or {}
+    return {
+        "job_id": job.job_id,
+        "status": job.status,
+        "requested_count": payload_summary.get("requested_count", 0),
+        "processed_count": payload_summary.get("processed_count", 0),
+        "results": payload_summary.get("results", []),
+        "error": job.error_message,
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "finished_at": job.finished_at.isoformat() if job.finished_at else None,
     }
 
 def generate_csv_response(contacts, filename):
@@ -111,7 +189,7 @@ def export_all_contacts(db: Session = Depends(get_db)):
 @router.get("/export/invalid")
 def export_invalid_contacts(db: Session = Depends(get_db)):
     from app.models.campaign import Contact
-    contacts = db.query(Contact).filter(Contact.verification_score < 80).all()
+    contacts = [contact for contact in db.query(Contact).all() if not contact_is_reachable(contact)]
     return generate_csv_response(contacts, "invalid_contacts.csv")
 
 @router.get("/export/suppressed")

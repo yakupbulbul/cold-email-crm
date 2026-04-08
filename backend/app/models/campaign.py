@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Text, Integer, Boolean, ForeignKey
+from sqlalchemy import Column, String, DateTime, Text, Integer, Boolean, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -20,11 +20,13 @@ class Contact(Base):
     linkedin_url = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     
-    email_status = Column(String, default="new")
-    verification_score = Column(Integer, default=0)
+    email_status = Column(String, default="unverified")
+    verification_score = Column(Integer, nullable=True)
+    verification_integrity = Column(String, nullable=True)
     is_disposable = Column(Boolean, default=False)
     is_role_based = Column(Boolean, default=False)
     is_suppressed = Column(Boolean, default=False)
+    verification_reasons = Column(JSON, nullable=True)
     
     source = Column(String, nullable=True)
     source_file_name = Column(String, nullable=True)

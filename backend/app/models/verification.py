@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -18,6 +18,7 @@ class EmailVerificationLog(Base):
     mx_valid = Column(Boolean, default=False)
     disposable = Column(Boolean, default=False)
     role_based = Column(Boolean, default=False)
+    duplicate = Column(Boolean, default=False)
     blocked = Column(Boolean, default=False)
     suppressed = Column(Boolean, default=False)
     
@@ -26,6 +27,8 @@ class EmailVerificationLog(Base):
     catch_all_result = Column(String, nullable=True)
     
     verification_score = Column(Integer, default=0)
+    verification_integrity = Column(String, nullable=True)
+    verification_reasons = Column(JSON, nullable=True)
     final_status = Column(String, default="pending") 
     # Statuses: valid, risky, invalid, duplicate, disposable, role_based, no_mx, blocked, suppressed
     

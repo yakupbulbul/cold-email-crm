@@ -2,6 +2,7 @@ import dns.resolver
 from sqlalchemy.orm import Session
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.monitoring import CampaignPreflightCheck
+from app.services.verification_service import contact_is_reachable
 
 class PreflightService:
     def __init__(self, db: Session):
@@ -63,16 +64,15 @@ class PreflightService:
         ).all()
         
         suppressed_count = sum(1 for cl in active_leads if cl.contact.is_suppressed)
-        unverified_count = sum(1 for cl in active_leads if cl.contact.verification_score < 80)
-        
-        if suppressed_count > 0 or unverified_count > (len(active_leads) * 0.2):
-            # Critical blocker if more than 20% leads are unverified or any are explicitly suppressed
+        blocked_count = sum(1 for cl in active_leads if not contact_is_reachable(cl.contact))
+
+        if suppressed_count > 0 or blocked_count > (len(active_leads) * 0.2):
             checks.append(CampaignPreflightCheck(
                 campaign_id=campaign.id,
                 check_name="lead_quality",
                 status="fail",
                 severity="critical",
-                message=f"Campaign contains {suppressed_count} suppressed leads and {unverified_count} risky leads. Launch Blocked."
+                message=f"Campaign contains {suppressed_count} suppressed leads and {blocked_count} leads that are not verified for outreach. Launch Blocked."
             ))
         else:
             checks.append(CampaignPreflightCheck(
