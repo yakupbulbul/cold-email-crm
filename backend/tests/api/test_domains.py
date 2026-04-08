@@ -99,3 +99,17 @@ def test_domain_status_endpoint_returns_structured_summary(client: TestClient, a
     assert payload["mailcow_status"] == "missing"
     assert isinstance(payload["missing_requirements"], list)
     assert set(payload["dns"].keys()) == {"mx", "spf", "dkim", "dmarc"}
+
+
+def test_delete_domain_removes_local_record(client: TestClient, auth_headers: dict, monkeypatch):
+    monkeypatch.setattr("app.integrations.mailcow.client.MailcowClient.lookup_domain", _mailcow_missing)
+    create_resp = client.post("/api/v1/domains", json={"name": "delete-domain.com"}, headers=auth_headers)
+    assert create_resp.status_code == 200
+    domain_id = create_resp.json()["id"]
+
+    delete_resp = client.delete(f"/api/v1/domains/{domain_id}", headers=auth_headers)
+    assert delete_resp.status_code == 200
+    assert delete_resp.json() == {"status": "success", "id": domain_id}
+
+    get_resp = client.get(f"/api/v1/domains/{domain_id}", headers=auth_headers)
+    assert get_resp.status_code == 404

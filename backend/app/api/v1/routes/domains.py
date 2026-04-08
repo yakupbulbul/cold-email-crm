@@ -93,6 +93,14 @@ def get_domain(domain_id: str, db: Session = Depends(get_db)):
     return serialize_domain(domain)
 
 
+@router.delete("/{domain_id}")
+def delete_domain(domain_id: str, db: Session = Depends(get_db)):
+    domain = get_domain_or_404(domain_id, db)
+    db.delete(domain)
+    db.commit()
+    return {"status": "success", "id": domain_id}
+
+
 @router.post("/{domain_id}/verify")
 def verify_domain(domain_id: str, db: Session = Depends(get_db)):
     domain = get_domain_or_404(domain_id, db)

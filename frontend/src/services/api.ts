@@ -65,6 +65,7 @@ export function useApiService() {
     const getDomains = useCallback(() => request<Domain[]>("/domains"), [request]);
     const getDomainById = useCallback((id: string) => request<Domain>(`/domains/${id}`), [request]);
     const createDomain = useCallback((name: string) => request<Domain>("/domains", { method: "POST", body: { name } }), [request]);
+    const deleteDomain = useCallback((id: string) => request<{ status: string; id: string }>(`/domains/${id}`, { method: "DELETE" }), [request]);
     const verifyDomain = useCallback((id: string) => request<Domain>(`/domains/${id}/verify`, { method: "POST" }), [request]);
     const refreshDomain = useCallback((id: string) => request<Domain>(`/domains/${id}/refresh`, { method: "POST" }), [request]);
     const getDomainStatus = useCallback((id: string) => request(`/domains/${id}/status`), [request]);
@@ -99,6 +100,7 @@ export function useApiService() {
         getDomains,
         getDomainById,
         createDomain,
+        deleteDomain,
         verifyDomain,
         refreshDomain,
         getDomainStatus,

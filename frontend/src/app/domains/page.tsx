@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useApiService } from "@/services/api";
 import { Domain } from "@/types/models";
-import { ServerCrash, Globe, Plus, AlertCircle, RefreshCw, ShieldCheck, ShieldAlert, ChevronDown, ChevronUp } from "lucide-react";
+import { ServerCrash, Globe, Plus, AlertCircle, RefreshCw, ShieldCheck, ShieldAlert, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 
 const statusTone: Record<string, string> = {
@@ -29,7 +29,7 @@ function StatusBadge({ label, value }: { label: string; value: string }) {
 }
 
 export default function DomainsPage() {
-    const { getDomains, createDomain, verifyDomain, refreshDomain, loading, error } = useApiService();
+    const { getDomains, createDomain, deleteDomain, verifyDomain, refreshDomain, loading, error } = useApiService();
     const [domains, setDomains] = useState<Domain[]>([]);
     const [domainName, setDomainName] = useState("");
     const [submitError, setSubmitError] = useState<string | null>(null);
@@ -85,9 +85,25 @@ export default function DomainsPage() {
         }
     };
 
-    const handleDomainAction = async (domainId: string, action: "verify" | "refresh") => {
+    const handleDomainAction = async (domainId: string, action: "verify" | "refresh" | "delete") => {
         setBusyDomainId(domainId);
         setSubmitError(null);
+        setSubmitSuccess(null);
+
+        if (action === "delete") {
+            const deleted = await deleteDomain(domainId);
+            setBusyDomainId(null);
+
+            if (!deleted) {
+                setSubmitError("Domain delete failed. Check the backend response and try again.");
+                return;
+            }
+
+            setDomains((current) => current.filter((domain) => domain.id !== domainId));
+            setActiveDetailsId((current) => (current === domainId ? null : current));
+            setSubmitSuccess("Domain removed.");
+            return;
+        }
 
         const result = action === "verify"
             ? await verifyDomain(domainId)
@@ -233,6 +249,16 @@ export default function DomainsPage() {
                                      >
                                          <RefreshCw size={16} />
                                          Refresh
+                                     </button>
+                                     <button
+                                         type="button"
+                                         data-testid={`delete-domain-${d.id}`}
+                                         onClick={() => void handleDomainAction(d.id, "delete")}
+                                         disabled={busyDomainId === d.id}
+                                         className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                     >
+                                         <Trash2 size={16} />
+                                         {busyDomainId === d.id ? "Removing..." : "Remove"}
                                      </button>
                                  </div>
 
