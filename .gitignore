@@ -35,3 +35,6 @@ Thumbs.db
 # Documentation
 README_PRIVATE.md
 *.local.env
+
+# Local development runtime
+tmp/
