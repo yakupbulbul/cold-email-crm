@@ -239,3 +239,51 @@ def test_update_lead_contact_type_validates_and_handles_missing(client: TestClie
         json={"contact_type": "b2b"},
     )
     assert missing_resp.status_code == 404
+
+
+def test_bulk_update_lead_contact_type_persists_and_maps_mixed_to_null(client: TestClient, auth_headers: dict, db, contact_factory):
+    lead_one = contact_factory(email="bulk-type-one@example.com", contact_type=None)
+    lead_two = contact_factory(email="bulk-type-two@example.com", contact_type="b2b")
+
+    first_resp = client.patch(
+        "/api/v1/leads/bulk/contact-type",
+        headers=auth_headers,
+        json={"lead_ids": [str(lead_one.id), str(lead_two.id)], "contact_type": "b2c"},
+    )
+    assert first_resp.status_code == 200
+    assert first_resp.json()["lead_count"] == 2
+    assert first_resp.json()["contact_type"] == "b2c"
+    db.refresh(lead_one)
+    db.refresh(lead_two)
+    assert lead_one.contact_type == "b2c"
+    assert lead_two.contact_type == "b2c"
+
+    second_resp = client.patch(
+        "/api/v1/leads/bulk/contact-type",
+        headers=auth_headers,
+        json={"lead_ids": [str(lead_one.id), str(lead_two.id)], "contact_type": "mixed"},
+    )
+    assert second_resp.status_code == 200
+    assert second_resp.json()["contact_type"] is None
+    db.refresh(lead_one)
+    db.refresh(lead_two)
+    assert lead_one.contact_type is None
+    assert lead_two.contact_type is None
+
+
+def test_bulk_update_lead_contact_type_validates_and_handles_missing(client: TestClient, auth_headers: dict, contact_factory):
+    lead = contact_factory(email="bulk-type-existing@example.com")
+
+    invalid_resp = client.patch(
+        "/api/v1/leads/bulk/contact-type",
+        headers=auth_headers,
+        json={"lead_ids": [str(lead.id)], "contact_type": "partner"},
+    )
+    assert invalid_resp.status_code == 422
+
+    missing_resp = client.patch(
+        "/api/v1/leads/bulk/contact-type",
+        headers=auth_headers,
+        json={"lead_ids": [str(lead.id), "00000000-0000-0000-0000-000000000999"], "contact_type": "b2b"},
+    )
+    assert missing_resp.status_code == 404

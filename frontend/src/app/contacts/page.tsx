@@ -115,6 +115,7 @@ export default function ContactsPage() {
     getLeads,
     getLists,
     updateLead,
+    updateLeadContactTypeBulk,
     addLeadToList,
     addLeadsToListBulk,
     verifyLead,
@@ -139,6 +140,7 @@ export default function ContactsPage() {
   const [addingLeadId, setAddingLeadId] = useState<string | null>(null);
   const [bulkListTargetId, setBulkListTargetId] = useState("");
   const [bulkTags, setBulkTags] = useState("");
+  const [bulkContactType, setBulkContactType] = useState<"b2b" | "b2c" | "mixed">("mixed");
   const [rowListTargets, setRowListTargets] = useState<Record<string, string>>({});
   const [bulkState, setBulkState] = useState<BulkState | null>(null);
   const [banner, setBanner] = useState<string | null>(sourceJobId ? "Imported leads are unverified until you run verification." : null);
@@ -359,6 +361,28 @@ export default function ContactsPage() {
     }
   };
 
+  const handleBulkContactTypeAssign = async () => {
+    if (!selectedLeadIds.length) {
+      setBanner("Select one or more leads to update contact type.");
+      return;
+    }
+    setAddingLeadId("__bulk_contact_type__");
+    try {
+      const result = await updateLeadContactTypeBulk({
+        lead_ids: selectedLeadIds,
+        contact_type: bulkContactType,
+      });
+      const refreshedLeads = await getLeads();
+      if (refreshedLeads) setLeads(refreshedLeads);
+      setSelectedLeadIds([]);
+      setBanner(`Updated ${result.lead_count} lead${result.lead_count === 1 ? "" : "s"} to ${result.contact_type || "mixed"}.`);
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Bulk contact type update failed.");
+    } finally {
+      setAddingLeadId(null);
+    }
+  };
+
   const handleBulkSuppress = async () => {
     if (!selectedLeadIds.length) {
       setBanner("Select one or more leads to suppress.");
@@ -490,6 +514,25 @@ export default function ContactsPage() {
           >
             {bulkState && ["queued", "running"].includes(bulkState.status) ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
             Verify selected
+          </button>
+          <select
+            value={bulkContactType}
+            onChange={(event) => setBulkContactType(event.target.value as "b2b" | "b2c" | "mixed")}
+            aria-label="Bulk contact type"
+            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+          >
+            <option value="b2b">B2B</option>
+            <option value="b2c">B2C</option>
+            <option value="mixed">Mixed</option>
+          </select>
+          <button
+            type="button"
+            disabled={!selectedLeadIds.length || addingLeadId === "__bulk_contact_type__"}
+            onClick={() => void handleBulkContactTypeAssign()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+          >
+            {addingLeadId === "__bulk_contact_type__" ? <LoaderCircle size={16} className="animate-spin" /> : null}
+            Set contact type
           </button>
           <select
             value={bulkListTargetId}

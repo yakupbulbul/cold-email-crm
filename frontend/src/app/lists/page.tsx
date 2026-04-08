@@ -20,6 +20,7 @@ export default function ListsPage() {
     getLeads,
     getListLeads,
     updateLead,
+    updateLeadContactTypeBulk,
     createList,
     updateList,
     deleteList,
@@ -41,6 +42,8 @@ export default function ListsPage() {
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [leadTypeDrafts, setLeadTypeDrafts] = useState<Record<string, "b2b" | "b2c" | "mixed">>({});
+  const [selectedMemberLeadIds, setSelectedMemberLeadIds] = useState<string[]>([]);
+  const [bulkContactType, setBulkContactType] = useState<"b2b" | "b2c" | "mixed">("mixed");
 
   useEffect(() => {
     const load = async () => {
@@ -68,6 +71,7 @@ export default function ListsPage() {
   useEffect(() => {
     if (!selectedListLeads) {
       setLeadTypeDrafts({});
+      setSelectedMemberLeadIds([]);
       return;
     }
     setLeadTypeDrafts(
@@ -81,6 +85,9 @@ export default function ListsPage() {
     const currentIds = new Set(selectedListLeads?.leads.map((lead) => lead.id) || []);
     return leads.filter((lead) => !currentIds.has(lead.id));
   }, [leads, selectedListLeads]);
+
+  const allMembersSelected = !!selectedListLeads?.leads.length
+    && selectedListLeads.leads.every((lead) => selectedMemberLeadIds.includes(lead.id));
 
   const refreshLists = async (focusListId?: string | null) => {
     const listData = await getLists();
@@ -193,6 +200,44 @@ export default function ListsPage() {
       if (refreshedLeads) setLeads(refreshedLeads);
     } catch (err) {
       setBanner(err instanceof Error ? err.message : "Lead update failed.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const toggleMemberLead = (leadId: string) => {
+    setSelectedMemberLeadIds((current) =>
+      current.includes(leadId) ? current.filter((id) => id !== leadId) : [...current, leadId],
+    );
+  };
+
+  const toggleAllMemberLeads = () => {
+    if (!selectedListLeads?.leads.length) return;
+    if (allMembersSelected) {
+      setSelectedMemberLeadIds([]);
+      return;
+    }
+    setSelectedMemberLeadIds(selectedListLeads.leads.map((lead) => lead.id));
+  };
+
+  const handleBulkUpdateLeadType = async () => {
+    if (!selectedMemberLeadIds.length) {
+      setBanner("Select one or more list members to update contact type.");
+      return;
+    }
+    setBusyId("__bulk_contact_type__");
+    try {
+      const result = await updateLeadContactTypeBulk({
+        lead_ids: selectedMemberLeadIds,
+        contact_type: bulkContactType,
+      });
+      setSelectedMemberLeadIds([]);
+      setBanner(`Updated ${result.lead_count} lead${result.lead_count === 1 ? "" : "s"} to ${result.contact_type || "mixed"}.`);
+      await refreshLists(selectedListId);
+      const refreshedLeads = await getLeads();
+      if (refreshedLeads) setLeads(refreshedLeads);
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Bulk contact type update failed.");
     } finally {
       setBusyId(null);
     }
@@ -350,9 +395,41 @@ export default function ListsPage() {
                   </div>
                 </div>
 
-                <Table columns={["Lead", "Audience", "Contact Type", "Status", "Score", "Actions"]}>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 text-sm font-bold text-slate-700">Set contact type for selected members</div>
+                  <div className="flex gap-3">
+                    <select
+                      value={bulkContactType}
+                      onChange={(event) => setBulkContactType(event.target.value as "b2b" | "b2c" | "mixed")}
+                      aria-label="Bulk member contact type"
+                      className="flex-1 rounded-xl border border-slate-200 px-3 py-2"
+                    >
+                      <option value="b2b">B2B</option>
+                      <option value="b2c">B2C</option>
+                      <option value="mixed">Mixed</option>
+                    </select>
+                    <button
+                      onClick={() => void handleBulkUpdateLeadType()}
+                      disabled={!selectedMemberLeadIds.length || busyId === "__bulk_contact_type__"}
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 disabled:opacity-50"
+                    >
+                      {busyId === "__bulk_contact_type__" ? <LoaderCircle size={16} className="animate-spin" /> : "Apply"}
+                    </button>
+                  </div>
+                </div>
+
+                <Table columns={["", "Lead", "Audience", "Contact Type", "Status", "Score", "Actions"]}>
                   {selectedListLeads.leads.map((lead) => (
                     <TableRow key={lead.id}>
+                      <TableCell className="w-12">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${lead.email}`}
+                          checked={selectedMemberLeadIds.includes(lead.id)}
+                          onChange={() => toggleMemberLead(lead.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="font-semibold text-slate-800">{lead.email}</div>
                         <div className="text-xs text-slate-500">{lead.company || "No company"}</div>
@@ -393,12 +470,26 @@ export default function ListsPage() {
                   ))}
                   {selectedListLeads.leads.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="py-10 text-center text-slate-500">
+                      <TableCell colSpan={7} className="py-10 text-center text-slate-500">
                         This list has no leads yet.
                       </TableCell>
                     </TableRow>
                   )}
                 </Table>
+                {selectedListLeads.leads.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all list members"
+                      checked={allMembersSelected}
+                      onChange={toggleAllMemberLeads}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-slate-600">
+                      Select all visible members ({selectedListLeads.leads.length})
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

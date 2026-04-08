@@ -208,4 +208,81 @@ test.describe("contacts verification UI", () => {
 
     await expect(page.getByText("Updated person@example.com contact type to b2b.")).toBeVisible();
   });
+
+  test("contacts bulk action can update selected lead contact type", async ({ page }) => {
+    let leads = [
+      {
+        id: "lead-1",
+        email: "one@example.com",
+        first_name: "One",
+        last_name: "Lead",
+        company: "Orbitworks",
+        contact_type: null,
+        consent_status: "unknown",
+        unsubscribe_status: "subscribed",
+        engagement_score: 0,
+        email_status: "unverified",
+        verification_score: null,
+        verification_integrity: null,
+        last_verified_at: null,
+        is_disposable: false,
+        is_role_based: false,
+        is_suppressed: false,
+        verification_reasons: null,
+        list_ids: [],
+        list_names: [],
+        created_at: "2026-04-08T10:00:00Z",
+      },
+      {
+        id: "lead-2",
+        email: "two@example.com",
+        first_name: "Two",
+        last_name: "Lead",
+        company: "Orbitworks",
+        contact_type: "b2b",
+        consent_status: "unknown",
+        unsubscribe_status: "subscribed",
+        engagement_score: 0,
+        email_status: "unverified",
+        verification_score: null,
+        verification_integrity: null,
+        last_verified_at: null,
+        is_disposable: false,
+        is_role_based: false,
+        is_suppressed: false,
+        verification_reasons: null,
+        list_ids: [],
+        list_names: [],
+        created_at: "2026-04-08T10:00:00Z",
+      },
+    ];
+
+    await page.route("**/api/v1/leads", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(leads) });
+    });
+    await page.route("**/api/v1/lists", async (route) => {
+      await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    });
+    await page.route("**/api/v1/leads/bulk/contact-type", async (route) => {
+      const payload = JSON.parse(route.request().postData() || "{}");
+      leads = leads.map((lead) =>
+        payload.lead_ids.includes(lead.id)
+          ? { ...lead, contact_type: payload.contact_type === "mixed" ? null : payload.contact_type }
+          : lead,
+      );
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ status: "updated", lead_count: payload.lead_ids.length, contact_type: payload.contact_type === "mixed" ? null : payload.contact_type }),
+      });
+    });
+
+    await page.goto("/contacts");
+    await page.getByLabel("Select one@example.com").check();
+    await page.getByLabel("Select two@example.com").check();
+    await page.getByLabel("Bulk contact type").selectOption("b2c");
+    await page.getByRole("button", { name: "Set contact type" }).click();
+
+    await expect(page.getByText("Updated 2 leads to b2c.")).toBeVisible();
+  });
 });
