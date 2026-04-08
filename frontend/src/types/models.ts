@@ -2,11 +2,21 @@ export interface Domain {
     id: string;
     name: string;
     status: string;
+    mailcow_status: string;
+    mailcow_detail?: string | null;
     spf_status: string;
     dkim_status: string;
     dmarc_status: string;
     mx_status: string;
+    dns_results?: Record<string, { status: string; detail: string; records?: string[] }>;
+    missing_requirements?: string[];
+    verification_summary?: Record<string, unknown>;
+    verification_error?: string | null;
+    last_checked_at?: string | null;
+    mailcow_last_checked_at?: string | null;
+    dns_last_checked_at?: string | null;
     created_at: string;
+    updated_at?: string;
 }
 
 export interface Mailbox {

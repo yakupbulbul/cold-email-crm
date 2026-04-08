@@ -5,6 +5,22 @@ import {
     SystemHealth, Alert, JobLog, DeliverabilitySummary, Thread, Message 
 } from "@/types/models";
 
+type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
+type MailboxCreatePayload = {
+    domain_id: string;
+    email: string;
+    display_name: string;
+    smtp_host?: string;
+    smtp_port?: number;
+    smtp_username?: string;
+    smtp_password: string;
+    imap_host?: string;
+    imap_port?: number;
+    imap_username?: string;
+    imap_password: string;
+    daily_send_limit?: number;
+};
+
 /**
  * Service API wrapping backend endpoints. Provides typed data fetching abstractions.
  */
@@ -31,17 +47,21 @@ export function useApiService() {
     const deleteSuppression = useCallback((id: string) => request(`/suppression/${id}`, { method: "DELETE" }), [request]);
 
     // ── WARMUP ──
-    const getWarmupStatus = useCallback(() => request<{ active_pairs: any[]; global_health?: number; total_sent?: number }>("/warmup/status"), [request]);
+    const getWarmupStatus = useCallback(() => request<WarmupStatus>("/warmup/status"), [request]);
     const startWarmup = useCallback((mailbox_id: string) => request("/warmup/start", { method: "POST", body: { mailbox_id } }), [request]);
     const stopWarmup = useCallback((mailbox_id: string) => request("/warmup/stop", { method: "POST", body: { mailbox_id } }), [request]);
 
     // ── DOMAINS ──
     const getDomains = useCallback(() => request<Domain[]>("/domains"), [request]);
+    const getDomainById = useCallback((id: string) => request<Domain>(`/domains/${id}`), [request]);
     const createDomain = useCallback((name: string) => request<Domain>("/domains", { method: "POST", body: { name } }), [request]);
+    const verifyDomain = useCallback((id: string) => request<Domain>(`/domains/${id}/verify`, { method: "POST" }), [request]);
+    const refreshDomain = useCallback((id: string) => request<Domain>(`/domains/${id}/refresh`, { method: "POST" }), [request]);
+    const getDomainStatus = useCallback((id: string) => request(`/domains/${id}/status`), [request]);
 
     // ── MAILBOXES ──
     const getMailboxes = useCallback(() => request<Mailbox[]>("/mailboxes"), [request]);
-    const createMailbox = useCallback((data: any) => request<Mailbox>("/mailboxes", { method: "POST", body: data }), [request]);
+    const createMailbox = useCallback((data: MailboxCreatePayload) => request<Mailbox>("/mailboxes", { method: "POST", body: data }), [request]);
 
     // ── INBOX & THREADS (Missing Backend - Graceful Fallback) ──
     const getThreads = useCallback(() => request<Thread[]>("/inbox/threads"), [request]);
@@ -65,7 +85,11 @@ export function useApiService() {
         startWarmup,
         stopWarmup,
         getDomains,
+        getDomainById,
         createDomain,
+        verifyDomain,
+        refreshDomain,
+        getDomainStatus,
         getMailboxes,
         createMailbox,
         getThreads,
