@@ -8,15 +8,15 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-slate-900 text-slate-400 flex flex-col h-screen fixed top-0 left-0 border-r border-slate-800">
-      <div className="border-b border-slate-700 bg-slate-100 px-4 py-5">
+      <div className="border-b border-slate-700 bg-slate-100 px-4 py-3">
         <Link href="/" className="block transition-transform hover:scale-[1.01]">
           <Image
             src="/crm-logo.png"
             alt="Campaign Manager"
-            width={220}
-            height={110}
+            width={170}
+            height={85}
             priority
-            className="h-auto w-full"
+            className="h-auto w-full max-w-[170px]"
           />
         </Link>
       </div>
