@@ -32,8 +32,8 @@ export default function SignInPage() {
 
             const { access_token } = await res.json();
             await login(access_token);
-        } catch (err: any) {
-            setError(err.message || "An unexpected error occurred");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "An unexpected error occurred");
         } finally {
             setLoading(false);
         }

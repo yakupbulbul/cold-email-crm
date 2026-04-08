@@ -14,11 +14,12 @@ from sqlalchemy.orm import sessionmaker, Session
 # Force test DB before any app imports
 TEST_DB_URL = os.environ.get(
     "TEST_DATABASE_URL",
-    "postgresql://user:password@localhost:5432/cold_email_test",
+    "postgresql://user:password@localhost:5433/cold_email_test",
 )
 os.environ.setdefault("POSTGRES_URL", TEST_DB_URL)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
-os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6380/1")
+os.environ.setdefault("APP_ENV", "test")
 
 from app.main import app
 from app.models.base import Base
@@ -28,7 +29,7 @@ engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def create_tables():
     """Create all tables once per session, drop on teardown."""
     Base.metadata.create_all(bind=engine)
@@ -37,7 +38,7 @@ def create_tables():
 
 
 @pytest.fixture()
-def db() -> Generator[Session, None, None]:
+def db(create_tables) -> Generator[Session, None, None]:
     """Per-test DB session that rolls back changes after each test."""
     connection = engine.connect()
     transaction = connection.begin()
@@ -68,24 +69,34 @@ def client(db: Session) -> Generator[TestClient, None, None]:
 @pytest.fixture()
 def auth_headers(client: TestClient) -> dict:
     """Return Authorization headers for a seeded admin user."""
+    return _issue_token(client, "test-admin@example.com", "test1234", is_admin=True)
+
+
+@pytest.fixture()
+def user_headers(client: TestClient) -> dict:
+    """Return Authorization headers for a seeded non-admin user."""
+    return _issue_token(client, "test-user@example.com", "test1234", is_admin=False)
+
+
+def _issue_token(client: TestClient, email: str, password: str, *, is_admin: bool) -> dict:
     from app.models.user import User
     from app.core.security import get_password_hash
     
     db = next(client.app.dependency_overrides[get_db]())
 
-    # Create admin if not exists
-    user = db.query(User).filter(User.email == "test@admin.com").first()
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         user = User(
-            email="test@admin.com",
-            hashed_password=get_password_hash("test1234"),
+            email=email,
+            hashed_password=get_password_hash(password),
             is_active=True,
+            is_admin=is_admin,
         )
         db.add(user)
         db.commit()
 
-    resp = client.post("/api/v1/auth/login", json={"email": "test@admin.com", "password": "test1234"})
+    resp = client.post("/api/v1/auth/login", json={"email": email, "password": password})
     if resp.status_code != 200:
-        return {}  # Auth may not be mandatory for all endpoints
+        return {}
     token = resp.json().get("access_token", "")
     return {"Authorization": f"Bearer {token}"}

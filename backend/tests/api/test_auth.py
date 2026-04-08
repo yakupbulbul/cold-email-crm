@@ -1,5 +1,4 @@
 """test_auth.py — Auth endpoint tests."""
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -15,5 +14,21 @@ def test_login_endpoint_exists(client: TestClient):
 
 
 def test_docs_accessible(client: TestClient):
-    resp = client.get("/docs")
+    resp = client.get("/api/v1/docs")
     assert resp.status_code == 200
+
+
+def test_auth_me_returns_current_user(client: TestClient, auth_headers: dict):
+    resp = client.get("/api/v1/auth/me", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["email"] == "test-admin@example.com"
+
+
+def test_protected_routes_require_authentication(client: TestClient):
+    resp = client.get("/api/v1/domains")
+    assert resp.status_code == 403
+
+
+def test_admin_routes_reject_non_admin_users(client: TestClient, user_headers: dict):
+    resp = client.get("/api/v1/ops/health", headers=user_headers)
+    assert resp.status_code == 403
