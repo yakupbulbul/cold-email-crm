@@ -21,6 +21,14 @@ type MailboxCreatePayload = {
     daily_send_limit?: number;
 };
 
+type CampaignCreatePayload = {
+    name: string;
+    mailbox_id: string;
+    template_subject: string;
+    template_body: string;
+    daily_limit?: number;
+};
+
 /**
  * Service API wrapping backend endpoints. Provides typed data fetching abstractions.
  */
@@ -36,6 +44,7 @@ export function useApiService() {
     // ── CAMPAIGNS ──
     const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
     const getCampaignById = useCallback((id: string) => request<Campaign>(`/campaigns/${id}`), [request]);
+    const createCampaign = useCallback((data: CampaignCreatePayload) => request<Campaign>("/campaigns", { method: "POST", body: data }), [request]);
     const runPreflight = useCallback((id: string) => request(`/campaigns/${id}/preflight`, { method: "POST" }), [request]);
 
     // ── LEADS / CONTACTS ──
@@ -76,6 +85,7 @@ export function useApiService() {
         getDeliverabilitySummary,
         getCampaigns,
         getCampaignById,
+        createCampaign,
         runPreflight,
         getLeads,
         getSuppressionList,

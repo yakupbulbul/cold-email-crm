@@ -2,29 +2,71 @@
 import { useState, useEffect } from 'react';
 import { Plus, Globe, Mail, Edit2, Trash2, ServerCrash } from 'lucide-react';
 import { useApiService } from '@/services/api';
-import { Mailbox } from '@/types/models';
+import { Domain, Mailbox } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
 
 export default function MailboxesPage() {
   const [activeTab, setActiveTab] = useState('mailboxes');
-  const { getMailboxes, loading, error } = useApiService();
+  const { getMailboxes, getDomains, createMailbox, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [selectedDomainId, setSelectedDomainId] = useState('');
+  const [localPart, setLocalPart] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchBoxes = async () => {
-        const data = await getMailboxes();
-        if (data) setMailboxes(data);
+    const fetchPageData = async () => {
+        const [mailboxData, domainData] = await Promise.all([getMailboxes(), getDomains()]);
+        if (mailboxData) setMailboxes(mailboxData);
+        if (domainData) {
+          setDomains(domainData);
+          setSelectedDomainId((current) => current || domainData[0]?.id || '');
+        }
     };
-    if (activeTab === 'mailboxes') fetchBoxes();
-  }, [getMailboxes, activeTab]);
+    fetchPageData();
+  }, [getMailboxes, getDomains]);
+
+  const selectedDomain = domains.find((domain) => domain.id === selectedDomainId);
+
+  const handleCreateMailbox = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitError(null);
+    if (!selectedDomain) {
+      setSubmitError('Create a domain first before adding a mailbox.');
+      return;
+    }
+    if (!localPart.trim() || !displayName.trim() || !password.trim()) {
+      setSubmitError('Mailbox local-part, display name, and password are required.');
+      return;
+    }
+    const email = `${localPart.trim().toLowerCase()}@${selectedDomain.name}`;
+    setIsSubmitting(true);
+    const created = await createMailbox({
+      domain_id: selectedDomain.id,
+      email,
+      display_name: displayName.trim(),
+      smtp_password: password,
+      imap_password: password,
+    });
+    setIsSubmitting(false);
+    if (!created) {
+      setSubmitError('Mailbox create failed. Check the backend response and try again.');
+      return;
+    }
+    setLocalPart('');
+    setDisplayName('');
+    setPassword('');
+    const refreshed = await getMailboxes();
+    if (refreshed) setMailboxes(refreshed);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Infrastructure</h1>
-        <button className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-slate-900/20 active:scale-95 flex items-center gap-2">
-          <Plus size={18} /> Add {activeTab === 'mailboxes' ? 'Mailbox' : 'Domain'}
-        </button>
       </div>
 
       <div className="flex bg-white rounded-xl p-1.5 border border-slate-200 w-fit shadow-sm">
@@ -41,6 +83,42 @@ export default function MailboxesPage() {
           Domains
         </button>
       </div>
+
+      {activeTab === 'mailboxes' ? (
+        <form onSubmit={handleCreateMailbox} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="mailbox-domain" className="block text-sm font-semibold text-slate-700 mb-2">Domain</label>
+            <select id="mailbox-domain" data-testid="mailbox-domain-select" value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+              <option value="">Select a domain</option>
+              {domains.map((domain) => (
+                <option key={domain.id} value={domain.id}>{domain.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="mailbox-local-part" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Local Part</label>
+            <input id="mailbox-local-part" data-testid="mailbox-local-part-input" value={localPart} onChange={(event) => setLocalPart(event.target.value)} placeholder="sales" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+          </div>
+          <div>
+            <label htmlFor="mailbox-display-name" className="block text-sm font-semibold text-slate-700 mb-2">Display Name</label>
+            <input id="mailbox-display-name" data-testid="mailbox-display-name-input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Sales Team" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+          </div>
+          <div>
+            <label htmlFor="mailbox-password" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Password</label>
+            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Local mailbox password" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+          </div>
+          <div className="md:col-span-2 flex items-center justify-between gap-4">
+            {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">Safe mode stores the mailbox locally only. It does not provision anything in Mailcow.</div>}
+            <button data-testid="create-mailbox-button" type="submit" disabled={isSubmitting || domains.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition-colors shadow-lg shadow-slate-900/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
+              <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add Mailbox'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 text-sm text-slate-600">
+          Domain onboarding now lives on the dedicated <a href="/domains" className="font-semibold text-blue-600 hover:underline">Domains</a> page so Mailcow and DNS readiness stay visible.
+        </div>
+      )}
 
       {error ? (
          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center mt-6">
@@ -111,18 +189,15 @@ export default function MailboxesPage() {
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : activeTab === 'mailboxes' ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col items-center justify-center p-16">
            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-slate-100">
              <Globe className="text-slate-300" size={32} />
            </div>
-           <h3 className="text-xl font-bold text-slate-800 mb-2">No {activeTab} Found</h3>
-           <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">Add your first {activeTab === 'mailboxes' ? 'mailbox' : 'domain'} to start configuring and sending emails.</p>
-           <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-blue-600/30">
-             Add {activeTab === 'mailboxes' ? 'Mailbox' : 'Domain'}
-           </button>
+           <h3 className="text-xl font-bold text-slate-800 mb-2">No Mailboxes Found</h3>
+           <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">Use the form above to add the first local mailbox for a verified or local-only domain.</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -5,11 +5,15 @@ import { useApiService } from "@/services/api";
 import { SuppressionEntry } from "@/types/models";
 import Table, { TableRow, TableCell } from "@/components/ui/Table";
 import Spinner from "@/components/ui/Spinner";
-import { ShieldX, Trash2, AlertCircle } from "lucide-react";
+import { ShieldX, Trash2, AlertCircle, Plus } from "lucide-react";
 
 export default function SuppressionPage() {
-    const { getSuppressionList, deleteSuppression, loading, error } = useApiService();
+    const { getSuppressionList, addSuppression, deleteSuppression, loading, error } = useApiService();
     const [list, setList] = useState<SuppressionEntry[]>([]);
+    const [email, setEmail] = useState("");
+    const [reason, setReason] = useState("manual");
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         const fetchList = async () => {
@@ -24,6 +28,28 @@ export default function SuppressionPage() {
         setList(list.filter(item => item.id !== id));
     };
 
+    const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setSubmitError(null);
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!normalizedEmail) {
+            setSubmitError("Enter an email address to suppress.");
+            return;
+        }
+        setIsSubmitting(true);
+        const created = await addSuppression(normalizedEmail, reason.trim() || "manual");
+        setIsSubmitting(false);
+        if (!created) {
+            setSubmitError("Suppression create failed. Check the backend response and try again.");
+            return;
+        }
+        setEmail("");
+        const refreshed = await getSuppressionList();
+        if (refreshed) {
+            setList(refreshed);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in relative min-h-screen">
             <div className="flex items-center justify-between">
@@ -36,6 +62,52 @@ export default function SuppressionPage() {
                     </p>
                 </div>
             </div>
+
+            <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4 md:flex-row md:items-end">
+                <div className="flex-1">
+                    <label htmlFor="suppression-email" className="block text-sm font-semibold text-slate-700 mb-2">
+                        Email Address
+                    </label>
+                    <input
+                        id="suppression-email"
+                        data-testid="suppression-email-input"
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="blocked@example.com"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all"
+                    />
+                </div>
+                <div className="md:w-64">
+                    <label htmlFor="suppression-reason" className="block text-sm font-semibold text-slate-700 mb-2">
+                        Reason
+                    </label>
+                    <input
+                        id="suppression-reason"
+                        data-testid="suppression-reason-input"
+                        type="text"
+                        value={reason}
+                        onChange={(event) => setReason(event.target.value)}
+                        placeholder="bounce"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all"
+                    />
+                </div>
+                <button
+                    data-testid="create-suppression-button"
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <Plus size={18} />
+                    {isSubmitting ? "Adding..." : "Add Suppression"}
+                </button>
+            </form>
+
+            {submitError && (
+                <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                    {submitError}
+                </div>
+            )}
 
             <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-8 mt-8 flex flex-col items-center justify-center max-w-full">
                 {error && list.length === 0 ? (

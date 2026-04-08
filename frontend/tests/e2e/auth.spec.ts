@@ -60,3 +60,11 @@ test("logo/home link on login page is visible", async ({ browser }) => {
   await expect(page).toHaveTitle(/.+/);
   await ctx.close();
 });
+
+test("/login redirects to the canonical /signin route", async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await ctx.newPage();
+  await page.goto("/login");
+  await expect(page).toHaveURL(/\/signin/, { timeout: 8_000 });
+  await ctx.close();
+});
