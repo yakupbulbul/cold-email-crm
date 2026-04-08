@@ -65,14 +65,20 @@ make up
 
 This starts only local Postgres and Redis for hybrid development.
 
-### 4. Run migrations and seed local access
+### 4. Run migrations and bootstrap local access
 
 ```bash
 make migrate
-make seed
+make bootstrap-admin
 ```
 
-`make seed` creates the bootstrap admin from `.env` and inserts safe deterministic demo records.
+`make bootstrap-admin` creates only the local admin from `.env`. It does not insert demo records.
+
+If you explicitly want deterministic demo/test data later, run:
+
+```bash
+make seed
+```
 
 ### 5. Run the app locally
 
@@ -96,6 +102,7 @@ make setup
 make up
 make down
 make migrate
+make bootstrap-admin
 make seed
 make dev
 make smoke
@@ -108,6 +115,7 @@ make full-down
 Notes:
 
 - `make up` and `make reset` require Docker
+- `make bootstrap-admin` is the primary no-seed login path
 - `make full-up` runs the entire stack in Docker
 - `make smoke` checks local backend, DB, and Redis endpoints
 - `make test` runs backend tests plus focused frontend auth/runtime checks

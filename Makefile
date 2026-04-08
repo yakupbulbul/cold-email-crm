@@ -8,7 +8,7 @@ PYTHON_BIN := backend/.venv/bin/python
 PIP_BIN := backend/.venv/bin/pip
 NPM_BIN := npm
 
-.PHONY: help setup up down logs migrate seed dev test reset \
+.PHONY: help setup up down logs migrate bootstrap-admin seed dev test reset \
 	full-up full-down test-infra-up test-infra-down \
 	test-backend test-frontend test-e2e smoke check-env check-docker
 
@@ -39,8 +39,10 @@ logs: check-env check-docker ## Tail container logs for local infra
 migrate: check-env ## Run Alembic migrations against the local database
 	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; cd backend && ../$(PYTHON_BIN) -m alembic upgrade head'
 
-seed: check-env ## Create the local admin user and deterministic safe seed data
-	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; test "$${BOOTSTRAP_ADMIN_PASSWORD}" != "replace-with-a-local-admin-password" || (echo "Set BOOTSTRAP_ADMIN_PASSWORD in $(ENV_FILE) before running make seed." && exit 1); cd backend && ../$(PYTHON_BIN) scripts/create_user.py --email "$${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}" --password "$${BOOTSTRAP_ADMIN_PASSWORD}" --admin'
+bootstrap-admin: check-env ## Create only the local bootstrap admin user
+	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; test "$${BOOTSTRAP_ADMIN_PASSWORD}" != "replace-with-a-local-admin-password" || (echo "Set BOOTSTRAP_ADMIN_PASSWORD in $(ENV_FILE) before running make bootstrap-admin." && exit 1); cd backend && ../$(PYTHON_BIN) scripts/create_user.py --email "$${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}" --password "$${BOOTSTRAP_ADMIN_PASSWORD}" --admin'
+
+seed: check-env ## Insert deterministic safe demo data (no admin bootstrap)
 	@/bin/zsh -lc 'set -a; source $(ENV_FILE); set +a; cd backend && ../$(PYTHON_BIN) scripts/seed_test_data.py --reset'
 
 dev: check-env ## Run frontend, backend, worker, and scheduler on the host

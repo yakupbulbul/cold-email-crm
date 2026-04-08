@@ -13,6 +13,10 @@ from app.core.security import get_password_hash
 from app.core.database import engine
 
 def create_user(email: str, password: str, is_admin: bool = False):
+    app_env = os.environ.get("APP_ENV", "development").strip().lower()
+    if app_env == "production":
+        raise SystemExit("Refusing to create bootstrap users in production.")
+
     Base.metadata.create_all(bind=engine)
     db: Session = SessionLocal()
     try:
