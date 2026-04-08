@@ -28,6 +28,8 @@ export interface Mailbox {
     daily_send_limit: number;
     current_warmup_stage: number;
     warmup_enabled: boolean;
+    remote_mailcow_provisioned: boolean;
+    provisioning_mode: "local_only" | "mailcow_synced";
     created_at: string;
 }
 

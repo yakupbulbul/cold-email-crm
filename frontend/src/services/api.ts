@@ -109,7 +109,7 @@ export function useApiService() {
 
     // ── MAILBOXES ──
     const getMailboxes = useCallback(() => request<Mailbox[]>("/mailboxes"), [request]);
-    const createMailbox = useCallback((data: MailboxCreatePayload) => request<Mailbox>("/mailboxes", { method: "POST", body: data }), [request]);
+    const createMailbox = useCallback((data: MailboxCreatePayload) => requestOrThrow<Mailbox>("/mailboxes", { method: "POST", body: data }), [requestOrThrow]);
     const updateMailbox = useCallback((id: string, data: MailboxUpdatePayload) => request<Mailbox>(`/mailboxes/${id}`, { method: "PUT", body: data }), [request]);
     const deleteMailbox = useCallback((id: string) => request<{ status: string; id: string }>(`/mailboxes/${id}`, { method: "DELETE" }), [request]);
 

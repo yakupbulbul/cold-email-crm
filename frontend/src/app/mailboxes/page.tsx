@@ -2,13 +2,14 @@
 import { useState, useEffect } from 'react';
 import { Plus, Mail, Edit2, Trash2, ServerCrash } from 'lucide-react';
 import { useApiService } from '@/services/api';
-import { Domain, Mailbox } from '@/types/models';
+import { Domain, Mailbox, SettingsSummary } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
 
 export default function MailboxesPage() {
-  const { getMailboxes, getDomains, createMailbox, updateMailbox, deleteMailbox, loading, error } = useApiService();
+  const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [settingsSummary, setSettingsSummary] = useState<SettingsSummary | null>(null);
   const [selectedDomainId, setSelectedDomainId] = useState('');
   const [localPart, setLocalPart] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -24,15 +25,16 @@ export default function MailboxesPage() {
 
   useEffect(() => {
     const fetchPageData = async () => {
-        const [mailboxData, domainData] = await Promise.all([getMailboxes(), getDomains()]);
+        const [mailboxData, domainData, settingsData] = await Promise.all([getMailboxes(), getDomains(), getSettingsSummary()]);
         if (mailboxData) setMailboxes(mailboxData);
         if (domainData) {
           setDomains(domainData);
           setSelectedDomainId((current) => current || domainData[0]?.id || '');
         }
+        if (settingsData) setSettingsSummary(settingsData);
     };
     fetchPageData();
-  }, [getMailboxes, getDomains]);
+  }, [getMailboxes, getDomains, getSettingsSummary]);
 
   const selectedDomain = domains.find((domain) => domain.id === selectedDomainId);
 
@@ -40,6 +42,10 @@ export default function MailboxesPage() {
     const refreshed = await getMailboxes();
     if (refreshed) setMailboxes(refreshed);
   };
+
+  const mailboxModeMessage = settingsSummary?.mailcow_mutations_enabled
+    ? 'Mutation mode creates the mailbox in Mailcow and CRM together. If Mailcow rejects the request, nothing is stored locally.'
+    : 'Safe mode stores the mailbox locally only. It does not provision anything in Mailcow.';
 
   const handleCreateMailbox = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,16 +60,20 @@ export default function MailboxesPage() {
     }
     const email = `${localPart.trim().toLowerCase()}@${selectedDomain.name}`;
     setIsSubmitting(true);
-    const created = await createMailbox({
-      domain_id: selectedDomain.id,
-      email,
-      display_name: displayName.trim(),
-      smtp_password: password,
-      imap_password: password,
-    });
+    let created: Mailbox | null = null;
+    try {
+      created = await createMailbox({
+        domain_id: selectedDomain.id,
+        email,
+        display_name: displayName.trim(),
+        smtp_password: password,
+        imap_password: password,
+      });
+    } catch (createError) {
+      setSubmitError(createError instanceof Error ? createError.message : 'Mailbox create failed.');
+    }
     setIsSubmitting(false);
     if (!created) {
-      setSubmitError('Mailbox create failed. Check the backend response and try again.');
       return;
     }
     setLocalPart('');
@@ -163,7 +173,7 @@ export default function MailboxesPage() {
             <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Local mailbox password" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
           </div>
           <div className="md:col-span-2 flex items-center justify-between gap-4">
-            {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">Safe mode stores the mailbox locally only. It does not provision anything in Mailcow.</div>}
+            {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">{mailboxModeMessage}</div>}
             <button data-testid="create-mailbox-button" type="submit" disabled={isSubmitting || domains.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition-colors shadow-lg shadow-slate-900/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
               <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add Mailbox'}
             </button>
@@ -214,6 +224,11 @@ export default function MailboxesPage() {
                       <div>
                         <p className="font-bold text-slate-800 text-sm mb-0.5">{mb.email}</p>
                         <p className="text-xs text-slate-500 font-medium">{mb.display_name || "SMTP/IMAP Account"}</p>
+                        <p className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}>
+                          {mb.remote_mailcow_provisioned ? 'Mailcow synced' : 'Local only'}
+                        </p>
                       </div>
                     </div>
                   </td>
