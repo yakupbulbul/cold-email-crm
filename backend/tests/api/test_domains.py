@@ -50,6 +50,9 @@ def test_create_domain_with_valid_data(client: TestClient, auth_headers: dict, m
     assert payload["status"] == "local_only"
     assert payload["mailcow_status"] == "missing"
     assert "missing_requirements" in payload
+    assert payload["verification_summary"]["remediation"]["mailcow"]["action"].startswith("Add test-domain.com in the Mailcow admin")
+    assert payload["verification_summary"]["remediation"]["dns"]["mx"]["type"] == "MX"
+    assert payload["verification_summary"]["remediation"]["dns"]["spf"]["type"] == "TXT"
 
 
 def test_create_domain_invalid_name_rejected(client: TestClient, auth_headers: dict):

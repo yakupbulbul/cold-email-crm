@@ -28,6 +28,18 @@ function StatusBadge({ label, value }: { label: string; value: string }) {
     );
 }
 
+function GuidanceRow({ title, host, type, expectedValue, explanation }: { title: string; host?: string; type?: string; expectedValue?: string; explanation?: string }) {
+    return (
+        <div className="rounded-xl border border-slate-200 p-3">
+            <div className="font-semibold text-slate-800">{title}</div>
+            {host ? <div className="mt-2 text-xs uppercase tracking-wide text-slate-500">Host: {host}</div> : null}
+            {type ? <div className="mt-1 text-xs uppercase tracking-wide text-slate-500">Type: {type}</div> : null}
+            {expectedValue ? <div className="mt-2 break-all rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{expectedValue}</div> : null}
+            {explanation ? <div className="mt-2 text-sm text-slate-600">{explanation}</div> : null}
+        </div>
+    );
+}
+
 export default function DomainsPage() {
     const { getDomains, createDomain, deleteDomain, verifyDomain, refreshDomain, loading, error } = useApiService();
     const [domains, setDomains] = useState<Domain[]>([]);
@@ -316,6 +328,36 @@ export default function DomainsPage() {
                                              ) : (
                                                  <div className="mt-2 text-sm text-slate-600">No missing requirements. This domain is mail-ready.</div>
                                              )}
+                                         </div>
+
+                                         <div className="mt-3 rounded-xl bg-white p-4 border border-slate-200">
+                                             <div className="font-semibold text-slate-800">How To Fix</div>
+                                             <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                                 <GuidanceRow
+                                                     title="Mailcow"
+                                                     host={d.verification_summary?.remediation?.mailcow?.mailcow_host as string | undefined}
+                                                     expectedValue={d.verification_summary?.remediation?.mailcow?.action as string | undefined}
+                                                     explanation={d.verification_summary?.remediation?.mailcow?.detail as string | undefined}
+                                                 />
+                                                 {(["mx", "spf", "dkim", "dmarc"] as const).map((key) => {
+                                                     const guidance = d.verification_summary?.remediation?.dns?.[key] as {
+                                                         host?: string;
+                                                         type?: string;
+                                                         expected_value?: string;
+                                                         explanation?: string;
+                                                     } | undefined;
+                                                     return (
+                                                         <GuidanceRow
+                                                             key={key}
+                                                             title={key.toUpperCase()}
+                                                             host={guidance?.host}
+                                                             type={guidance?.type}
+                                                             expectedValue={guidance?.expected_value}
+                                                             explanation={guidance?.explanation}
+                                                         />
+                                                     );
+                                                 })}
+                                             </div>
                                          </div>
                                      </div>
                                  )}
