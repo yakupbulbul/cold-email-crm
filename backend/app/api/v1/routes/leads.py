@@ -14,6 +14,7 @@ from app.models.campaign import Contact
 router = APIRouter()
 
 @router.get("/")
+@router.get("")  # Handle both /leads and /leads/ without redirect
 def list_leads(db: Session = Depends(get_db)):
     return db.query(Contact).all()
 
