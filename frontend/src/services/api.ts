@@ -2,7 +2,7 @@ import { useApi } from "@/hooks/useApi";
 import { useCallback } from "react";
 import { 
     Domain, Mailbox, Campaign, Contact, SuppressionEntry, 
-    SystemHealth, Alert, JobLog, DeliverabilitySummary, Thread, Message 
+    SystemHealth, Alert, JobLog, DeliverabilitySummary, Thread, Message, SettingsSummary 
 } from "@/types/models";
 
 type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
@@ -37,6 +37,7 @@ export function useApiService() {
 
     // ── OPS / METRICS ──
     const getHealth = useCallback(() => request<SystemHealth>("/ops/health"), [request]);
+    const getSettingsSummary = useCallback(() => request<SettingsSummary>("/settings/summary"), [request]);
     const getAlerts = useCallback(() => request<Alert[]>("/ops/alerts"), [request]);
     const getJobs = useCallback(() => request<JobLog[]>("/ops/jobs"), [request]);
     const getDeliverabilitySummary = useCallback(() => request<DeliverabilitySummary>("/ops/deliverability/summary"), [request]);
@@ -80,6 +81,7 @@ export function useApiService() {
         loading,
         error,
         getHealth,
+        getSettingsSummary,
         getAlerts,
         getJobs,
         getDeliverabilitySummary,

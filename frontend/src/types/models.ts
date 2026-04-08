@@ -70,12 +70,48 @@ export interface HealthComponent {
     latency_ms?: number;
     active_count?: number;
     total_registered?: number;
+    detail?: string | null;
 }
 
 export interface SystemHealth {
     status: "healthy" | "degraded" | "failed";
     components: Record<string, HealthComponent>;
     timestamp: string;
+}
+
+export interface SettingsUserSummary {
+    email: string;
+    full_name?: string | null;
+    is_admin: boolean;
+    is_active: boolean;
+}
+
+export interface SettingsHealthItem {
+    status: string;
+    detail?: string | null;
+}
+
+export interface SettingsSummary {
+    app_env: string;
+    project_name: string;
+    api_base_path: string;
+    backend_url: string;
+    frontend_api_path: string;
+    worker_mode: "lean" | "full";
+    worker_available: boolean;
+    worker_detail?: string | null;
+    readiness_status: "healthy" | "degraded" | "failed" | "unknown";
+    safe_mode: boolean;
+    mailcow_mutations_enabled: boolean;
+    mailcow_configured: boolean;
+    mailcow_status: string;
+    mailcow_reason?: string | null;
+    mailcow_detail?: string | null;
+    frontend_mailcow_direct_access: boolean;
+    auth_enabled: boolean;
+    session_healthy: boolean;
+    current_user: SettingsUserSummary;
+    health: Record<string, SettingsHealthItem>;
 }
 
 export interface Alert {
