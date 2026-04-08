@@ -1,11 +1,11 @@
 import logging
-import subprocess
-import os
 import smtplib
 import imaplib
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Dict, Any
+from app.core.config import settings
+from app.integrations.mailcow import MailcowClient
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +24,7 @@ class SystemHealthService:
     def check_redis_health(self) -> Dict[str, Any]:
         try:
             import redis
-            redis_url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
-            r = redis.Redis.from_url(redis_url, socket_timeout=2)
+            r = redis.Redis.from_url(settings.REDIS_URL, socket_timeout=2)
             r.ping()
             return {"status": "healthy", "service": "redis"}
         except Exception as e:
@@ -72,22 +71,30 @@ class SystemHealthService:
             logger.error(f"IMAP Check Failed for {host}: {e}")
             return {"status": "failed", "service": f"imap_{host}", "error": str(e)}
 
+    def check_mailcow_health(self) -> Dict[str, Any]:
+        result = MailcowClient().check_health()
+        payload: Dict[str, Any] = {
+            "status": result.status,
+            "service": "mailcow_api",
+            "detail": result.detail,
+        }
+        if result.http_status is not None:
+            payload["http_status"] = result.http_status
+        return payload
+
     def check_overall_health(self) -> Dict[str, Any]:
         db_stat = self.check_db_health()
         redis_stat = self.check_redis_health()
         worker_stat = self.check_worker_health()
-        
-        # Generic SMTP assumption pointing mapping Mailcow
-        # For precise check we read exact mailbox domains but global check assumes "mailcow" container existence
-        smtp_stat = {"status": "unknown", "service": "global_smtp"}
-        
+        mailcow_stat = self.check_mailcow_health()
+
         is_all_healthy = all(x["status"] == "healthy" for x in [db_stat, redis_stat])
-        is_any_failed = any(x["status"] == "failed" for x in [db_stat, redis_stat, worker_stat])
-        
+        is_any_failed = any(x["status"] == "failed" for x in [db_stat, redis_stat, worker_stat, mailcow_stat])
+
         overall = "healthy"
         if is_any_failed:
             overall = "failed"
-        elif not is_all_healthy or worker_stat["status"] == "degraded":
+        elif not is_all_healthy or worker_stat["status"] == "degraded" or mailcow_stat["status"] in {"degraded", "unknown"}:
             overall = "degraded"
             
         return {
@@ -96,6 +103,6 @@ class SystemHealthService:
                 "postgres": db_stat,
                 "redis": redis_stat,
                 "workers": worker_stat,
-                "smtp_engine": smtp_stat
+                "mailcow": mailcow_stat,
             }
         }

@@ -32,6 +32,10 @@ def get_smtp_health(host: str, port: int = 465, secure: bool = True, db: Session
 def get_imap_health(host: str, port: int = 993, db: Session = Depends(get_db)):
     return SystemHealthService(db).check_imap_health(host, port)
 
+@router.get("/health/mailcow")
+def get_mailcow_health(db: Session = Depends(get_db)):
+    return SystemHealthService(db).check_mailcow_health()
+
 @router.get("/jobs")
 def get_recent_jobs(status: str = "all", db: Session = Depends(get_db)):
     query = db.query(JobLog)

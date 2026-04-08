@@ -1,5 +1,5 @@
-import os
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.services.health_service import SystemHealthService
 
 class ReadinessService:
@@ -31,8 +31,9 @@ class ReadinessService:
         })
 
         # Secrets & Keys
-        has_secret = bool(os.environ.get("SECRET_KEY"))
-        has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+        has_secret = bool(settings.SECRET_KEY)
+        has_openai = bool(settings.OPENAI_API_KEY)
+        mailcow = health_stat["components"]["mailcow"]
         
         checks.append({
             "category": "Security",
@@ -48,12 +49,11 @@ class ReadinessService:
             "detail": "AI capabilities are enabled." if has_openai else "OPENAI_API_KEY missing. AI features disabled."
         })
 
-        # Mailcow Check Assumption
         checks.append({
-            "category": "Infrastructure",
-            "check": "Mailcow Engine Link",
-            "status": "pass" if os.environ.get("SMTP_HOST", "mailcow") else "warning",
-            "detail": "Standard Docker network assumed for Mailcow."
+            "category": "Integrations",
+            "check": "Mailcow API Connectivity",
+            "status": "pass" if mailcow["status"] == "healthy" else ("warning" if mailcow["status"] in {"degraded", "unknown"} else "fail"),
+            "detail": mailcow.get("detail", "Mailcow connectivity check did not return detail."),
         })
 
         total = len(checks)

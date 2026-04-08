@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from app.core.database import get_db
+from app.integrations.mailcow import MailcowClient
 from app.models.core import Domain
 
 router = APIRouter()
@@ -20,7 +21,10 @@ def create_domain(req: DomainCreate, db: Session = Depends(get_db)):
     existing = db.query(Domain).filter(Domain.name == req.name).first()
     if existing:
         raise HTTPException(status_code=400, detail="Domain already exists")
+    remote_exists = MailcowClient().domain_exists(req.name)
     domain = Domain(name=req.name)
+    if remote_exists is True:
+        domain.status = "verified"
     db.add(domain)
     db.commit()
     db.refresh(domain)

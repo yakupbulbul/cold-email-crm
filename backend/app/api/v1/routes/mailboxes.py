@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.core import Mailbox, Domain
 
@@ -11,13 +12,13 @@ class MailboxCreate(BaseModel):
     domain_id: str
     email: str
     display_name: str
-    smtp_host: str
-    smtp_port: int = 587
-    smtp_username: str
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_username: Optional[str] = None
     smtp_password: str
-    imap_host: str
-    imap_port: int = 993
-    imap_username: str
+    imap_host: Optional[str] = None
+    imap_port: Optional[int] = None
+    imap_username: Optional[str] = None
     imap_password: str
     daily_send_limit: int = 50
 
@@ -59,6 +60,25 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "updated_at": str(mb.updated_at) if mb.updated_at else None,
     }
 
+
+def resolve_mailbox_connection_defaults(req: MailboxCreate) -> dict:
+    smtp_host = req.smtp_host or settings.MAILCOW_SMTP_HOST
+    imap_host = req.imap_host or settings.MAILCOW_IMAP_HOST
+    if not smtp_host or not imap_host:
+        raise HTTPException(
+            status_code=400,
+            detail="smtp_host and imap_host are required unless MAILCOW_SMTP_HOST and MAILCOW_IMAP_HOST are configured server-side.",
+        )
+
+    return {
+        "smtp_host": smtp_host,
+        "smtp_port": req.smtp_port or settings.MAILCOW_SMTP_PORT,
+        "smtp_username": req.smtp_username or req.email,
+        "imap_host": imap_host,
+        "imap_port": req.imap_port or settings.MAILCOW_IMAP_PORT,
+        "imap_username": req.imap_username or req.email,
+    }
+
 @router.get("/")
 @router.get("")  # Handle both /mailboxes and /mailboxes/ without redirect
 def list_mailboxes(db: Session = Depends(get_db)):
@@ -77,17 +97,19 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Mailbox email already exists")
     
+    connection_defaults = resolve_mailbox_connection_defaults(req)
+
     mailbox = Mailbox(
         domain_id=req.domain_id,
         email=req.email,
         display_name=req.display_name,
-        smtp_host=req.smtp_host,
-        smtp_port=req.smtp_port,
-        smtp_username=req.smtp_username,
+        smtp_host=connection_defaults["smtp_host"],
+        smtp_port=connection_defaults["smtp_port"],
+        smtp_username=connection_defaults["smtp_username"],
         smtp_password_encrypted=req.smtp_password,  # TODO: encrypt at rest
-        imap_host=req.imap_host,
-        imap_port=req.imap_port,
-        imap_username=req.imap_username,
+        imap_host=connection_defaults["imap_host"],
+        imap_port=connection_defaults["imap_port"],
+        imap_username=connection_defaults["imap_username"],
         imap_password_encrypted=req.imap_password,  # TODO: encrypt at rest
         daily_send_limit=req.daily_send_limit,
     )
