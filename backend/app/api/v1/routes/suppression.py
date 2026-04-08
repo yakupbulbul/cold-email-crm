@@ -42,6 +42,7 @@ def add_suppression(req: SuppressionCreate, db: Session = Depends(get_db)):
     contact = db.query(Contact).filter(Contact.email == email_clean).first()
     if contact:
         contact.is_suppressed = True
+        contact.unsubscribe_status = "suppressed"
 
     db.commit()
     return {"status": "success", "id": suppression.id}
@@ -57,6 +58,8 @@ def delete_suppression(id: str, db: Session = Depends(get_db)):
     contact = db.query(Contact).filter(Contact.email == suppression.email).first()
     if contact:
         contact.is_suppressed = False
+        if contact.unsubscribe_status == "suppressed":
+            contact.unsubscribe_status = "subscribed"
 
     db.delete(suppression)
     db.commit()

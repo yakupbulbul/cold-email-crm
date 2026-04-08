@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.monitoring import JobLog
 from app.models.lists import LeadListMember
+from app.models.suppression import SuppressionList
+from app.services.audience_service import normalize_tags, quality_tier_for_contact
 from app.services.verification_service import EmailVerificationService, contact_is_reachable, verification_result_payload
 from app.services.import_service import CSVParserService, LeadImportJobService
 from app.workers.lead_verification_worker import run_lead_verification_bulk
@@ -31,15 +33,30 @@ def _serialize_contact(db: Session, contact: Contact) -> dict:
         "first_name": contact.first_name,
         "last_name": contact.last_name,
         "company": contact.company,
+        "job_title": contact.job_title,
+        "website": contact.website,
+        "country": contact.country,
+        "industry": contact.industry,
+        "persona": contact.persona,
+        "contact_type": contact.contact_type,
+        "consent_status": contact.consent_status,
+        "unsubscribe_status": contact.unsubscribe_status,
+        "engagement_score": contact.engagement_score,
+        "contact_status": contact.contact_status,
         "email_status": contact.email_status,
         "verification_score": contact.verification_score,
         "verification_integrity": contact.verification_integrity,
+        "contact_quality_tier": quality_tier_for_contact(contact),
         "last_verified_at": contact.last_verified_at.isoformat() if contact.last_verified_at else None,
+        "last_contacted_at": contact.last_contacted_at.isoformat() if contact.last_contacted_at else None,
+        "last_replied_at": contact.last_replied_at.isoformat() if contact.last_replied_at else None,
         "is_disposable": contact.is_disposable,
         "is_role_based": contact.is_role_based,
         "is_suppressed": contact.is_suppressed,
         "verification_reasons": contact.verification_reasons,
         "source": contact.source,
+        "source_file_name": contact.source_file_name,
+        "tags": normalize_tags(contact.tags),
         "source_import_job_id": str(contact.source_import_job_id) if contact.source_import_job_id else None,
         "list_ids": [str(member.list_id) for member in memberships],
         "list_names": [member.lead_list.name for member in memberships],
@@ -48,8 +65,48 @@ def _serialize_contact(db: Session, contact: Contact) -> dict:
 
 @router.get("/")
 @router.get("")  # Handle both /leads and /leads/ without redirect
-def list_leads(db: Session = Depends(get_db)):
-    return [_serialize_contact(db, contact) for contact in db.query(Contact).all()]
+def list_leads(
+    contact_type: str | None = Query(default=None),
+    email_status: str | None = Query(default=None),
+    verification_integrity: str | None = Query(default=None),
+    consent_status: str | None = Query(default=None),
+    unsubscribe_status: str | None = Query(default=None),
+    company: str | None = Query(default=None),
+    country: str | None = Query(default=None),
+    list_id: str | None = Query(default=None),
+    min_score: int | None = Query(default=None),
+    min_engagement_score: int | None = Query(default=None),
+    tag: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Contact)
+    if contact_type:
+        if contact_type == "mixed":
+            query = query.filter(Contact.contact_type.is_(None))
+        else:
+            query = query.filter(Contact.contact_type == contact_type)
+    if email_status:
+        query = query.filter(Contact.email_status == email_status)
+    if verification_integrity:
+        query = query.filter(Contact.verification_integrity == verification_integrity)
+    if consent_status:
+        query = query.filter(Contact.consent_status == consent_status)
+    if unsubscribe_status:
+        query = query.filter(Contact.unsubscribe_status == unsubscribe_status)
+    if company:
+        query = query.filter(Contact.company.ilike(f"%{company}%"))
+    if country:
+        query = query.filter(Contact.country.ilike(f"%{country}%"))
+    if min_score is not None:
+        query = query.filter(Contact.verification_score >= min_score)
+    if min_engagement_score is not None:
+        query = query.filter(Contact.engagement_score >= min_engagement_score)
+    if list_id:
+        query = query.join(LeadListMember, LeadListMember.lead_id == Contact.id).filter(LeadListMember.list_id == list_id)
+    contacts = query.all()
+    if tag:
+        contacts = [contact for contact in contacts if tag in normalize_tags(contact.tags)]
+    return [_serialize_contact(db, contact) for contact in contacts]
 
 @router.post("/import/csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -117,6 +174,16 @@ class VerifyRequest(BaseModel):
 
 class VerifyBulkRequest(BaseModel):
     lead_ids: list[UUID]
+
+
+class LeadBulkTagsRequest(BaseModel):
+    lead_ids: list[UUID]
+    tags: list[str]
+
+
+class LeadBulkSuppressRequest(BaseModel):
+    lead_ids: list[UUID]
+    reason: str = "manual_bulk_action"
 
 @router.post("/verify")
 def verify_email(req: VerifyRequest, db: Session = Depends(get_db)):
@@ -196,12 +263,51 @@ def get_verify_job(job_id: str, db: Session = Depends(get_db)):
         "finished_at": job.finished_at.isoformat() if job.finished_at else None,
     }
 
+
+@router.patch("/bulk/tags")
+def assign_tags_bulk(req: LeadBulkTagsRequest, db: Session = Depends(get_db)):
+    contacts = db.query(Contact).filter(Contact.id.in_(req.lead_ids)).all()
+    if len(contacts) != len(set(req.lead_ids)):
+        raise HTTPException(status_code=404, detail="One or more leads were not found")
+    normalized_tags = sorted(set(normalize_tags(req.tags)))
+    for contact in contacts:
+        existing = set(normalize_tags(contact.tags))
+        contact.tags = sorted(existing.union(normalized_tags))
+        db.add(contact)
+    db.commit()
+    return {"status": "updated", "lead_count": len(contacts), "tags": normalized_tags}
+
+
+@router.post("/bulk/suppress")
+def suppress_leads_bulk(req: LeadBulkSuppressRequest, db: Session = Depends(get_db)):
+    contacts = db.query(Contact).filter(Contact.id.in_(req.lead_ids)).all()
+    if len(contacts) != len(set(req.lead_ids)):
+        raise HTTPException(status_code=404, detail="One or more leads were not found")
+    suppressed_count = 0
+    for contact in contacts:
+        email = contact.email.strip().lower()
+        existing = db.query(SuppressionList).filter(SuppressionList.email == email).first()
+        if not existing:
+            db.add(SuppressionList(email=email, reason=req.reason, source="bulk_contact_action"))
+        contact.is_suppressed = True
+        contact.unsubscribe_status = "suppressed"
+        db.add(contact)
+        suppressed_count += 1
+    db.commit()
+    return {"status": "suppressed", "lead_count": suppressed_count}
+
 def generate_csv_response(contacts, filename):
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Email", "First Name", "Last Name", "Company", "Verification Score", "Suppressed"])
+    writer.writerow([
+        "Email", "First Name", "Last Name", "Company", "Contact Type", "Consent Status",
+        "Unsubscribe Status", "Verification Score", "Engagement Score", "Tags", "Suppressed"
+    ])
     for c in contacts:
-        writer.writerow([c.email, c.first_name, c.last_name, c.company, c.verification_score, c.is_suppressed])
+        writer.writerow([
+            c.email, c.first_name, c.last_name, c.company, c.contact_type, c.consent_status,
+            c.unsubscribe_status, c.verification_score, c.engagement_score, ",".join(normalize_tags(c.tags)), c.is_suppressed
+        ])
     output.seek(0)
     return StreamingResponse(io.BytesIO(output.getvalue().encode('utf-8')), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
 

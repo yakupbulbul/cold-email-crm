@@ -32,6 +32,42 @@ def test_list_contacts_includes_persisted_list_membership(client: TestClient, au
     assert row["list_names"] == ["Verified High Score"]
 
 
+def test_list_contacts_includes_b2b_b2c_fields_and_filters(client: TestClient, auth_headers: dict, db, contact_factory):
+    b2b = contact_factory(
+        email="b2b@example.com",
+        contact_type="b2b",
+        consent_status="unknown",
+        unsubscribe_status="subscribed",
+        engagement_score=55,
+        tags=["saas", "founder"],
+        industry="SaaS",
+        persona="Founder",
+    )
+    contact_factory(
+        email="b2c@example.com",
+        contact_type="b2c",
+        consent_status="granted",
+        unsubscribe_status="subscribed",
+        engagement_score=75,
+        tags=["newsletter"],
+    )
+
+    resp = client.get("/api/v1/leads?contact_type=b2b&tag=saas&min_engagement_score=50", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert len(payload) == 1
+    row = payload[0]
+    assert row["id"] == str(b2b.id)
+    assert row["contact_type"] == "b2b"
+    assert row["consent_status"] == "unknown"
+    assert row["unsubscribe_status"] == "subscribed"
+    assert row["engagement_score"] == 55
+    assert row["industry"] == "SaaS"
+    assert row["persona"] == "Founder"
+    assert row["tags"] == ["saas", "founder"]
+    assert row["contact_quality_tier"] in {"high", "medium", "low"}
+
+
 def test_single_lead_verification_persists_real_status(client: TestClient, auth_headers: dict, db, contact_factory):
     lead = contact_factory(email="person@example.com")
 
@@ -125,3 +161,29 @@ def test_verification_classifies_common_failure_modes(client: TestClient, auth_h
         no_mx_resp = client.post("/api/v1/leads/verify", headers=auth_headers, json={"lead_id": str(no_mx_lead.id)})
     assert no_mx_resp.status_code == 200
     assert no_mx_resp.json()["status"] == "no_mx"
+
+
+def test_bulk_tagging_and_suppression_actions(client: TestClient, auth_headers: dict, db, contact_factory):
+    lead_one = contact_factory(email="bulk-one@example.com")
+    lead_two = contact_factory(email="bulk-two@example.com")
+
+    tag_resp = client.patch(
+        "/api/v1/leads/bulk/tags",
+        headers=auth_headers,
+        json={"lead_ids": [str(lead_one.id), str(lead_two.id)], "tags": ["vip", "newsletter"]},
+    )
+    assert tag_resp.status_code == 200
+    db.refresh(lead_one)
+    db.refresh(lead_two)
+    assert lead_one.tags == ["newsletter", "vip"] or lead_one.tags == ["vip", "newsletter"]
+    assert lead_two.tags == ["newsletter", "vip"] or lead_two.tags == ["vip", "newsletter"]
+
+    suppress_resp = client.post(
+        "/api/v1/leads/bulk/suppress",
+        headers=auth_headers,
+        json={"lead_ids": [str(lead_one.id), str(lead_two.id)], "reason": "compliance"},
+    )
+    assert suppress_resp.status_code == 200
+    db.refresh(lead_one)
+    assert lead_one.is_suppressed is True
+    assert lead_one.unsubscribe_status == "suppressed"

@@ -50,6 +50,8 @@ def test_start_campaign_requires_background_workers(client: TestClient, auth_hea
             "template_subject": "Subject",
             "template_body": "Body",
             "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
         },
         headers=auth_headers,
     )
@@ -84,13 +86,15 @@ def test_start_campaign_requires_scheduled_lead(client: TestClient, auth_headers
             "template_subject": "Subject",
             "template_body": "Body",
             "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
         },
         headers=auth_headers,
     )
 
     resp = client.post(f"/api/v1/campaigns/{campaign_resp.json()['id']}/start", headers=auth_headers)
     assert resp.status_code == 409
-    assert "scheduled, verified, unsuppressed lead" in resp.json()["detail"]
+    assert "scheduled, eligible lead" in resp.json()["detail"]
 
 
 def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_headers: dict, monkeypatch, db):
@@ -119,6 +123,8 @@ def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_hea
             "template_subject": "Subject",
             "template_body": "Hi {{first_name}}",
             "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
         },
         headers=auth_headers,
     )
@@ -168,6 +174,8 @@ def test_pause_campaign_updates_status(client: TestClient, auth_headers: dict, m
             "template_subject": "Subject",
             "template_body": "Body",
             "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
         },
         headers=auth_headers,
     )
@@ -208,6 +216,8 @@ def test_delete_campaign_removes_draft_campaign(client: TestClient, auth_headers
             "template_subject": "Subject",
             "template_body": "Body",
             "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
         },
         headers=auth_headers,
     )
@@ -243,6 +253,8 @@ def test_delete_campaign_blocks_non_draft_campaign(client: TestClient, auth_head
             "template_subject": "Subject",
             "template_body": "Body",
             "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
         },
         headers=auth_headers,
     )
@@ -259,6 +271,133 @@ def test_delete_campaign_blocks_non_draft_campaign(client: TestClient, auth_head
 def test_delete_campaign_returns_404_for_missing_record(client: TestClient, auth_headers: dict):
     delete_resp = client.delete("/api/v1/campaigns/00000000-0000-0000-0000-000000000000", headers=auth_headers)
     assert delete_resp.status_code == 404
+
+
+def test_create_campaign_persists_b2c_fields(client: TestClient, auth_headers: dict, monkeypatch):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-b2c.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-b2c.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Newsletter Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2c",
+            "channel_type": "email",
+            "goal_type": "newsletter",
+            "list_strategy": "list_based",
+            "compliance_mode": "strict_b2c",
+            "send_window_timezone": "Europe/Berlin",
+        },
+        headers=auth_headers,
+    )
+    assert campaign_resp.status_code == 200
+    payload = campaign_resp.json()
+    assert payload["campaign_type"] == "b2c"
+    assert payload["goal_type"] == "newsletter"
+    assert payload["compliance_mode"] == "strict_b2c"
+    assert payload["send_window_timezone"] == "Europe/Berlin"
+
+
+def test_b2c_strict_campaign_excludes_unknown_consent_and_type_mismatch(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", lambda: type("Task", (), {"id": "campaign-job-2"})())
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-b2c-strict.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-b2c-strict.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Strict B2C Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Hi",
+            "daily_limit": 10,
+            "campaign_type": "b2c",
+            "compliance_mode": "strict_b2c",
+            "goal_type": "newsletter",
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+
+    allowed = Contact(
+        email="consumer@example.com",
+        email_status="valid",
+        verification_score=95,
+        verification_integrity="high",
+        contact_type="b2c",
+        consent_status="granted",
+        unsubscribe_status="subscribed",
+    )
+    blocked_unknown = Contact(
+        email="unknown@example.com",
+        email_status="valid",
+        verification_score=95,
+        verification_integrity="high",
+        contact_type="b2c",
+        consent_status="unknown",
+        unsubscribe_status="subscribed",
+    )
+    mismatched = Contact(
+        email="b2b@example.com",
+        email_status="valid",
+        verification_score=95,
+        verification_integrity="high",
+        contact_type="b2b",
+        consent_status="granted",
+        unsubscribe_status="subscribed",
+    )
+    db.add_all([allowed, blocked_unknown, mismatched])
+    db.commit()
+    db.refresh(allowed)
+    db.refresh(blocked_unknown)
+    db.refresh(mismatched)
+
+    db.add_all([
+        CampaignLead(campaign_id=campaign_id, contact_id=allowed.id, status="scheduled"),
+        CampaignLead(campaign_id=campaign_id, contact_id=blocked_unknown.id, status="scheduled"),
+        CampaignLead(campaign_id=campaign_id, contact_id=mismatched.id, status="scheduled"),
+    ])
+    db.commit()
+
+    preflight_resp = client.post(f"/api/v1/campaigns/{campaign_id}/preflight", headers=auth_headers)
+    assert preflight_resp.status_code == 200
+    preflight = preflight_resp.json()
+    assert preflight["audience_summary"]["consent_unknown_count"] == 1
+    assert preflight["audience_summary"]["type_mismatch_count"] == 1
+    assert any(check["name"] == "b2c_compliance" for check in preflight["checks"])
+
+    start_resp = client.post(f"/api/v1/campaigns/{campaign_id}/start", headers=auth_headers)
+    assert start_resp.status_code == 200
+    assert start_resp.json()["eligible_leads"] == 1
 
 
 def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict, monkeypatch, db):

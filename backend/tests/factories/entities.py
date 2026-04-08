@@ -95,6 +95,8 @@ def create_campaign(
     mailbox: Mailbox | None = None,
     name: str | None = None,
     status: str = "draft",
+    campaign_type: str = "b2b",
+    compliance_mode: str = "standard",
 ) -> Campaign:
     mailbox = mailbox or create_mailbox(db)
     campaign = Campaign(
@@ -104,6 +106,11 @@ def create_campaign(
         template_body="World",
         status=status,
         daily_limit=25,
+        campaign_type=campaign_type,
+        channel_type="email",
+        goal_type="outreach",
+        list_strategy="list_based",
+        compliance_mode=compliance_mode,
     )
     db.add(campaign)
     db.commit()
@@ -125,6 +132,13 @@ def create_contact(
     is_role_based: bool = False,
     is_suppressed: bool = False,
     verification_reasons: list[str] | None = None,
+    contact_type: str | None = None,
+    consent_status: str = "unknown",
+    unsubscribe_status: str = "subscribed",
+    engagement_score: int = 0,
+    tags: list[str] | None = None,
+    industry: str | None = None,
+    persona: str | None = None,
 ) -> Contact:
     contact = Contact(
         email=email or f"{_next('lead')}@example.com",
@@ -138,6 +152,13 @@ def create_contact(
         is_role_based=is_role_based,
         is_suppressed=is_suppressed,
         verification_reasons=verification_reasons,
+        contact_type=contact_type,
+        consent_status=consent_status,
+        unsubscribe_status=unsubscribe_status,
+        engagement_score=engagement_score,
+        tags=tags or [],
+        industry=industry,
+        persona=persona,
     )
     db.add(contact)
     db.commit()
@@ -152,6 +173,11 @@ def campaign_payload(*, mailbox_id: str, name: str | None = None) -> dict:
         "template_subject": "Hello",
         "template_body": "World",
         "daily_limit": 25,
+        "campaign_type": "b2b",
+        "channel_type": "email",
+        "goal_type": "outreach",
+        "list_strategy": "list_based",
+        "compliance_mode": "standard",
     }
 
 

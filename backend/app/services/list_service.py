@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.lists import CampaignList, LeadList, LeadListMember
-from app.services.verification_service import contact_is_reachable
+from app.services.audience_service import evaluate_contact_for_campaign, summarize_contacts_for_campaign
 
 
 class LeadListService:
@@ -30,20 +30,7 @@ class LeadListService:
         return normalized
 
     def summarize_contact_collection(self, contacts: list[Contact]) -> dict:
-        counts = Counter(contact.email_status or "unverified" for contact in contacts)
-        unique_ids = {str(contact.id) for contact in contacts}
-        reachable = sum(1 for contact in contacts if contact_is_reachable(contact))
-        risky = sum(1 for contact in contacts if (contact.email_status or "unverified") == "risky")
-        invalid = sum(1 for contact in contacts if (contact.email_status or "unverified") not in {"valid", "risky"})
-        suppressed = sum(1 for contact in contacts if contact.is_suppressed or (contact.email_status or "unverified") == "suppressed")
-        return {
-            "lead_count": len(unique_ids),
-            "reachable_count": reachable,
-            "risky_count": risky,
-            "invalid_count": invalid,
-            "suppressed_count": suppressed,
-            "status_counts": dict(counts),
-        }
+        return summarize_contacts_for_campaign(contacts)
 
     def summarize_list(self, lead_list: LeadList) -> dict:
         contacts = [member.lead for member in lead_list.members]
@@ -60,6 +47,9 @@ class LeadListService:
         }
 
     def summarize_campaign_lists(self, campaign_id: str) -> dict:
+        campaign = self.db.query(Campaign).filter(Campaign.id == campaign_id).first()
+        if not campaign:
+            raise ValueError("Campaign not found")
         campaign_lists = (
             self.db.query(CampaignList)
             .filter(CampaignList.campaign_id == campaign_id)
@@ -72,7 +62,7 @@ class LeadListService:
             for contact in contacts:
                 deduped[str(contact.id)] = contact
             list_payloads.append(self.summarize_list(campaign_list.lead_list))
-        aggregate = self.summarize_contact_collection(list(deduped.values()))
+        aggregate = summarize_contacts_for_campaign(list(deduped.values()), campaign)
         aggregate["lists"] = list_payloads
         return aggregate
 
@@ -96,6 +86,13 @@ class LeadListService:
                 self.db.delete(lead)
 
         for contact_id in target_contact_ids:
+            contact = deduped_contacts[contact_id]
+            eligibility = evaluate_contact_for_campaign(contact, campaign)
+            if not eligibility.eligible:
+                existing = existing_by_contact.get(contact_id)
+                if existing and existing.status == "scheduled":
+                    self.db.delete(existing)
+                continue
             if contact_id in existing_by_contact:
                 continue
             self.db.add(

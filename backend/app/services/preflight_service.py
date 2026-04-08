@@ -2,8 +2,8 @@ import dns.resolver
 from sqlalchemy.orm import Session
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.monitoring import CampaignPreflightCheck
+from app.services.audience_service import summarize_contacts_for_campaign
 from app.services.list_service import LeadListService
-from app.services.verification_service import contact_is_reachable
 
 class PreflightService:
     def __init__(self, db: Session):
@@ -65,9 +65,12 @@ class PreflightService:
             CampaignLead.campaign_id == campaign.id,
             CampaignLead.status == "scheduled"
         ).all()
-        
-        suppressed_count = sum(1 for cl in active_leads if cl.contact.is_suppressed)
-        blocked_count = sum(1 for cl in active_leads if not contact_is_reachable(cl.contact))
+
+        contact_summary = summarize_contacts_for_campaign([lead.contact for lead in active_leads], campaign)
+        suppressed_count = contact_summary["suppressed_count"]
+        blocked_count = contact_summary["invalid_count"]
+        consent_unknown_count = contact_summary["consent_unknown_count"]
+        type_mismatch_count = contact_summary["type_mismatch_count"]
 
         if suppressed_count > 0 or blocked_count > (len(active_leads) * 0.2):
             checks.append(CampaignPreflightCheck(
@@ -75,7 +78,8 @@ class PreflightService:
                 check_name="lead_quality",
                 status="fail",
                 severity="critical",
-                message=f"Campaign contains {suppressed_count} suppressed leads and {blocked_count} leads that are not verified for outreach. Launch Blocked."
+                message=f"Campaign contains {suppressed_count} suppressed leads and {blocked_count} blocked leads after verification/compliance checks. Launch blocked.",
+                metadata_blob=contact_summary,
             ))
         else:
             checks.append(CampaignPreflightCheck(
@@ -83,7 +87,32 @@ class PreflightService:
                 check_name="lead_quality",
                 status="pass",
                 severity="info",
-                message="Lead quality metrics within acceptable bounds."
+                message="Lead quality metrics within acceptable bounds.",
+                metadata_blob=contact_summary,
+            ))
+
+        if campaign.campaign_type == "b2b":
+            checks.append(CampaignPreflightCheck(
+                campaign_id=campaign.id,
+                check_name="b2b_audience_mix",
+                status="warning" if contact_summary["risky_count"] > 0 else "pass",
+                severity="warning" if contact_summary["risky_count"] > 0 else "info",
+                message=f"B2B audience has {contact_summary['risky_count']} risky contacts, {contact_summary['high_quality_count']} high-quality contacts, and {sum(contact_summary['persona_counts'].values())} contacts with persona metadata.",
+                metadata_blob={"persona_counts": contact_summary["persona_counts"], "industry_counts": contact_summary["industry_counts"]},
+            ))
+        else:
+            strict_fail = campaign.compliance_mode == "strict_b2c" and (consent_unknown_count > 0 or contact_summary["unsubscribed_count"] > 0)
+            checks.append(CampaignPreflightCheck(
+                campaign_id=campaign.id,
+                check_name="b2c_compliance",
+                status="fail" if strict_fail else "warning" if (consent_unknown_count > 0 or type_mismatch_count > 0) else "pass",
+                severity="critical" if strict_fail else "warning" if (consent_unknown_count > 0 or type_mismatch_count > 0) else "info",
+                message=f"B2C audience includes {contact_summary['unsubscribed_count']} unsubscribed, {consent_unknown_count} consent-unknown, and {type_mismatch_count} type-mismatched contacts.",
+                metadata_blob={
+                    "consent_counts": contact_summary["consent_counts"],
+                    "unsubscribe_counts": contact_summary["unsubscribe_counts"],
+                    "type_mismatch_count": type_mismatch_count,
+                },
             ))
 
         checks.append(CampaignPreflightCheck(
@@ -121,4 +150,5 @@ class PreflightService:
                 for c in checks
             ],
             "list_summary": list_summary,
+            "audience_summary": contact_summary,
         }

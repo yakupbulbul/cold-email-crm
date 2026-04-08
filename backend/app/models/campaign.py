@@ -17,8 +17,16 @@ class Contact(Base):
     job_title = Column(String, nullable=True)
     website = Column(String, nullable=True)
     country = Column(String, nullable=True)
+    industry = Column(String, nullable=True)
+    persona = Column(String, nullable=True)
     linkedin_url = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+
+    contact_type = Column(String, nullable=True)
+    consent_status = Column(String, default="unknown")
+    unsubscribe_status = Column(String, default="subscribed")
+    engagement_score = Column(Integer, default=0)
+    contact_status = Column(String, default="active")
     
     email_status = Column(String, default="unverified")
     verification_score = Column(Integer, nullable=True)
@@ -36,7 +44,7 @@ class Contact(Base):
     last_contacted_at = Column(DateTime, nullable=True)
     last_replied_at = Column(DateTime, nullable=True)
     
-    tags = Column(String, nullable=True)
+    tags = Column(JSON, nullable=True)
     notes = Column(Text, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -52,6 +60,13 @@ class Campaign(Base):
     
     mailbox_id = Column(UUID(as_uuid=True), ForeignKey("mailboxes.id", ondelete="SET NULL"), nullable=True)
     daily_limit = Column(Integer, default=50)
+    campaign_type = Column(String, default="b2b")
+    channel_type = Column(String, default="email")
+    goal_type = Column(String, default="outreach")
+    list_strategy = Column(String, default="list_based")
+    compliance_mode = Column(String, default="standard")
+    schedule_window = Column(JSON, nullable=True)
+    send_window_timezone = Column(String, nullable=True)
     
     template_subject = Column(String, nullable=False)
     template_body = Column(Text, nullable=False)

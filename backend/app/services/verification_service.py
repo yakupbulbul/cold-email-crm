@@ -8,6 +8,7 @@ import dns.resolver
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.services.audience_service import evaluate_contact_for_campaign
 from app.models.campaign import Contact
 from app.models.suppression import SuppressionList
 from app.models.verification import EmailVerificationLog
@@ -309,4 +310,5 @@ def verification_result_payload(result: LeadVerificationResult) -> dict:
 
 
 def contact_is_reachable(contact: Contact) -> bool:
-    return contact.email_status in {"valid", "risky"} and not contact.is_suppressed
+    eligibility = evaluate_contact_for_campaign(contact)
+    return eligibility.eligible

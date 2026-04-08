@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.campaign import Contact
 from app.models.lists import LeadList, LeadListMember
+from app.services.audience_service import normalize_tags, quality_tier_for_contact
 from app.schemas.lists import LeadListCreate, LeadListLeadBulkPayload, LeadListLeadPayload, LeadListUpdate
 from app.services.list_service import LeadListService
 
@@ -98,10 +99,16 @@ def get_list_leads(list_id: str, db: Session = Depends(get_db)):
                 "first_name": contact.first_name,
                 "last_name": contact.last_name,
                 "company": contact.company,
+                "contact_type": contact.contact_type,
+                "consent_status": contact.consent_status,
+                "unsubscribe_status": contact.unsubscribe_status,
+                "engagement_score": contact.engagement_score,
                 "email_status": contact.email_status,
                 "verification_score": contact.verification_score,
                 "verification_integrity": contact.verification_integrity,
+                "contact_quality_tier": quality_tier_for_contact(contact),
                 "is_suppressed": contact.is_suppressed,
+                "tags": normalize_tags(contact.tags),
                 "created_at": contact.created_at.isoformat() if contact.created_at else None,
             }
             for contact in contacts

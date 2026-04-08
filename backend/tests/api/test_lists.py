@@ -52,6 +52,7 @@ def test_list_crud_and_membership_persist(client: TestClient, auth_headers: dict
 
     delete_resp = client.delete(f"/api/v1/lists/{lead_list['id']}", headers=auth_headers)
     assert delete_resp.status_code == 200
+    assert "contact_type_counts" in lead_list
 
 
 def test_bulk_membership_and_campaign_list_deduplication(client: TestClient, auth_headers: dict, monkeypatch, db):
@@ -82,9 +83,9 @@ def test_bulk_membership_and_campaign_list_deduplication(client: TestClient, aut
         headers=auth_headers,
     )
 
-    lead_a = Contact(email="lead-a@example.com", first_name="A", email_status="valid", verification_score=95, verification_integrity="high")
-    lead_b = Contact(email="lead-b@example.com", first_name="B", email_status="suppressed", verification_score=20, is_suppressed=True)
-    lead_c = Contact(email="lead-c@example.com", first_name="C", email_status="risky", verification_score=75, verification_integrity="low")
+    lead_a = Contact(email="lead-a@example.com", first_name="A", email_status="valid", verification_score=95, verification_integrity="high", contact_type="b2b", consent_status="unknown")
+    lead_b = Contact(email="lead-b@example.com", first_name="B", email_status="suppressed", verification_score=20, is_suppressed=True, contact_type="b2c", consent_status="granted", unsubscribe_status="suppressed")
+    lead_c = Contact(email="lead-c@example.com", first_name="C", email_status="risky", verification_score=75, verification_integrity="low", contact_type="b2b", consent_status="unknown")
     db.add_all([lead_a, lead_b, lead_c])
     db.commit()
     db.refresh(lead_a)
@@ -123,8 +124,10 @@ def test_bulk_membership_and_campaign_list_deduplication(client: TestClient, aut
     assert payload["lead_count"] == 3
     assert payload["reachable_count"] == 2
     assert payload["suppressed_count"] == 1
+    assert payload["contact_type_counts"]["b2b"] == 2
+    assert payload["contact_type_counts"]["b2c"] == 1
     assert len(payload["lists"]) == 2
-    assert db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign_resp.json()["id"]).count() == 3
+    assert db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign_resp.json()["id"]).count() == 2
 
     list_resp = client.get(f"/api/v1/campaigns/{campaign_resp.json()['id']}/lists", headers=auth_headers)
     assert list_resp.status_code == 200

@@ -8,8 +8,8 @@ from app.models.lists import CampaignList
 from app.models.monitoring import JobLog
 from app.schemas.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
 from app.schemas.lists import CampaignListAttachPayload
+from app.services.audience_service import evaluate_contact_for_campaign
 from app.services.list_service import LeadListService
-from app.services.verification_service import contact_is_reachable
 from app.workers.campaign_worker import run_campaign_cycle
 
 router = APIRouter()
@@ -27,6 +27,13 @@ def _campaign_payload(db: Session, campaign: Campaign) -> dict:
         "template_subject": campaign.template_subject,
         "template_body": campaign.template_body,
         "daily_limit": campaign.daily_limit,
+        "campaign_type": campaign.campaign_type,
+        "channel_type": campaign.channel_type,
+        "goal_type": campaign.goal_type,
+        "list_strategy": campaign.list_strategy,
+        "compliance_mode": campaign.compliance_mode,
+        "schedule_window": campaign.schedule_window,
+        "send_window_timezone": campaign.send_window_timezone,
         "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
         "lead_count": campaign_lists_summary["lead_count"],
         "sent_count": sent_count,
@@ -47,7 +54,14 @@ def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
         mailbox_id=req.mailbox_id,
         template_subject=req.template_subject,
         template_body=req.template_body,
-        daily_limit=req.daily_limit
+        daily_limit=req.daily_limit,
+        campaign_type=req.campaign_type,
+        channel_type=req.channel_type,
+        goal_type=req.goal_type,
+        list_strategy=req.list_strategy,
+        compliance_mode=req.compliance_mode,
+        schedule_window=req.schedule_window,
+        send_window_timezone=req.send_window_timezone,
     )
     db.add(c)
     db.commit()
@@ -66,6 +80,13 @@ def update_campaign(campaign_id: str, req: CampaignUpdate, db: Session = Depends
     campaign.template_subject = req.template_subject
     campaign.template_body = req.template_body
     campaign.daily_limit = req.daily_limit
+    campaign.campaign_type = req.campaign_type
+    campaign.channel_type = req.channel_type
+    campaign.goal_type = req.goal_type
+    campaign.list_strategy = req.list_strategy
+    campaign.compliance_mode = req.compliance_mode
+    campaign.schedule_window = req.schedule_window
+    campaign.send_window_timezone = req.send_window_timezone
     db.commit()
     db.refresh(campaign)
     return _campaign_payload(db, campaign)
@@ -148,11 +169,19 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
         )
         .all()
     )
-    eligible_leads = sum(1 for lead in scheduled_leads if contact_is_reachable(lead.contact))
+    blocked_counts: dict[str, int] = {}
+    eligible_leads = 0
+    for lead in scheduled_leads:
+        eligibility = evaluate_contact_for_campaign(lead.contact, c)
+        if eligibility.eligible:
+            eligible_leads += 1
+            continue
+        reason = eligibility.blocked_reason or "unknown"
+        blocked_counts[reason] = blocked_counts.get(reason, 0) + 1
     if eligible_leads == 0:
         raise HTTPException(
             status_code=409,
-            detail="Campaign cannot start until it has at least one scheduled, verified, unsuppressed lead.",
+            detail="Campaign cannot start until it has at least one scheduled, eligible lead after verification, suppression, contact type, and compliance checks.",
         )
 
     c.status = "active"
@@ -181,6 +210,7 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
         "status": "started",
         "campaign": c.name,
         "eligible_leads": eligible_leads,
+        "blocked_leads": blocked_counts,
         "job_queued": bool(job_id),
         "job_id": job_id,
     }
@@ -204,12 +234,14 @@ def lead_quality_report(campaign_id: str, db: Session = Depends(get_db)):
     risky = sum(1 for c in leads if c.email_status == "risky")
     invalid = sum(1 for c in leads if c.email_status not in {"valid", "risky"})
     suppressed = sum(1 for c in leads if c.is_suppressed)
+    unsubscribed = sum(1 for c in leads if c.unsubscribe_status in {"unsubscribed", "suppressed"})
     
     return {
         "valid": valid,
         "risky": risky,
         "invalid": invalid,
         "suppressed": suppressed,
+        "unsubscribed": unsubscribed,
         "total": len(leads)
     }
 

@@ -20,6 +20,19 @@ def get_summary(db: Session = Depends(get_db)):
     for k, v in events:
         if k in res:
             res[k] = v
+    res.update({
+        "total_contacts": db.query(func.count(Contact.id)).scalar() or 0,
+        "valid_contacts": db.query(func.count(Contact.id)).filter(Contact.email_status == "valid").scalar() or 0,
+        "risky_contacts": db.query(func.count(Contact.id)).filter(Contact.email_status == "risky").scalar() or 0,
+        "invalid_contacts": db.query(func.count(Contact.id)).filter(Contact.email_status.in_(["invalid", "no_mx", "disposable", "role_based", "duplicate"])).scalar() or 0,
+        "suppressed_contacts": db.query(func.count(Contact.id)).filter(Contact.is_suppressed == True).scalar() or 0,
+        "unsubscribed_contacts": db.query(func.count(Contact.id)).filter(Contact.unsubscribe_status.in_(["unsubscribed", "suppressed"])).scalar() or 0,
+        "b2b_campaigns": db.query(func.count(Campaign.id)).filter(Campaign.campaign_type == "b2b").scalar() or 0,
+        "b2c_campaigns": db.query(func.count(Campaign.id)).filter(Campaign.campaign_type == "b2c").scalar() or 0,
+        "active_campaigns": db.query(func.count(Campaign.id)).filter(Campaign.status == "active").scalar() or 0,
+        "mailbox_count": db.query(func.count(Mailbox.id)).scalar() or 0,
+        "domain_count": db.query(func.count(Domain.id)).scalar() or 0,
+    })
     return res
 
 @router.get("/trends")
