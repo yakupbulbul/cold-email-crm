@@ -15,11 +15,10 @@ test("login succeeds with valid credentials and redirects to dashboard", async (
 });
 
 test("protected route redirects unauthenticated user to login", async ({ browser }) => {
-  const ctx = await browser.newContext(); // no storage state — fresh unauthenticated context
+  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
   await page.goto("/");
-  await page.waitForURL((url) => url.pathname.includes("/signin"), { timeout: 8_000 });
-  expect(page.url()).toContain("/signin");
+  await expect(page).toHaveURL(/\/signin/, { timeout: 8_000 });
   await ctx.close();
 });
 

@@ -12,6 +12,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     const isAuthRoute = pathname === "/signin" || pathname === "/login";
 
+    if (isAuthRoute) {
+        return <div className="w-full">{children}</div>;
+    }
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 w-full font-bold text-slate-400">
@@ -21,10 +25,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
             </div>
         );
-    }
-
-    if (isAuthRoute) {
-        return <div className="w-full">{children}</div>;
     }
 
     if (!token) {
