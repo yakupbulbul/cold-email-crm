@@ -17,10 +17,12 @@ class SuppressionCheck(BaseModel):
     emails: List[str]
 
 @router.get("/")
+@router.get("")  # Handle both /suppression and /suppression/ without redirect
 def get_suppressions(db: Session = Depends(get_db)):
     return db.query(SuppressionList).all()
 
 @router.post("/")
+@router.post("")  # Handle both /suppression and /suppression/ without redirect
 def add_suppression(req: SuppressionCreate, db: Session = Depends(get_db)):
     email_clean = req.email.strip().lower()
     existing = db.query(SuppressionList).filter(SuppressionList.email == email_clean).first()

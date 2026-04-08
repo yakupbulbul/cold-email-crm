@@ -36,8 +36,8 @@ export default function InboxPage() {
                 <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
                     <ServerCrash className="text-red-500" size={28} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Backend Endpoint Missing</h3>
-                <p className="text-sm text-slate-500 mb-4">The REST API for querying inbox threads and messages is not yet connected or implemented.</p>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">Inbox Unavailable</h3>
+                <p className="text-sm text-slate-500 mb-4">The local backend responded with an error while loading inbox threads or messages.</p>
                 <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded w-full break-words">Error: {error}</p>
             </div>
         </div>
@@ -155,7 +155,7 @@ export default function InboxPage() {
             </div>
             
             <div className="p-6 bg-slate-50 border border-slate-100 rounded-xl text-center text-slate-400 font-medium h-48 flex items-center justify-center">
-                Insights loading disabled while backend missing.
+                AI thread insights will appear here when inbox metadata becomes available.
             </div>
           </div>
       )}

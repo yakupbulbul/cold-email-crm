@@ -20,7 +20,12 @@ export default function WarmupPage() {
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Warm-up Engine</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Warm-up Engine</h1>
+          <p className="text-sm text-slate-500 mt-2 font-medium">
+            Lean mode keeps warm-up controls read-only. Run <code>make dev-full</code> before starting mailbox warm-up cycles.
+          </p>
+        </div>
         <div className="flex gap-3">
           <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
             <Pause size={18} /> Pause All

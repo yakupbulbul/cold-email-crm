@@ -25,3 +25,9 @@ def test_add_suppression_invalid_email(client: TestClient):
 def test_delete_suppression_unknown_id(client: TestClient):
     resp = client.delete("/api/v1/suppression/00000000-0000-0000-0000-000000000000")
     assert resp.status_code in (200, 401, 404)
+
+
+def test_list_suppression_trailing_slashless_route(client: TestClient, auth_headers: dict):
+    resp = client.get("/api/v1/suppression", headers=auth_headers)
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)

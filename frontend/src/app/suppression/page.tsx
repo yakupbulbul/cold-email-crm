@@ -65,7 +65,7 @@ export default function SuppressionPage() {
                             {list.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center py-12">
-                                        <span className="text-slate-400 font-bold text-lg">Infrastructure Clear. No Penalties Detected.</span>
+                                        <span className="text-slate-400 font-bold text-lg">No suppression entries yet.</span>
                                     </TableCell>
                                 </TableRow>
                             )}
