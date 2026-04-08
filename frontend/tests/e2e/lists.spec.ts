@@ -81,3 +81,61 @@ test("lists page renders real list management sections", async ({ page }) => {
   await expect(page.getByText("Add lead to list")).toBeVisible();
   await expect(page.getByText("This list has no leads yet.")).toBeVisible();
 });
+
+test("edit button opens the selected list in edit mode", async ({ page }) => {
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: "list-1",
+          name: "April Outreach Batch",
+          description: "Reusable list",
+          type: "static",
+          created_at: "2026-04-08T10:00:00Z",
+          updated_at: "2026-04-08T10:00:00Z",
+          lead_count: 2,
+          reachable_count: 1,
+          risky_count: 1,
+          invalid_count: 0,
+          suppressed_count: 0,
+          status_counts: { valid: 1, risky: 1 },
+        },
+      ]),
+    });
+  });
+  await page.route("**/api/v1/leads", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/lists/list-1/leads", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        list: {
+          id: "list-1",
+          name: "April Outreach Batch",
+          description: "Reusable list",
+          type: "static",
+          created_at: "2026-04-08T10:00:00Z",
+          updated_at: "2026-04-08T10:00:00Z",
+          lead_count: 2,
+          reachable_count: 1,
+          risky_count: 1,
+          invalid_count: 0,
+          suppressed_count: 0,
+          status_counts: { valid: 1, risky: 1 },
+        },
+        leads: [],
+      }),
+    });
+  });
+
+  await page.goto("/lists");
+  await page.locator('table button').nth(1).click();
+
+  await expect(page.locator('input[value="April Outreach Batch"]')).toBeVisible();
+  await expect(page.locator('input[value="Reusable list"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+});

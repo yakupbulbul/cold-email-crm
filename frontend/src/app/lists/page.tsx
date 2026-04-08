@@ -119,6 +119,15 @@ export default function ListsPage() {
     }
   };
 
+  const handleBeginEdit = (list: LeadList) => {
+    setSelectedListId(list.id);
+    setEditState({
+      id: list.id,
+      name: list.name,
+      description: list.description || "",
+    });
+  };
+
   const handleDelete = async (listId: string) => {
     setBusyId(listId);
     try {
@@ -217,7 +226,7 @@ export default function ListsPage() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setEditState({ id: list.id, name: list.name, description: list.description || "" })}
+                        onClick={() => handleBeginEdit(list)}
                         className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700"
                       >
                         <Pencil size={14} />
