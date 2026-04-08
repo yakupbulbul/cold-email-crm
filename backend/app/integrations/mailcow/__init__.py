@@ -1,3 +1,3 @@
-from app.integrations.mailcow.client import MailcowClient, MailcowError
+from app.integrations.mailcow.client import MailcowClient, MailcowDomainLookup, MailcowError
 
-__all__ = ["MailcowClient", "MailcowError"]
+__all__ = ["MailcowClient", "MailcowDomainLookup", "MailcowError"]

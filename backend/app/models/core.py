@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Boolean, Integer, ForeignKey
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -10,13 +10,22 @@ class Domain(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, unique=True, index=True, nullable=False)
-    status = Column(String, default="active")
+    status = Column(String, default="pending")
+    mailcow_status = Column(String, default="pending")
+    mailcow_detail = Column(String, nullable=True)
     
     # DNS Statuses
     spf_status = Column(String, default="pending")
     dkim_status = Column(String, default="pending")
     dmarc_status = Column(String, default="pending")
     mx_status = Column(String, default="pending")
+    dns_results = Column(JSON, nullable=True)
+    missing_requirements = Column(JSON, nullable=True)
+    verification_summary = Column(JSON, nullable=True)
+    verification_error = Column(String, nullable=True)
+    last_checked_at = Column(DateTime, nullable=True)
+    mailcow_last_checked_at = Column(DateTime, nullable=True)
+    dns_last_checked_at = Column(DateTime, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

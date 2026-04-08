@@ -19,6 +19,14 @@ class MailcowHealth:
     http_status: int | None = None
 
 
+@dataclass
+class MailcowDomainLookup:
+    status: str
+    detail: str
+    exists: bool
+    http_status: int | None = None
+
+
 class MailcowClient:
     def __init__(self) -> None:
         self.api_url = settings.MAILCOW_API_URL.rstrip("/") if settings.MAILCOW_API_URL else None
@@ -78,13 +86,61 @@ class MailcowClient:
         )
 
     def domain_exists(self, domain_name: str) -> bool | None:
+        result = self.lookup_domain(domain_name)
+        if result.status == "verified":
+            return True
+        if result.status == "not_found":
+            return False
+        return None
+
+    def lookup_domain(self, domain_name: str) -> MailcowDomainLookup:
         if not self.configured:
-            return None
+            return MailcowDomainLookup(
+                status="unconfigured",
+                detail="Mailcow API credentials are not configured for this environment.",
+                exists=False,
+            )
         try:
             response = self._request("GET", f"/get/domain/{domain_name}")
-        except (httpx.HTTPError, MailcowError):
-            return None
+        except httpx.HTTPError as exc:
+            return MailcowDomainLookup(
+                status="unreachable",
+                detail=f"Mailcow API unreachable: {exc}",
+                exists=False,
+            )
+        except MailcowError as exc:
+            return MailcowDomainLookup(
+                status="error",
+                detail=str(exc),
+                exists=False,
+            )
+
+        if response.status_code in {401, 403}:
+            return MailcowDomainLookup(
+                status="unauthorized",
+                detail="Mailcow API rejected the configured credentials.",
+                exists=False,
+                http_status=response.status_code,
+            )
         if response.status_code == 200:
             payload: Any = response.json()
-            return bool(payload)
-        return None
+            exists = bool(payload)
+            return MailcowDomainLookup(
+                status="verified" if exists else "not_found",
+                detail="Domain found in remote Mailcow." if exists else "Domain not found in remote Mailcow.",
+                exists=exists,
+                http_status=200,
+            )
+        if response.status_code == 404:
+            return MailcowDomainLookup(
+                status="not_found",
+                detail="Domain not found in remote Mailcow.",
+                exists=False,
+                http_status=404,
+            )
+        return MailcowDomainLookup(
+            status="unexpected_response",
+            detail=f"Mailcow API returned an unexpected status code ({response.status_code}).",
+            exists=False,
+            http_status=response.status_code,
+        )
