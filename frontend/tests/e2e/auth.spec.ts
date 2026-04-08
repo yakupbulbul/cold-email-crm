@@ -1,45 +1,10 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs";
-import path from "path";
-
-const repoEnvFile = path.resolve(__dirname, "../../../.env");
-
-function getBootstrapEnvValue(key: string): string | undefined {
-  if (!fs.existsSync(repoEnvFile)) {
-    return undefined;
-  }
-
-  for (const line of fs.readFileSync(repoEnvFile, "utf8").split(/\r?\n/)) {
-    if (!line || line.startsWith("#")) {
-      continue;
-    }
-
-    const [envKey, ...rest] = line.split("=");
-    if (envKey === key) {
-      return rest.join("=").trim();
-    }
-  }
-
-  return undefined;
-}
+import { loginAsBootstrapAdmin } from "../utils/auth";
 
 test("login succeeds with valid credentials and redirects to dashboard", async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
-  await page.goto("/signin");
-  await page.waitForLoadState("networkidle");
-
-  await page.fill(
-    'input[type="email"], input[name="email"]',
-    process.env.TEST_ADMIN_EMAIL || getBootstrapEnvValue("BOOTSTRAP_ADMIN_EMAIL") || "admin@example.com",
-  );
-  await page.fill(
-    'input[type="password"], input[name="password"]',
-    process.env.TEST_ADMIN_PASSWORD ||
-      getBootstrapEnvValue("BOOTSTRAP_ADMIN_PASSWORD") ||
-      "replace-with-a-local-admin-password",
-  );
-  await page.click('button[type="submit"]');
+  await loginAsBootstrapAdmin(page);
 
   await page.waitForURL((url) => !url.pathname.includes("/signin"), { timeout: 10_000 });
   expect(page.url()).not.toContain("/signin");
@@ -68,4 +33,24 @@ test("/login redirects to the canonical /signin route", async ({ browser }) => {
   await page.goto("/login");
   await expect(page).toHaveURL(/\/signin/, { timeout: 8_000 });
   await ctx.close();
+});
+
+test("authenticated user can reach all protected pages", async ({ page }) => {
+  const protectedRoutes = [
+    { route: "/", heading: /dashboard|ops command center/i },
+    { route: "/domains", heading: /domain infrastructure/i },
+    { route: "/mailboxes", heading: /infrastructure/i },
+    { route: "/campaigns", heading: /campaigns/i },
+    { route: "/suppression", heading: /global suppression log/i },
+    { route: "/inbox", heading: /inbox|inbox empty/i },
+    { route: "/ops", heading: /ops command center/i },
+    { route: "/settings", heading: /system settings/i },
+  ];
+
+  for (const { route, heading } of protectedRoutes) {
+    await page.goto(route);
+    await page.waitForLoadState("networkidle");
+    await expect(page).not.toHaveURL(/\/signin/, { timeout: 8_000 });
+    await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible();
+  }
 });

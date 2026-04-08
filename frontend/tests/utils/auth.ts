@@ -20,6 +20,14 @@ export async function loginAsBootstrapAdmin(page: Page) {
   await page.goto("/signin");
   await page.fill('[data-testid="email-input"], input[type="email"], input[name="email"]', email);
   await page.fill('[data-testid="password-input"], input[type="password"], input[name="password"]', password);
-  await page.click('[data-testid="login-button"], button[type="submit"]');
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/auth/login") && response.request().method() === "POST",
+      { timeout: 10_000 },
+    ),
+    page.click('[data-testid="login-button"], button[type="submit"]'),
+  ]);
+  await page.waitForFunction(() => window.localStorage.getItem("token"), undefined, { timeout: 10_000 });
   await page.waitForURL((url) => !url.pathname.includes("/signin"), { timeout: 10_000 });
 }
