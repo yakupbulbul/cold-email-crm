@@ -1,4 +1,27 @@
 import { test, expect } from "@playwright/test";
+import fs from "fs";
+import path from "path";
+
+const repoEnvFile = path.resolve(__dirname, "../../../.env");
+
+function getBootstrapEnvValue(key: string): string | undefined {
+  if (!fs.existsSync(repoEnvFile)) {
+    return undefined;
+  }
+
+  for (const line of fs.readFileSync(repoEnvFile, "utf8").split(/\r?\n/)) {
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const [envKey, ...rest] = line.split("=");
+    if (envKey === key) {
+      return rest.join("=").trim();
+    }
+  }
+
+  return undefined;
+}
 
 test("login succeeds with valid credentials and redirects to dashboard", async ({ page }) => {
   // Clear stored auth to test fresh login
@@ -6,8 +29,16 @@ test("login succeeds with valid credentials and redirects to dashboard", async (
   await page.goto("/signin");
   await page.waitForLoadState("networkidle");
 
-  await page.fill('input[type="email"], input[name="email"]', process.env.TEST_ADMIN_EMAIL || "admin@example.com");
-  await page.fill('input[type="password"], input[name="password"]', process.env.TEST_ADMIN_PASSWORD || "testpassword");
+  await page.fill(
+    'input[type="email"], input[name="email"]',
+    process.env.TEST_ADMIN_EMAIL || getBootstrapEnvValue("BOOTSTRAP_ADMIN_EMAIL") || "admin@example.com",
+  );
+  await page.fill(
+    'input[type="password"], input[name="password"]',
+    process.env.TEST_ADMIN_PASSWORD ||
+      getBootstrapEnvValue("BOOTSTRAP_ADMIN_PASSWORD") ||
+      "replace-with-a-local-admin-password",
+  );
   await page.click('button[type="submit"]');
 
   await page.waitForURL((url) => !url.pathname.includes("/signin"), { timeout: 10_000 });
