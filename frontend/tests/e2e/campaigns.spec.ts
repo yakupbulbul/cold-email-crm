@@ -71,6 +71,7 @@ test("campaign cards expose activation controls and show honest lean-mode start 
   await expect(card.getByRole("button", { name: "Start" })).toBeVisible();
   await expect(card.getByRole("button", { name: "Preflight" })).toBeVisible();
   await expect(card.getByRole("button", { name: "Attach list" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Delete" })).toBeVisible();
   await card.getByRole("button", { name: "Start" }).click();
   await expect(card.locator('[data-testid^="campaign-message-"]')).toContainText("make dev or make dev-full");
 });
@@ -304,4 +305,117 @@ test("campaigns can attach reusable lists and show deduplicated summary", async 
   await expect(card).toContainText("April Outreach Batch");
   await expect(card).toContainText("Deduped leads");
   await expect(card).toContainText("2");
+});
+
+test("draft campaigns can be deleted and disappear from the UI", async ({ page }) => {
+  const campaignId = "55555555-5555-5555-5555-555555555555";
+  let deleted = false;
+
+  await page.route("**/api/v1/campaigns", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(
+        deleted
+          ? []
+          : [{
+              id: campaignId,
+              name: "Delete Me",
+              status: "draft",
+              mailbox_id: "33333333-3333-3333-3333-333333333333",
+              template_subject: "Subject",
+              template_body: "Body",
+              daily_limit: 25,
+              created_at: "2026-04-08T10:00:00Z",
+              lead_count: 0,
+              sent_count: 0,
+              reply_rate: "0%",
+              lists_summary: {
+                lead_count: 0,
+                reachable_count: 0,
+                risky_count: 0,
+                invalid_count: 0,
+                suppressed_count: 0,
+                status_counts: {},
+                lists: [],
+              },
+            }],
+      ),
+    });
+  });
+  await page.route("**/api/v1/mailboxes", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route(`**/api/v1/campaigns/${campaignId}`, async (route) => {
+    deleted = true;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "deleted", id: campaignId }) });
+  });
+
+  await page.goto("/campaigns");
+
+  const card = page.getByTestId(`campaign-card-${campaignId}`);
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Delete" }).click();
+
+  await expect(page.getByText("Campaign deleted.")).toBeVisible();
+  await expect(card).toHaveCount(0);
+});
+
+test("non-draft campaigns show the backend delete block message", async ({ page }) => {
+  const campaignId = "66666666-6666-6666-6666-666666666666";
+
+  await page.route("**/api/v1/campaigns", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: campaignId,
+          name: "Blocked Delete",
+          status: "paused",
+          mailbox_id: "33333333-3333-3333-3333-333333333333",
+          template_subject: "Subject",
+          template_body: "Body",
+          daily_limit: 25,
+          created_at: "2026-04-08T10:00:00Z",
+          lead_count: 0,
+          sent_count: 0,
+          reply_rate: "0%",
+          lists_summary: {
+            lead_count: 0,
+            reachable_count: 0,
+            risky_count: 0,
+            invalid_count: 0,
+            suppressed_count: 0,
+            status_counts: {},
+            lists: [],
+          },
+        },
+      ]),
+    });
+  });
+  await page.route("**/api/v1/mailboxes", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route(`**/api/v1/campaigns/${campaignId}`, async (route) => {
+    await route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({
+        detail: "Only draft campaigns can be deleted. Pause or archive non-draft campaigns instead.",
+      }),
+    });
+  });
+
+  await page.goto("/campaigns");
+
+  const card = page.getByTestId(`campaign-card-${campaignId}`);
+  await card.getByRole("button", { name: "Delete" }).click();
+  await expect(card.locator('[data-testid^="campaign-message-"]')).toContainText("Only draft campaigns can be deleted");
 });

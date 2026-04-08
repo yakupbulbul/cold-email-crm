@@ -184,6 +184,83 @@ def test_pause_campaign_updates_status(client: TestClient, auth_headers: dict, m
     assert paused_campaign.status == "paused"
 
 
+def test_delete_campaign_removes_draft_campaign(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-delete.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-delete.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Delete Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+
+    delete_resp = client.delete(f"/api/v1/campaigns/{campaign_id}", headers=auth_headers)
+    assert delete_resp.status_code == 200
+    assert delete_resp.json()["status"] == "deleted"
+    assert db.query(Campaign).filter(Campaign.id == campaign_id).first() is None
+
+
+def test_delete_campaign_blocks_non_draft_campaign(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-non-draft.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-non-draft.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Blocked Delete Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    campaign.status = "paused"
+    db.commit()
+
+    delete_resp = client.delete(f"/api/v1/campaigns/{campaign_id}", headers=auth_headers)
+    assert delete_resp.status_code == 409
+    assert "Only draft campaigns can be deleted" in delete_resp.json()["detail"]
+
+
+def test_delete_campaign_returns_404_for_missing_record(client: TestClient, auth_headers: dict):
+    delete_resp = client.delete("/api/v1/campaigns/00000000-0000-0000-0000-000000000000", headers=auth_headers)
+    assert delete_resp.status_code == 404
+
+
 def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")

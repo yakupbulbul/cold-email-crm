@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Users, X } from 'lucide-react';
+import { AlertCircle, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Trash2, Users, X } from 'lucide-react';
 
 import Spinner from '@/components/ui/Spinner';
 import { useApiService } from '@/services/api';
 import { Campaign, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
 
 type ActionState = {
-  type: 'start' | 'pause' | 'preflight' | 'save' | 'attach-list' | 'remove-list';
+  type: 'start' | 'pause' | 'preflight' | 'save' | 'delete' | 'attach-list' | 'remove-list';
   campaignId: string;
 };
 
@@ -28,6 +28,7 @@ export default function CampaignsPage() {
     getLists,
     createCampaign,
     updateCampaign,
+    deleteCampaign,
     startCampaign,
     pauseCampaign,
     runPreflight,
@@ -259,6 +260,28 @@ export default function CampaignsPage() {
       setBanner({ tone: 'success', message: `Campaign ${updated.name} updated.` });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Campaign update failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleDelete = async (campaignId: string) => {
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'delete', campaignId });
+    try {
+      await deleteCampaign(campaignId);
+      setCampaigns((current) => current.filter((campaign) => campaign.id !== campaignId));
+      if (editState?.campaignId === campaignId) {
+        setEditState(null);
+      }
+      setBanner({ tone: 'success', message: 'Campaign deleted.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign delete failed. Check the backend response and try again.';
       setActionErrors((current) => ({
         ...current,
         [campaignId]: message,
@@ -595,16 +618,28 @@ export default function CampaignsPage() {
                         </button>
                       </>
                     ) : (
-                      <button
-                        data-testid={`edit-campaign-${campaign.id}`}
-                        type="button"
-                        onClick={() => beginEdit(campaign)}
-                        disabled={!!actionState || !!editState}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Pencil size={16} />
-                        Edit
-                      </button>
+                      <>
+                        <button
+                          data-testid={`edit-campaign-${campaign.id}`}
+                          type="button"
+                          onClick={() => beginEdit(campaign)}
+                          disabled={!!actionState || !!editState}
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Pencil size={16} />
+                          Edit
+                        </button>
+                        <button
+                          data-testid={`delete-campaign-${campaign.id}`}
+                          type="button"
+                          onClick={() => void handleDelete(campaign.id)}
+                          disabled={!!actionState || !!editState}
+                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isActionPending(campaign.id, 'delete') ? <LoaderCircle size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                          Delete
+                        </button>
+                      </>
                     )}
                     {canStart && (
                       <>

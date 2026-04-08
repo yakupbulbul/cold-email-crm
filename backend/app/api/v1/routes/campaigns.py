@@ -71,6 +71,29 @@ def update_campaign(campaign_id: str, req: CampaignUpdate, db: Session = Depends
     return _campaign_payload(db, campaign)
 
 
+@router.delete("/{campaign_id}")
+def delete_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign.status != "draft":
+        raise HTTPException(
+            status_code=409,
+            detail="Only draft campaigns can be deleted. Pause or archive non-draft campaigns instead.",
+        )
+
+    db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign.id).delete(synchronize_session=False)
+    db.query(CampaignList).filter(CampaignList.campaign_id == campaign.id).delete(synchronize_session=False)
+    for job in db.query(JobLog).filter(JobLog.payload_summary.isnot(None)).all():
+        payload_summary = job.payload_summary or {}
+        if payload_summary.get("campaign_id") == str(campaign.id):
+            db.delete(job)
+    db.delete(campaign)
+    db.commit()
+    return {"status": "deleted", "id": str(campaign.id)}
+
+
 @router.post("/{campaign_id}/lists")
 def attach_list_to_campaign(campaign_id: str, req: CampaignListAttachPayload, db: Session = Depends(get_db)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
