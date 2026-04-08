@@ -8,8 +8,8 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 bg-slate-900 text-slate-400 flex flex-col h-screen fixed top-0 left-0 border-r border-slate-800">
-      <div className="border-b border-slate-800 p-5">
-        <Link href="/" className="block rounded-2xl border border-slate-700 bg-white/95 p-3 shadow-lg shadow-black/20 transition-transform hover:scale-[1.01]">
+      <div className="border-b border-slate-700 bg-slate-100 px-4 py-5">
+        <Link href="/" className="block transition-transform hover:scale-[1.01]">
           <Image
             src="/crm-logo.png"
             alt="Campaign Manager"
