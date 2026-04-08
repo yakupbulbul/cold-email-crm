@@ -196,19 +196,6 @@ class LeadBulkContactTypeRequest(BaseModel):
     contact_type: Literal["b2b", "b2c", "mixed"] | None
 
 
-@router.patch("/{lead_id}")
-def update_lead(lead_id: UUID, req: LeadUpdateRequest, db: Session = Depends(get_db)):
-    contact = db.query(Contact).filter(Contact.id == lead_id).first()
-    if not contact:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
-    contact.contact_type = None if req.contact_type in {None, "mixed"} else req.contact_type
-    db.add(contact)
-    db.commit()
-    db.refresh(contact)
-    return _serialize_contact(db, contact)
-
-
 @router.patch("/bulk/contact-type")
 def update_lead_contact_type_bulk(req: LeadBulkContactTypeRequest, db: Session = Depends(get_db)):
     contacts = db.query(Contact).filter(Contact.id.in_(req.lead_ids)).all()
@@ -226,6 +213,19 @@ def update_lead_contact_type_bulk(req: LeadBulkContactTypeRequest, db: Session =
         "lead_count": len(contacts),
         "contact_type": normalized_contact_type,
     }
+
+
+@router.patch("/{lead_id}")
+def update_lead(lead_id: UUID, req: LeadUpdateRequest, db: Session = Depends(get_db)):
+    contact = db.query(Contact).filter(Contact.id == lead_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    contact.contact_type = None if req.contact_type in {None, "mixed"} else req.contact_type
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+    return _serialize_contact(db, contact)
 
 @router.post("/verify")
 def verify_email(req: VerifyRequest, db: Session = Depends(get_db)):
