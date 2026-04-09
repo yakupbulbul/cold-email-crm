@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 interface ApiOptions {
-    method?: "GET" | "POST" | "PUT" | "DELETE";
+    method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     body?: unknown;
     headers?: Record<string, string>;
 }
@@ -42,7 +42,16 @@ export function useApi() {
 
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.detail || `Request failed with status ${res.status}`);
+                const detail = errData.detail;
+                const normalizedMessage =
+                    typeof detail === "string"
+                        ? detail
+                        : typeof detail?.message === "string"
+                            ? detail.message
+                            : typeof errData.message === "string"
+                                ? errData.message
+                                : `Request failed with status ${res.status}`;
+                throw new Error(normalizedMessage);
             }
 
             const data = await res.json();

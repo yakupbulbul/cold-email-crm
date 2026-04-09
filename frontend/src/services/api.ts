@@ -9,6 +9,9 @@ import {
     CampaignPreflightResult,
     LeadList,
     LeadListLeadResponse,
+    SendEmailLog,
+    SendEmailPayload,
+    SendEmailResult,
 } from "@/types/models";
 
 type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
@@ -140,6 +143,8 @@ export function useApiService() {
     const createMailbox = useCallback((data: MailboxCreatePayload) => requestOrThrow<Mailbox>("/mailboxes", { method: "POST", body: data }), [requestOrThrow]);
     const updateMailbox = useCallback((id: string, data: MailboxUpdatePayload) => request<Mailbox>(`/mailboxes/${id}`, { method: "PUT", body: data }), [request]);
     const deleteMailbox = useCallback((id: string) => request<{ status: string; id: string }>(`/mailboxes/${id}`, { method: "DELETE" }), [request]);
+    const sendEmail = useCallback((data: SendEmailPayload) => requestOrThrow<SendEmailResult>("/send-email", { method: "POST", body: data }), [requestOrThrow]);
+    const getSendEmailLogs = useCallback((limit: number = 20) => request<SendEmailLog[]>(`/send-email/logs?limit=${limit}`), [request]);
 
     // ── INBOX & THREADS (Missing Backend - Graceful Fallback) ──
     const getThreads = useCallback(() => request<Thread[]>("/inbox/threads"), [request]);
@@ -213,6 +218,8 @@ export function useApiService() {
         createMailbox,
         updateMailbox,
         deleteMailbox,
+        sendEmail,
+        getSendEmailLogs,
         getThreads,
         getMessages
     };

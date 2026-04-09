@@ -273,6 +273,36 @@ export interface JobLog {
     created_at: string;
 }
 
+export interface SendEmailPayload {
+    mailbox_id: string;
+    to: string[];
+    cc?: string[];
+    bcc?: string[];
+    subject: string;
+    text_body: string;
+    html_body?: string | null;
+}
+
+export interface SendEmailResult {
+    success: boolean;
+    status: string;
+    message_id: string;
+    provider: string;
+    log_id?: string | null;
+}
+
+export interface SendEmailLog {
+    id: string;
+    mailbox_id?: string | null;
+    campaign_id?: string | null;
+    contact_id?: string | null;
+    target_email: string;
+    subject?: string | null;
+    delivery_status: string;
+    smtp_response?: string | null;
+    created_at?: string | null;
+}
+
 export interface DeliverabilitySummary {
     sent?: number;
     bounced?: number;

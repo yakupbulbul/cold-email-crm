@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks } from 'lucide-react';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks, MailPlus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Sidebar() {
@@ -37,6 +37,9 @@ export default function Sidebar() {
         </Link>
         <Link href="/campaigns" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
           <Send size={20} className="group-hover:scale-110 transition-transform"/> Campaigns
+        </Link>
+        <Link href="/send-email" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
+          <MailPlus size={20} className="group-hover:scale-110 transition-transform"/> Send Email
         </Link>
         <Link href="/contacts" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
           <Users size={20} className="group-hover:scale-110 transition-transform"/> Contacts
