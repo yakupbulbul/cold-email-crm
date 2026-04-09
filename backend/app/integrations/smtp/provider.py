@@ -5,6 +5,7 @@ import ssl
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from email.message import EmailMessage
+from email.utils import make_msgid
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -228,6 +229,9 @@ class MailcowSMTPProvider(SMTPProvider):
             msg['In-Reply-To'] = in_reply_to
         if references:
             msg['References'] = references
+        if not msg.get("Message-ID"):
+            sender_domain = (from_email.rsplit("@", 1)[1].strip() if "@" in from_email else "").strip() or None
+            msg["Message-ID"] = make_msgid(domain=sender_domain)
             
         msg.set_content(text_body)
         if html_body:

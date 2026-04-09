@@ -221,8 +221,9 @@ export default function SendEmailPage() {
                   <th className="px-2 py-3">When</th>
                   <th className="px-2 py-3">To</th>
                   <th className="px-2 py-3">Subject</th>
-                  <th className="px-2 py-3">Status</th>
-                  <th className="px-2 py-3">Response</th>
+                    <th className="px-2 py-3">Status</th>
+                    <th className="px-2 py-3">Message ID</th>
+                    <th className="px-2 py-3">Response</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,6 +237,7 @@ export default function SendEmailPage() {
                         {log.delivery_status}
                       </span>
                     </td>
+                    <td className="px-2 py-3 text-xs font-mono text-slate-500">{log.provider_message_id || "-"}</td>
                     <td className="px-2 py-3 text-xs text-slate-500">{log.smtp_response || "-"}</td>
                   </tr>
                 ))}

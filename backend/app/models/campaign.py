@@ -108,6 +108,7 @@ class SendLog(Base):
     target_email = Column(String, nullable=False)
     subject = Column(String, nullable=True)
     delivery_status = Column(String, nullable=False) # "success", "failed"
+    provider_message_id = Column(String, nullable=True)
     smtp_response = Column(Text, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)

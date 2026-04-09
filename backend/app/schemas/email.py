@@ -29,5 +29,6 @@ class SendEmailLogResponse(BaseModel):
     target_email: str
     subject: str | None = None
     delivery_status: str
+    provider_message_id: str | None = None
     smtp_response: str | None = None
     created_at: str | None = None

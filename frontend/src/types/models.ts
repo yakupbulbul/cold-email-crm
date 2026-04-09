@@ -319,6 +319,7 @@ export interface SendEmailLog {
     target_email: string;
     subject?: string | null;
     delivery_status: string;
+    provider_message_id?: string | null;
     smtp_response?: string | null;
     created_at?: string | null;
 }

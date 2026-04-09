@@ -73,6 +73,7 @@ class SMTPManagerService:
             target_email=", ".join(req.to),
             subject=req.subject,
             delivery_status="success" if success else "failed",
+            provider_message_id=message_id_or_error if success else None,
             smtp_response=safe_response,
         )
         self.db.add(log)
@@ -109,6 +110,7 @@ class SMTPManagerService:
                 target_email=log.target_email,
                 subject=log.subject,
                 delivery_status=log.delivery_status,
+                provider_message_id=log.provider_message_id,
                 smtp_response=log.smtp_response,
                 created_at=log.created_at.isoformat() if log.created_at else None,
             )

@@ -59,6 +59,8 @@ def test_send_email_sends_immediately_and_logs_attempt(client: TestClient, auth_
     assert log is not None
     assert log.delivery_status == "success"
     assert log.target_email == "recipient@example.com"
+    assert log.provider_message_id == "<message-id-1@example.com>"
+    assert log.smtp_response == "<message-id-1@example.com>"
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
     assert mailbox.smtp_last_check_status == "healthy"
 
@@ -157,3 +159,60 @@ def test_send_email_logs_endpoint_returns_recent_attempts(client: TestClient, au
     payload = resp.json()
     assert len(payload) >= 1
     assert payload[0]["target_email"] == "recipient@example.com"
+    assert payload[0]["provider_message_id"] == "<message-id-logs@example.com>"
+
+
+def test_provider_generates_rfc_message_id_when_missing():
+    from app.integrations.smtp.provider import MailcowSMTPProvider
+
+    captured = {}
+
+    class FakeSMTP:
+        def __init__(self, *args, **kwargs):
+            self.sock = self
+
+        def ehlo(self):
+            return None
+
+        def starttls(self, context=None):
+            return None
+
+        def settimeout(self, timeout):
+            return None
+
+        def login(self, username, password):
+            return None
+
+        def send_message(self, msg, from_addr=None, to_addrs=None):
+            captured["message_id"] = msg.get("Message-ID")
+            return {}
+
+        def quit(self):
+            return None
+
+    provider = MailcowSMTPProvider()
+
+    import smtplib
+
+    original_smtp = smtplib.SMTP
+    smtplib.SMTP = FakeSMTP
+    try:
+        success, message_id = provider.send_email(
+            host="smtp.example.com",
+            port=587,
+            username="sender@example.com",
+            password="password",
+            security_mode="starttls",
+            from_email="sender@example.com",
+            to_emails=["recipient@example.com"],
+            subject="Generated id",
+            text_body="Hello",
+        )
+    finally:
+        smtplib.SMTP = original_smtp
+
+    assert success is True
+    assert message_id == captured["message_id"]
+    assert message_id.startswith("<")
+    assert message_id.endswith(">")
+    assert "@example.com>" in message_id
