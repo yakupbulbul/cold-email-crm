@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Plus, Mail, Edit2, Trash2, ServerCrash } from 'lucide-react';
+import { Plus, Mail, Edit2, ShieldCheck, Trash2, ServerCrash } from 'lucide-react';
 import { useApiService } from '@/services/api';
-import { Domain, Mailbox, SettingsSummary } from '@/types/models';
+import { Domain, Mailbox, SMTPDiagnosticResult, SettingsSummary } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
 
 export default function MailboxesPage() {
-  const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, loading, error } = useApiService();
+  const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, checkMailboxSmtp, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [settingsSummary, setSettingsSummary] = useState<SettingsSummary | null>(null);
@@ -14,14 +14,17 @@ export default function MailboxesPage() {
   const [localPart, setLocalPart] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
+  const [smtpSecurityMode, setSmtpSecurityMode] = useState<'starttls' | 'ssl' | 'plain'>('starttls');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMailboxId, setEditingMailboxId] = useState<string | null>(null);
   const [editingDisplayName, setEditingDisplayName] = useState('');
   const [editingDailyLimit, setEditingDailyLimit] = useState('50');
   const [editingStatus, setEditingStatus] = useState('active');
+  const [editingSecurityMode, setEditingSecurityMode] = useState<'starttls' | 'ssl' | 'plain'>('starttls');
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyMailboxId, setBusyMailboxId] = useState<string | null>(null);
+  const [smtpDiagnostics, setSmtpDiagnostics] = useState<Record<string, SMTPDiagnosticResult>>({});
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -66,6 +69,7 @@ export default function MailboxesPage() {
         domain_id: selectedDomain.id,
         email,
         display_name: displayName.trim(),
+        smtp_security_mode: smtpSecurityMode,
         smtp_password: password,
         imap_password: password,
       });
@@ -79,6 +83,7 @@ export default function MailboxesPage() {
     setLocalPart('');
     setDisplayName('');
     setPassword('');
+    setSmtpSecurityMode('starttls');
     await refreshMailboxes();
   };
 
@@ -88,6 +93,7 @@ export default function MailboxesPage() {
     setEditingDisplayName(mailbox.display_name);
     setEditingDailyLimit(String(mailbox.daily_send_limit));
     setEditingStatus(mailbox.status);
+    setEditingSecurityMode(mailbox.smtp_security_mode);
   };
 
   const cancelEditMailbox = () => {
@@ -95,6 +101,7 @@ export default function MailboxesPage() {
     setEditingDisplayName('');
     setEditingDailyLimit('50');
     setEditingStatus('active');
+    setEditingSecurityMode('starttls');
     setActionError(null);
   };
 
@@ -115,6 +122,7 @@ export default function MailboxesPage() {
       display_name: editingDisplayName.trim(),
       daily_send_limit: dailySendLimit,
       status: editingStatus,
+      smtp_security_mode: editingSecurityMode,
     });
     setBusyMailboxId(null);
 
@@ -125,6 +133,20 @@ export default function MailboxesPage() {
 
     setMailboxes((current) => current.map((mailbox) => mailbox.id === mailboxId ? updated : mailbox));
     cancelEditMailbox();
+  };
+
+  const handleCheckMailboxSmtp = async (mailboxId: string) => {
+    setActionError(null);
+    setBusyMailboxId(mailboxId);
+    try {
+      const result = await checkMailboxSmtp(mailboxId);
+      setSmtpDiagnostics((current) => ({ ...current, [mailboxId]: result }));
+      await refreshMailboxes();
+    } catch (checkError) {
+      setActionError(checkError instanceof Error ? checkError.message : 'SMTP check failed.');
+    } finally {
+      setBusyMailboxId(null);
+    }
   };
 
   const handleDeleteMailbox = async (mailboxId: string) => {
@@ -172,8 +194,16 @@ export default function MailboxesPage() {
             <label htmlFor="mailbox-password" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Password</label>
             <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Local mailbox password" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
           </div>
+          <div>
+            <label htmlFor="mailbox-smtp-mode" className="block text-sm font-semibold text-slate-700 mb-2">SMTP Security Mode</label>
+            <select id="mailbox-smtp-mode" value={smtpSecurityMode} onChange={(event) => setSmtpSecurityMode(event.target.value as 'starttls' | 'ssl' | 'plain')} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+              <option value="starttls">STARTTLS</option>
+              <option value="ssl">SSL/TLS</option>
+              <option value="plain">Plain</option>
+            </select>
+          </div>
           <div className="md:col-span-2 flex items-center justify-between gap-4">
-            {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">{mailboxModeMessage}</div>}
+            {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div data-testid="mailbox-mode-message" className="text-sm text-slate-500">{mailboxModeMessage}</div>}
             <button data-testid="create-mailbox-button" type="submit" disabled={isSubmitting || domains.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition-colors shadow-lg shadow-slate-900/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
               <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add Mailbox'}
             </button>
@@ -214,6 +244,7 @@ export default function MailboxesPage() {
               {mailboxes.map((mb) => {
                 const isEditing = editingMailboxId === mb.id;
                 const isBusy = busyMailboxId === mb.id;
+                const diagnostic = smtpDiagnostics[mb.id];
                 return (
                 <tr key={mb.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
                   <td className="py-4 px-6">
@@ -228,6 +259,10 @@ export default function MailboxesPage() {
                           mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
                           {mb.remote_mailcow_provisioned ? 'Mailcow synced' : 'Local only'}
+                        </p>
+                        <p className="mt-1 text-[11px] font-medium text-slate-500">SMTP {mb.smtp_security_mode.toUpperCase()} on {mb.smtp_host}:{mb.smtp_port}</p>
+                        <p className={`mt-1 text-[11px] font-medium ${((diagnostic?.status || mb.smtp_last_check_status) === 'healthy') ? 'text-emerald-700' : 'text-slate-500'}`}>
+                          {diagnostic?.message || mb.smtp_last_check_message || 'SMTP has not been checked yet.'}
                         </p>
                       </div>
                     </div>
@@ -261,6 +296,11 @@ export default function MailboxesPage() {
                           min="1"
                           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
                         />
+                        <select value={editingSecurityMode} onChange={(event) => setEditingSecurityMode(event.target.value as 'starttls' | 'ssl' | 'plain')} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500">
+                          <option value="starttls">STARTTLS</option>
+                          <option value="ssl">SSL/TLS</option>
+                          <option value="plain">Plain</option>
+                        </select>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1.5">
@@ -296,6 +336,14 @@ export default function MailboxesPage() {
                         </>
                       ) : (
                         <>
+                          <button
+                            data-testid={`check-smtp-mailbox-${mb.id}`}
+                            disabled={isBusy}
+                            onClick={() => void handleCheckMailboxSmtp(mb.id)}
+                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100 disabled:opacity-50"
+                          >
+                            <ShieldCheck size={16} />
+                          </button>
                           <button
                             data-testid={`edit-mailbox-${mb.id}`}
                             onClick={() => beginEditMailbox(mb)}

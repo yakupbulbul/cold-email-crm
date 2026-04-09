@@ -10,6 +10,11 @@ test("send email page submits a real backend-driven send request and shows logs"
           id: "mailbox-1",
           email: "sender@example.com",
           display_name: "Sender",
+          smtp_host: "smtp.example.com",
+          smtp_port: 587,
+          smtp_security_mode: "starttls",
+          smtp_last_check_status: null,
+          smtp_last_check_message: null,
           status: "active",
           daily_send_limit: 50,
           current_warmup_stage: 0,
@@ -38,6 +43,24 @@ test("send email page submits a real backend-driven send request and shows logs"
       body: JSON.stringify([sendLog]),
     });
   });
+  await page.route("**/api/v1/mailboxes/mailbox-1/smtp-check", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "healthy",
+        category: "ok",
+        message: "SMTP host accepted the connection, negotiated the expected security mode, and authenticated successfully.",
+        host: "smtp.example.com",
+        port: 587,
+        security_mode: "starttls",
+        dns_resolved: true,
+        connected: true,
+        tls_negotiated: true,
+        auth_succeeded: true,
+      }),
+    });
+  });
 
   await page.route("**/api/v1/send-email", async (route) => {
     sendLog = {
@@ -62,6 +85,9 @@ test("send email page submits a real backend-driven send request and shows logs"
   });
 
   await page.goto("/send-email");
+  await expect(page.getByRole("heading", { name: "Send Email" })).toBeVisible();
+  await page.getByTestId("check-smtp-button").click();
+  await expect(page.getByText(/authenticated successfully/i)).toBeVisible();
   await page.locator("#send-email-to").fill("recipient@example.com");
   await page.getByRole("button", { name: "Send Email" }).click();
 
@@ -80,6 +106,11 @@ test("send email page shows honest backend errors", async ({ page }) => {
           id: "mailbox-1",
           email: "sender@example.com",
           display_name: "Sender",
+          smtp_host: "smtp.example.com",
+          smtp_port: 587,
+          smtp_security_mode: "starttls",
+          smtp_last_check_status: null,
+          smtp_last_check_message: null,
           status: "paused",
           daily_send_limit: 50,
           current_warmup_stage: 0,
@@ -108,6 +139,7 @@ test("send email page shows honest backend errors", async ({ page }) => {
   });
 
   await page.goto("/send-email");
+  await expect(page.getByRole("heading", { name: "Send Email" })).toBeVisible();
   await page.locator("#send-email-to").fill("recipient@example.com");
   await page.getByRole("button", { name: "Send Email" }).click();
 

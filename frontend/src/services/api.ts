@@ -12,6 +12,7 @@ import {
     SendEmailLog,
     SendEmailPayload,
     SendEmailResult,
+    SMTPDiagnosticResult,
 } from "@/types/models";
 
 type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
@@ -22,6 +23,7 @@ type MailboxCreatePayload = {
     smtp_host?: string;
     smtp_port?: number;
     smtp_username?: string;
+    smtp_security_mode?: "starttls" | "ssl" | "plain";
     smtp_password: string;
     imap_host?: string;
     imap_port?: number;
@@ -34,6 +36,7 @@ type MailboxUpdatePayload = {
     display_name: string;
     daily_send_limit: number;
     status: string;
+    smtp_security_mode?: "starttls" | "ssl" | "plain";
 };
 
 type CampaignCreatePayload = {
@@ -143,6 +146,7 @@ export function useApiService() {
     const createMailbox = useCallback((data: MailboxCreatePayload) => requestOrThrow<Mailbox>("/mailboxes", { method: "POST", body: data }), [requestOrThrow]);
     const updateMailbox = useCallback((id: string, data: MailboxUpdatePayload) => request<Mailbox>(`/mailboxes/${id}`, { method: "PUT", body: data }), [request]);
     const deleteMailbox = useCallback((id: string) => request<{ status: string; id: string }>(`/mailboxes/${id}`, { method: "DELETE" }), [request]);
+    const checkMailboxSmtp = useCallback((id: string) => requestOrThrow<SMTPDiagnosticResult>(`/mailboxes/${id}/smtp-check`, { method: "POST" }), [requestOrThrow]);
     const sendEmail = useCallback((data: SendEmailPayload) => requestOrThrow<SendEmailResult>("/send-email", { method: "POST", body: data }), [requestOrThrow]);
     const getSendEmailLogs = useCallback((limit: number = 20) => request<SendEmailLog[]>(`/send-email/logs?limit=${limit}`), [request]);
 
@@ -218,6 +222,7 @@ export function useApiService() {
         createMailbox,
         updateMailbox,
         deleteMailbox,
+        checkMailboxSmtp,
         sendEmail,
         getSendEmailLogs,
         getThreads,

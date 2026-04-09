@@ -34,6 +34,8 @@ def test_create_mailbox_uses_server_side_defaults(client: TestClient, auth_heade
     assert "imap_password_encrypted" not in body
     assert body["remote_mailcow_provisioned"] is False
     assert body["provisioning_mode"] == "local_only"
+    assert body["smtp_security_mode"] == "starttls"
+    assert body["smtp_last_checked_at"] is None
 
 
 def test_create_mailbox_requires_hosts_without_server_defaults(client: TestClient, auth_headers: dict, monkeypatch):
@@ -64,7 +66,7 @@ def test_update_and_delete_mailbox(client: TestClient, auth_headers: dict, monke
 
     update_resp = client.put(
         f"/api/v1/mailboxes/{mailbox_id}",
-        json={"display_name": "Updated Name", "daily_send_limit": 120, "status": "paused"},
+        json={"display_name": "Updated Name", "daily_send_limit": 120, "status": "paused", "smtp_security_mode": "ssl"},
         headers=auth_headers,
     )
     assert update_resp.status_code == 200
@@ -72,6 +74,7 @@ def test_update_and_delete_mailbox(client: TestClient, auth_headers: dict, monke
     assert updated["display_name"] == "Updated Name"
     assert updated["daily_send_limit"] == 120
     assert updated["status"] == "paused"
+    assert updated["smtp_security_mode"] == "ssl"
 
     delete_resp = client.delete(f"/api/v1/mailboxes/{mailbox_id}", headers=auth_headers)
     assert delete_resp.status_code == 200
@@ -142,6 +145,45 @@ def test_mailcow_provision_failure_keeps_no_local_mailbox(client: TestClient, au
 
     mailbox = db.query(Mailbox).filter(Mailbox.email == email).first()
     assert mailbox is None
+
+
+def test_smtp_check_returns_structured_diagnostics(client: TestClient, auth_headers: dict, monkeypatch):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+    domain_resp = client.post("/api/v1/domains", json={"name": "smtp-check.example.com"}, headers=auth_headers)
+    create_resp = client.post(
+        "/api/v1/mailboxes",
+        json=_mailbox_payload(domain_resp.json()["id"], "hello@smtp-check.example.com"),
+        headers=auth_headers,
+    )
+    mailbox_id = create_resp.json()["id"]
+
+    monkeypatch.setattr(
+        "app.services.smtp_service.MailcowSMTPProvider.diagnose_connection",
+        lambda self, **kwargs: type(
+            "Diagnostic",
+            (),
+            {
+                "status": "healthy",
+                "category": "ok",
+                "message": "SMTP host accepted the connection, negotiated the expected security mode, and authenticated successfully.",
+                "host": kwargs["host"],
+                "port": kwargs["port"],
+                "security_mode": kwargs["security_mode"],
+                "dns_resolved": True,
+                "connected": True,
+                "tls_negotiated": True,
+                "auth_succeeded": True,
+            },
+        )(),
+    )
+
+    resp = client.post(f"/api/v1/mailboxes/{mailbox_id}/smtp-check", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["status"] == "healthy"
+    assert payload["category"] == "ok"
+    assert payload["security_mode"] == "starttls"
 
 
 def test_mailcow_unauthorized_failure_returns_safe_error(client: TestClient, auth_headers: dict, monkeypatch, db):

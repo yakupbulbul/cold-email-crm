@@ -69,19 +69,15 @@ class CampaignService:
             )
             try:
                 success, response = self.smtp.send_email(req)
-                message_id, _log_id = response.split("|", 1)
+                message_id, log_id = response.split("|", 1)
                 lead.status = "sent" if success else "failed"
                 lead.sent_at = datetime.utcnow() if success else None
-                log = SendLog(
-                    mailbox_id=campaign.mailbox_id,
-                    campaign_id=campaign.id,
-                    contact_id=lead.contact_id,
-                    target_email=lead.contact.email,
-                    subject=subject,
-                    delivery_status="success" if success else "failed",
-                    smtp_response=message_id,
-                )
-                self.db.add(log)
+                log = self.db.query(SendLog).filter(SendLog.id == log_id).first()
+                if log:
+                    log.campaign_id = campaign.id
+                    log.contact_id = lead.contact_id
+                    log.subject = subject
+                    self.db.add(log)
             except SMTPServiceError as exc:
                 logger.warning("Campaign send failed for %s via %s: %s", lead.contact.email, campaign.id, exc.message)
                 lead.status = "failed"

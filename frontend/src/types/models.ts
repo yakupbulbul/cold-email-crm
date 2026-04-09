@@ -24,6 +24,13 @@ export interface Mailbox {
     domain_id?: string;
     email: string;
     display_name: string;
+    smtp_host?: string;
+    smtp_port?: number;
+    smtp_security_mode: "starttls" | "ssl" | "plain";
+    smtp_last_checked_at?: string | null;
+    smtp_last_check_status?: string | null;
+    smtp_last_check_category?: string | null;
+    smtp_last_check_message?: string | null;
     status: string;
     daily_send_limit: number;
     current_warmup_stage: number;
@@ -289,6 +296,19 @@ export interface SendEmailResult {
     message_id: string;
     provider: string;
     log_id?: string | null;
+}
+
+export interface SMTPDiagnosticResult {
+    status: string;
+    category: string;
+    message: string;
+    host: string;
+    port: number;
+    security_mode: "starttls" | "ssl" | "plain";
+    dns_resolved: boolean;
+    connected: boolean;
+    tls_negotiated: boolean;
+    auth_succeeded: boolean;
 }
 
 export interface SendEmailLog {

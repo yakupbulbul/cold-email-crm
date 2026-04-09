@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2, LoaderCircle, MailCheck, Send } from "lucide
 
 import Spinner from "@/components/ui/Spinner";
 import { useApiService } from "@/services/api";
-import { Mailbox, SendEmailLog, SendEmailResult } from "@/types/models";
+import { Mailbox, SMTPDiagnosticResult, SendEmailLog, SendEmailResult } from "@/types/models";
 
 function parseRecipients(raw: string): string[] {
   return raw
@@ -15,7 +15,7 @@ function parseRecipients(raw: string): string[] {
 }
 
 export default function SendEmailPage() {
-  const { getMailboxes, sendEmail, getSendEmailLogs } = useApiService();
+  const { getMailboxes, sendEmail, getSendEmailLogs, checkMailboxSmtp } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [logs, setLogs] = useState<SendEmailLog[]>([]);
   const [mailboxId, setMailboxId] = useState("");
@@ -30,6 +30,7 @@ export default function SendEmailPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [result, setResult] = useState<SendEmailResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [smtpDiagnostic, setSmtpDiagnostic] = useState<SMTPDiagnosticResult | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -52,6 +53,21 @@ export default function SendEmailPage() {
   const refreshLogs = async () => {
     const refreshed = await getSendEmailLogs();
     if (refreshed) setLogs(refreshed);
+  };
+
+  const selectedMailbox = mailboxes.find((mailbox) => mailbox.id === mailboxId) || null;
+
+  const handleCheckSelectedMailbox = async () => {
+    if (!mailboxId) return;
+    setSubmitError(null);
+    try {
+      const diagnostic = await checkMailboxSmtp(mailboxId);
+      setSmtpDiagnostic(diagnostic);
+      const refreshed = await getMailboxes();
+      if (refreshed) setMailboxes(refreshed);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "SMTP check failed.");
+    }
   };
 
   const handleSend = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -143,12 +159,30 @@ export default function SendEmailPage() {
         </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
           <div className="text-sm text-slate-500">Direct send uses the backend SMTP integration only. It bypasses campaign lists, workers, and preflight.</div>
-          <button type="submit" disabled={submitting || mailboxes.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
-            {submitting ? <LoaderCircle size={18} className="animate-spin" /> : <Send size={18} />}
-            {submitting ? "Sending..." : "Send Email"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button data-testid="check-smtp-button" type="button" onClick={() => void handleCheckSelectedMailbox()} disabled={!mailboxId || submitting} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+              <MailCheck size={16} />
+              Check SMTP
+            </button>
+            <button type="submit" disabled={submitting || mailboxes.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+              {submitting ? <LoaderCircle size={18} className="animate-spin" /> : <Send size={18} />}
+              {submitting ? "Sending..." : "Send Email"}
+            </button>
+          </div>
         </div>
       </form>
+
+      {selectedMailbox ? (
+        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <div className="text-sm font-semibold text-slate-700">Selected mailbox transport</div>
+          <div className="mt-2 text-sm text-slate-600">
+            {selectedMailbox.email} via {selectedMailbox.smtp_host}:{selectedMailbox.smtp_port} using {selectedMailbox.smtp_security_mode.toUpperCase()}
+          </div>
+          <div className={`mt-2 text-sm font-medium ${(smtpDiagnostic?.status || selectedMailbox.smtp_last_check_status) === 'healthy' ? 'text-emerald-700' : 'text-slate-600'}`}>
+            {smtpDiagnostic?.message || selectedMailbox.smtp_last_check_message || 'SMTP has not been checked yet for this mailbox.'}
+          </div>
+        </div>
+      ) : null}
 
       {result ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">

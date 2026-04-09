@@ -16,9 +16,9 @@ test("create mailbox button is visible", async ({ page }) => {
 test("mailboxes page shows honest provisioning mode guidance", async ({ page }) => {
   await page.goto("/mailboxes");
   await page.waitForLoadState("networkidle");
-  await expect(
-    page.getByText(/Safe mode stores the mailbox locally only|Mutation mode creates the mailbox in Mailcow and CRM together/i),
-  ).toBeVisible();
+  await expect(page.getByTestId("mailbox-mode-message")).toContainText(
+    /Safe mode stores the mailbox locally only|Mutation mode creates the mailbox in Mailcow and CRM together/i,
+  );
 });
 
 test("mailbox row actions render when mailboxes exist", async ({ page }) => {
@@ -26,9 +26,11 @@ test("mailbox row actions render when mailboxes exist", async ({ page }) => {
   await page.waitForLoadState("networkidle");
   const editButtons = page.locator('[data-testid^="edit-mailbox-"]');
   const deleteButtons = page.locator('[data-testid^="delete-mailbox-"]');
+  const checkButtons = page.locator('[data-testid^="check-smtp-mailbox-"]');
   if ((await editButtons.count()) > 0) {
     await expect(editButtons.first()).toBeVisible();
     await expect(deleteButtons.first()).toBeVisible();
+    await expect(checkButtons.first()).toBeVisible();
     await expect(page.getByText(/Mailcow synced|Local only/).first()).toBeVisible();
   } else {
     await expect(page.getByText("No Mailboxes Found")).toBeVisible();

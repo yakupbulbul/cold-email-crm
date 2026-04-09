@@ -46,6 +46,7 @@ class Mailbox(Base):
     smtp_port = Column(Integer, nullable=False)
     smtp_username = Column(String, nullable=False)
     smtp_password_encrypted = Column(String, nullable=False)
+    smtp_security_mode = Column(String, default="starttls", nullable=False)
     
     imap_host = Column(String, nullable=False)
     imap_port = Column(Integer, nullable=False)
@@ -58,6 +59,10 @@ class Mailbox(Base):
     
     status = Column(String, default="active")
     remote_mailcow_provisioned = Column(Boolean, default=False, nullable=False)
+    smtp_last_checked_at = Column(DateTime, nullable=True)
+    smtp_last_check_status = Column(String, nullable=True)
+    smtp_last_check_category = Column(String, nullable=True)
+    smtp_last_check_message = Column(String, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

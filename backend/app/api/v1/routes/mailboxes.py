@@ -17,6 +17,7 @@ class MailboxCreate(BaseModel):
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_username: Optional[str] = None
+    smtp_security_mode: Optional[str] = None
     smtp_password: str
     imap_host: Optional[str] = None
     imap_port: Optional[int] = None
@@ -29,6 +30,7 @@ class MailboxUpdate(BaseModel):
     display_name: str
     daily_send_limit: int = 50
     status: str = "active"
+    smtp_security_mode: Optional[str] = None
 
 class MailboxResponse(BaseModel):
     id: str
@@ -37,6 +39,7 @@ class MailboxResponse(BaseModel):
     display_name: str
     smtp_host: str
     smtp_port: int
+    smtp_security_mode: str
     imap_host: str
     imap_port: int
     warmup_enabled: bool
@@ -45,6 +48,10 @@ class MailboxResponse(BaseModel):
     status: str
     remote_mailcow_provisioned: bool
     provisioning_mode: str
+    smtp_last_checked_at: Optional[str] = None
+    smtp_last_check_status: Optional[str] = None
+    smtp_last_check_category: Optional[str] = None
+    smtp_last_check_message: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -60,6 +67,7 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "display_name": mb.display_name,
         "smtp_host": mb.smtp_host,
         "smtp_port": mb.smtp_port,
+        "smtp_security_mode": mb.smtp_security_mode or ("ssl" if mb.smtp_port == 465 else "starttls"),
         "imap_host": mb.imap_host,
         "imap_port": mb.imap_port,
         "warmup_enabled": mb.warmup_enabled,
@@ -68,6 +76,10 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "status": mb.status,
         "remote_mailcow_provisioned": mb.remote_mailcow_provisioned,
         "provisioning_mode": "mailcow_synced" if mb.remote_mailcow_provisioned else "local_only",
+        "smtp_last_checked_at": mb.smtp_last_checked_at.isoformat() if mb.smtp_last_checked_at else None,
+        "smtp_last_check_status": mb.smtp_last_check_status,
+        "smtp_last_check_category": mb.smtp_last_check_category,
+        "smtp_last_check_message": mb.smtp_last_check_message,
         "created_at": str(mb.created_at) if mb.created_at else None,
         "updated_at": str(mb.updated_at) if mb.updated_at else None,
     }
@@ -86,10 +98,18 @@ def resolve_mailbox_connection_defaults(req: MailboxCreate) -> dict:
         "smtp_host": smtp_host,
         "smtp_port": req.smtp_port or settings.MAILCOW_SMTP_PORT,
         "smtp_username": req.smtp_username or req.email,
+        "smtp_security_mode": normalize_smtp_security_mode(req.smtp_security_mode, req.smtp_port or settings.MAILCOW_SMTP_PORT),
         "imap_host": imap_host,
         "imap_port": req.imap_port or settings.MAILCOW_IMAP_PORT,
         "imap_username": req.imap_username or req.email,
     }
+
+
+def normalize_smtp_security_mode(value: Optional[str], port: int) -> str:
+    normalized = (value or "").strip().lower()
+    if normalized in {"starttls", "ssl", "plain"}:
+        return normalized
+    return "ssl" if port == 465 else "starttls"
 
 
 def validate_mailbox_email_for_domain(req: MailboxCreate, domain: Domain) -> None:
@@ -177,6 +197,7 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
         smtp_port=connection_defaults["smtp_port"],
         smtp_username=connection_defaults["smtp_username"],
         smtp_password_encrypted=req.smtp_password,  # TODO: encrypt at rest
+        smtp_security_mode=connection_defaults["smtp_security_mode"],
         imap_host=connection_defaults["imap_host"],
         imap_port=connection_defaults["imap_port"],
         imap_username=connection_defaults["imap_username"],
@@ -206,6 +227,7 @@ def update_mailbox(mailbox_id: str, req: MailboxUpdate, db: Session = Depends(ge
     mailbox.display_name = req.display_name.strip()
     mailbox.daily_send_limit = req.daily_send_limit
     mailbox.status = req.status
+    mailbox.smtp_security_mode = normalize_smtp_security_mode(req.smtp_security_mode, mailbox.smtp_port)
     db.add(mailbox)
     db.commit()
     db.refresh(mailbox)
@@ -221,3 +243,11 @@ def delete_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
     db.delete(mailbox)
     db.commit()
     return {"status": "deleted", "id": mailbox_id}
+
+
+@router.post("/{mailbox_id}/smtp-check")
+def check_mailbox_smtp(mailbox_id: str, db: Session = Depends(get_db)):
+    from app.services.smtp_service import SMTPManagerService
+
+    service = SMTPManagerService(db)
+    return service.check_mailbox_smtp(mailbox_id)

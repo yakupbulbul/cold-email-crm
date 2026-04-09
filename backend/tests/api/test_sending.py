@@ -59,6 +59,8 @@ def test_send_email_sends_immediately_and_logs_attempt(client: TestClient, auth_
     assert log is not None
     assert log.delivery_status == "success"
     assert log.target_email == "recipient@example.com"
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    assert mailbox.smtp_last_check_status == "healthy"
 
 
 def test_send_email_requires_active_mailbox(client: TestClient, auth_headers: dict, monkeypatch, db):
@@ -121,6 +123,9 @@ def test_send_email_returns_safe_failure_and_logs_attempt(client: TestClient, au
     assert log is not None
     assert log.delivery_status == "failed"
     assert "timed out" in (log.smtp_response or "").lower()
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    assert mailbox.smtp_last_check_status == "failed"
+    assert mailbox.smtp_last_check_category == "smtp_timeout"
 
 
 def test_send_email_logs_endpoint_returns_recent_attempts(client: TestClient, auth_headers: dict, monkeypatch):

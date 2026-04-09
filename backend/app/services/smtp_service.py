@@ -1,8 +1,11 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
+
 from app.models.core import Mailbox
 from app.models.campaign import SendLog
 from app.schemas.email import SendEmailLogResponse, SendEmailRequest
-from app.integrations.smtp.provider import MailcowSMTPProvider
+from app.integrations.smtp.provider import MailcowSMTPProvider, SMTPDiagnosticResult
 
 
 class SMTPServiceError(Exception):
@@ -17,6 +20,27 @@ class SMTPManagerService:
         self.db = db
         self.provider = MailcowSMTPProvider()
 
+    def derive_security_mode(self, mailbox: Mailbox) -> str:
+        configured = (mailbox.smtp_security_mode or "").strip().lower()
+        if configured in {"starttls", "ssl", "plain"}:
+            return configured
+        return "ssl" if mailbox.smtp_port == 465 else "starttls"
+
+    def check_mailbox_smtp(self, mailbox_id: str) -> dict:
+        mailbox = self.db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+        if not mailbox:
+            raise SMTPServiceError("mailbox_not_found", "Mailbox not found.", status_code=404)
+
+        result = self.provider.diagnose_connection(
+            host=mailbox.smtp_host,
+            port=mailbox.smtp_port,
+            username=mailbox.smtp_username,
+            password=mailbox.smtp_password_encrypted,
+            security_mode=self.derive_security_mode(mailbox),
+        )
+        self._persist_smtp_check(mailbox, result)
+        return self._serialize_diagnostic(result)
+
     def send_email(self, req: SendEmailRequest) -> tuple[bool, str]:
         mailbox = self.db.query(Mailbox).filter(Mailbox.id == req.mailbox_id).first()
         if not mailbox:
@@ -24,11 +48,14 @@ class SMTPManagerService:
         if mailbox.status != "active":
             raise SMTPServiceError("mailbox_inactive", "Mailbox must be active before sending email.", status_code=409)
 
+        security_mode = self.derive_security_mode(mailbox)
+
         success, message_id_or_error = self.provider.send_email(
             host=mailbox.smtp_host,
             port=mailbox.smtp_port,
             username=mailbox.smtp_username,
             password=mailbox.smtp_password_encrypted,
+            security_mode=security_mode,
             from_email=mailbox.email,
             to_emails=req.to,
             subject=req.subject,
@@ -54,7 +81,20 @@ class SMTPManagerService:
 
         if not success:
             category, message, status_code = self._classify_provider_failure(message_id_or_error)
+            mailbox.smtp_last_checked_at = datetime.utcnow()
+            mailbox.smtp_last_check_status = "failed"
+            mailbox.smtp_last_check_category = category
+            mailbox.smtp_last_check_message = message
+            self.db.add(mailbox)
+            self.db.commit()
             raise SMTPServiceError(category, message, status_code=status_code)
+
+        mailbox.smtp_last_checked_at = datetime.utcnow()
+        mailbox.smtp_last_check_status = "healthy"
+        mailbox.smtp_last_check_category = "ok"
+        mailbox.smtp_last_check_message = "SMTP delivery succeeded."
+        self.db.add(mailbox)
+        self.db.commit()
 
         return success, f"{message_id_or_error}|{log.id}"
 
@@ -81,6 +121,14 @@ class SMTPManagerService:
 
     def _classify_provider_failure(self, raw_error: str) -> tuple[str, str, int]:
         normalized = (raw_error or "").lower()
+        if "dns resolution failed" in normalized:
+            return ("dns_resolution_failed", "SMTP host could not be resolved from the backend environment.", 502)
+        if "tls negotiation failed" in normalized:
+            return ("tls_failed", "SMTP TLS negotiation failed for the selected security mode.", 502)
+        if "authentication failed" in normalized:
+            return ("smtp_auth_failed", "SMTP rejected the mailbox credentials.", 502)
+        if "connection failed" in normalized:
+            return ("smtp_unreachable", "SMTP server is unreachable from the backend environment.", 502)
         if "timed out" in normalized or "timeout" in normalized:
             return ("smtp_timeout", "SMTP server timed out before the email could be sent.", 504)
         if "auth" in normalized or "authentication" in normalized or "535" in normalized:
@@ -90,3 +138,27 @@ class SMTPManagerService:
         if "recipient refused" in normalized or "5.1.1" in normalized:
             return ("recipient_rejected", "SMTP rejected one or more recipients.", 422)
         return ("smtp_send_failed", "SMTP send failed before the message was accepted.", 502)
+
+    def _persist_smtp_check(self, mailbox: Mailbox, result: SMTPDiagnosticResult) -> None:
+        mailbox.smtp_last_checked_at = datetime.utcnow()
+        mailbox.smtp_last_check_status = result.status
+        mailbox.smtp_last_check_category = result.category
+        mailbox.smtp_last_check_message = result.message
+        if not mailbox.smtp_security_mode:
+            mailbox.smtp_security_mode = result.security_mode
+        self.db.add(mailbox)
+        self.db.commit()
+
+    def _serialize_diagnostic(self, result: SMTPDiagnosticResult) -> dict:
+        return {
+            "status": result.status,
+            "category": result.category,
+            "message": result.message,
+            "host": result.host,
+            "port": result.port,
+            "security_mode": result.security_mode,
+            "dns_resolved": result.dns_resolved,
+            "connected": result.connected,
+            "tls_negotiated": result.tls_negotiated,
+            "auth_succeeded": result.auth_succeeded,
+        }
