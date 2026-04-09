@@ -17,3 +17,17 @@ class SendEmailResponse(BaseModel):
     success: bool
     message_id: str
     status: str
+    provider: str
+    log_id: str | None = None
+
+
+class SendEmailLogResponse(BaseModel):
+    id: str
+    mailbox_id: str | None = None
+    campaign_id: str | None = None
+    contact_id: str | None = None
+    target_email: str
+    subject: str | None = None
+    delivery_status: str
+    smtp_response: str | None = None
+    created_at: str | None = None

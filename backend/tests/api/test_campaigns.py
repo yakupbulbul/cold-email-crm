@@ -2,6 +2,9 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.models.campaign import Campaign, CampaignLead, Contact
+from app.models.core import Domain, Mailbox
+from app.services.campaign_service import CampaignService
+from app.services.smtp_service import SMTPServiceError
 
 
 def test_list_campaigns_returns_200_or_401(client: TestClient):
@@ -101,7 +104,13 @@ def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_hea
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
-    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", lambda: type("Task", (), {"id": "campaign-job-1"})())
+    queued_campaign_ids: list[str] = []
+
+    def _queue_task(campaign_id: str):
+        queued_campaign_ids.append(campaign_id)
+        return type("Task", (), {"id": "campaign-job-1"})()
+
+    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", _queue_task)
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-queue.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -148,6 +157,66 @@ def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_hea
     payload = resp.json()
     assert payload["job_queued"] is True
     assert payload["eligible_leads"] == 1
+    assert payload["status"] == "queued"
+    assert queued_campaign_ids == [campaign_resp.json()["id"]]
+
+
+def test_start_campaign_returns_503_when_queue_submit_fails(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    def _raise_queue_failure(campaign_id: str):
+        raise RuntimeError("redis down")
+
+    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", _raise_queue_failure)
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-queue-fail.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-queue-fail.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Queue Failure Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Hi {{first_name}}",
+            "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+
+    contact = Contact(
+        email="lead-queue-fail@example.com",
+        first_name="Lead",
+        email_status="valid",
+        verification_score=100,
+        verification_integrity="high",
+        is_suppressed=False,
+    )
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+    db.add(CampaignLead(campaign_id=campaign_resp.json()["id"], contact_id=contact.id, status="scheduled"))
+    db.commit()
+
+    resp = client.post(f"/api/v1/campaigns/{campaign_resp.json()['id']}/start", headers=auth_headers)
+    assert resp.status_code == 503
+    assert "could not be queued" in str(resp.json()["detail"]).lower()
+
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_resp.json()["id"]).first()
+    assert campaign.status == "draft"
 
 
 def test_pause_campaign_updates_status(client: TestClient, auth_headers: dict, monkeypatch, db):
@@ -318,7 +387,7 @@ def test_b2c_strict_campaign_excludes_unknown_consent_and_type_mismatch(client: 
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
-    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", lambda: type("Task", (), {"id": "campaign-job-2"})())
+    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", lambda campaign_id: type("Task", (), {"id": "campaign-job-2"})())
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-b2c-strict.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -452,3 +521,71 @@ def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict,
     assert refreshed.template_subject == "New Subject"
     assert refreshed.template_body == "New Body"
     assert refreshed.daily_limit == 25
+
+
+def test_campaign_processing_marks_lead_failed_when_smtp_times_out(db):
+    domain = Domain(name="smtp-failure-test.example.com")
+    db.add(domain)
+    db.commit()
+    db.refresh(domain)
+
+    mailbox = Mailbox(
+        domain_id=domain.id,
+        email="sender@smtp-failure-test.example.com",
+        display_name="Sender",
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_username="sender@smtp-failure-test.example.com",
+        smtp_password_encrypted="super-secret-password",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_username="sender@smtp-failure-test.example.com",
+        imap_password_encrypted="super-secret-password",
+        status="active",
+    )
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+
+    contact = Contact(
+        email="smtp-fail@example.com",
+        first_name="SMTP",
+        email_status="valid",
+        verification_score=100,
+        verification_integrity="high",
+        consent_status="granted",
+        unsubscribe_status="subscribed",
+    )
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+
+    campaign = Campaign(
+        name="SMTP Failure Campaign",
+        status="active",
+        mailbox_id=mailbox.id,
+        template_subject="Hello {{first_name}}",
+        template_body="Hi {{first_name}}",
+        daily_limit=10,
+        campaign_type="b2b",
+        compliance_mode="standard",
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    lead = CampaignLead(campaign_id=campaign.id, contact_id=contact.id, status="scheduled")
+    db.add(lead)
+    db.commit()
+
+    service = CampaignService(db)
+
+    def _raise_timeout(req):
+        raise SMTPServiceError("smtp_timeout", "SMTP server timed out before the email could be sent.", status_code=504)
+
+    service.smtp.send_email = _raise_timeout  # type: ignore[method-assign]
+    result = service.process_campaign_by_id(str(campaign.id))
+
+    assert result["processed"] == 1
+    failed_lead = db.query(CampaignLead).filter(CampaignLead.id == lead.id).first()
+    assert failed_lead.status == "failed"

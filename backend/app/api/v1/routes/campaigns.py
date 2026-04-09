@@ -15,6 +15,14 @@ from app.workers.campaign_worker import run_campaign_cycle
 router = APIRouter()
 
 
+def _campaign_job_for_status(db: Session, campaign_id: str, statuses: set[str]) -> JobLog | None:
+    for job in db.query(JobLog).filter(JobLog.job_type == "campaign_cycle").order_by(JobLog.created_at.desc()).all():
+        payload_summary = job.payload_summary or {}
+        if payload_summary.get("campaign_id") == campaign_id and job.status in statuses:
+            return job
+    return None
+
+
 def _campaign_payload(db: Session, campaign: Campaign) -> dict:
     service = LeadListService(db)
     campaign_lists_summary = service.summarize_campaign_lists(str(campaign.id))
@@ -164,7 +172,7 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
         db.query(CampaignLead)
         .join(Contact)
         .filter(
-            CampaignLead.campaign_id == campaign_id,
+            CampaignLead.campaign_id == c.id,
             CampaignLead.status == "scheduled",
         )
         .all()
@@ -184,12 +192,31 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
             detail="Campaign cannot start until it has at least one scheduled, eligible lead after verification, suppression, contact type, and compliance checks.",
         )
 
-    c.status = "active"
-    db.commit()
-    job_id = None
+    existing_job = _campaign_job_for_status(db, str(c.id), {"queued", "running"})
+    if existing_job:
+        if c.status != "active":
+            c.status = "active"
+            db.commit()
+        return {
+            "status": existing_job.status,
+            "campaign": c.name,
+            "eligible_leads": eligible_leads,
+            "blocked_leads": blocked_counts,
+            "job_queued": True,
+            "job_id": existing_job.job_id,
+        }
+
     try:
-        task = run_campaign_cycle.delay()
-        job_id = task.id
+        task = run_campaign_cycle.delay(str(c.id))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Campaign execution could not be queued because background workers are unavailable.",
+        ) from exc
+
+    c.status = "active"
+    job_id = task.id
+    try:
         db.add(
             JobLog(
                 job_id=task.id,
@@ -203,15 +230,21 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
             )
         )
         db.commit()
-    except Exception:
-        job_id = None
+    except Exception as exc:
+        db.rollback()
+        c.status = "draft"
+        db.commit()
+        raise HTTPException(
+            status_code=503,
+            detail="Campaign execution could not be recorded after queueing. Try again after checking worker health.",
+        ) from exc
 
     return {
-        "status": "started",
+        "status": "queued",
         "campaign": c.name,
         "eligible_leads": eligible_leads,
         "blocked_leads": blocked_counts,
-        "job_queued": bool(job_id),
+        "job_queued": True,
         "job_id": job_id,
     }
     
