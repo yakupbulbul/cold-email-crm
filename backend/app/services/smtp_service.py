@@ -1,4 +1,5 @@
 from datetime import datetime
+from email.utils import formataddr
 
 from sqlalchemy.orm import Session
 
@@ -25,6 +26,12 @@ class SMTPManagerService:
         if configured in {"starttls", "ssl", "plain"}:
             return configured
         return "ssl" if mailbox.smtp_port == 465 else "starttls"
+
+    def build_sender_identity(self, mailbox: Mailbox) -> str:
+        display_name = (mailbox.display_name or "").strip()
+        if display_name:
+            return formataddr((display_name, mailbox.email))
+        return mailbox.email
 
     def check_mailbox_smtp(self, mailbox_id: str) -> dict:
         mailbox = self.db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
@@ -56,7 +63,8 @@ class SMTPManagerService:
             username=mailbox.smtp_username,
             password=mailbox.smtp_password_encrypted,
             security_mode=security_mode,
-            from_email=mailbox.email,
+            sender_email=mailbox.email,
+            from_header=self.build_sender_identity(mailbox),
             to_emails=req.to,
             subject=req.subject,
             text_body=req.text_body,

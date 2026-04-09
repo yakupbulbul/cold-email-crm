@@ -185,6 +185,8 @@ def test_provider_generates_rfc_message_id_when_missing():
 
         def send_message(self, msg, from_addr=None, to_addrs=None):
             captured["message_id"] = msg.get("Message-ID")
+            captured["from_header"] = msg.get("From")
+            captured["envelope_from"] = from_addr
             return {}
 
         def quit(self):
@@ -203,7 +205,8 @@ def test_provider_generates_rfc_message_id_when_missing():
             username="sender@example.com",
             password="password",
             security_mode="starttls",
-            from_email="sender@example.com",
+            sender_email="sender@example.com",
+            from_header="Support Team <sender@example.com>",
             to_emails=["recipient@example.com"],
             subject="Generated id",
             text_body="Hello",
@@ -216,3 +219,26 @@ def test_provider_generates_rfc_message_id_when_missing():
     assert message_id.startswith("<")
     assert message_id.endswith(">")
     assert "@example.com>" in message_id
+    assert captured["from_header"] == "Support Team <sender@example.com>"
+    assert captured["envelope_from"] == "sender@example.com"
+
+
+def test_sender_identity_falls_back_to_raw_email_when_display_name_missing(db):
+    from app.models.core import Mailbox
+    from app.services.smtp_service import SMTPManagerService
+
+    mailbox = Mailbox(
+        email="sender@example.com",
+        display_name="   ",
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_username="sender@example.com",
+        smtp_password_encrypted="password",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_username="sender@example.com",
+        imap_password_encrypted="password",
+    )
+
+    service = SMTPManagerService(db)
+    assert service.build_sender_identity(mailbox) == "sender@example.com"

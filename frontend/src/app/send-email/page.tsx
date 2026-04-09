@@ -14,6 +14,12 @@ function parseRecipients(raw: string): string[] {
     .filter(Boolean);
 }
 
+function buildSenderPreview(mailbox: Mailbox | null): string {
+  if (!mailbox) return "";
+  const displayName = mailbox.display_name?.trim();
+  return displayName ? `${displayName} <${mailbox.email}>` : mailbox.email;
+}
+
 export default function SendEmailPage() {
   const { getMailboxes, sendEmail, getSendEmailLogs, checkMailboxSmtp } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
@@ -175,6 +181,9 @@ export default function SendEmailPage() {
       {selectedMailbox ? (
         <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <div className="text-sm font-semibold text-slate-700">Selected mailbox transport</div>
+          <div className="mt-2 text-sm font-medium text-slate-700">
+            From preview: <span className="font-mono">{buildSenderPreview(selectedMailbox)}</span>
+          </div>
           <div className="mt-2 text-sm text-slate-600">
             {selectedMailbox.email} via {selectedMailbox.smtp_host}:{selectedMailbox.smtp_port} using {selectedMailbox.smtp_security_mode.toUpperCase()}
           </div>

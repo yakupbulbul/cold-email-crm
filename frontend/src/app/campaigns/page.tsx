@@ -24,6 +24,12 @@ type EditState = {
   complianceMode: string;
 };
 
+function buildSenderPreview(mailbox?: Mailbox | null): string {
+  if (!mailbox) return 'Mailbox unavailable';
+  const displayName = mailbox.display_name?.trim();
+  return displayName ? `${displayName} <${mailbox.email}>` : mailbox.email;
+}
+
 export default function CampaignsPage() {
   const {
     getCampaigns,
@@ -462,7 +468,10 @@ export default function CampaignsPage() {
           </div>
         </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
-          {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">{campaignType === 'b2c' ? 'B2C campaigns surface stricter consent and unsubscribe blockers in preflight.' : 'B2B campaigns allow risky leads with warnings when compliance stays standard.'}</div>}
+          {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">
+            <div>{campaignType === 'b2c' ? 'B2C campaigns surface stricter consent and unsubscribe blockers in preflight.' : 'B2B campaigns allow risky leads with warnings when compliance stays standard.'}</div>
+            <div className="mt-1">Sender preview: <span className="font-mono text-slate-700">{buildSenderPreview(mailboxes.find((mailbox) => mailbox.id === mailboxId))}</span></div>
+          </div>}
           <button data-testid="create-campaign-button" type="submit" disabled={isSubmitting || mailboxes.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
             <Plus size={18} strokeWidth={3} /> {isSubmitting ? 'Creating...' : 'Create Campaign'}
           </button>
@@ -497,6 +506,7 @@ export default function CampaignsPage() {
             const isEditing = editState?.campaignId === campaign.id;
             const attachedLists = campaign.lists_summary?.lists || [];
             const availableLists = lists.filter((list) => !attachedLists.some((attached) => attached.id === list.id));
+            const effectiveMailbox = mailboxes.find((mailbox) => mailbox.id === (isEditing ? editState?.mailboxId : campaign.mailbox_id));
 
             return (
               <div key={campaign.id} data-testid={`campaign-card-${campaign.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-7 group relative overflow-hidden">
@@ -623,6 +633,9 @@ export default function CampaignsPage() {
 
                   <div className="mt-4 text-sm font-medium text-slate-500">
                     Daily limit: <span className="font-semibold text-slate-800">{campaign.daily_limit}</span>
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-slate-500">
+                    Sender: <span className="font-mono text-slate-700">{buildSenderPreview(effectiveMailbox)}</span>
                   </div>
 
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">

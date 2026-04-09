@@ -33,7 +33,8 @@ class SMTPProvider(ABC):
                    username: str, 
                    password: str, 
                    security_mode: str,
-                   from_email: str, 
+                   sender_email: str,
+                   from_header: str,
                    to_emails: List[str], 
                    subject: str, 
                    text_body: str, 
@@ -204,7 +205,8 @@ class MailcowSMTPProvider(SMTPProvider):
                    username: str, 
                    password: str, 
                    security_mode: str,
-                   from_email: str, 
+                   sender_email: str,
+                   from_header: str,
                    to_emails: List[str], 
                    subject: str, 
                    text_body: str, 
@@ -219,7 +221,7 @@ class MailcowSMTPProvider(SMTPProvider):
         
         msg = EmailMessage()
         msg['Subject'] = subject
-        msg['From'] = from_email
+        msg['From'] = from_header
         msg['To'] = ", ".join(to_emails)
         
         if cc_emails:
@@ -230,7 +232,7 @@ class MailcowSMTPProvider(SMTPProvider):
         if references:
             msg['References'] = references
         if not msg.get("Message-ID"):
-            sender_domain = (from_email.rsplit("@", 1)[1].strip() if "@" in from_email else "").strip() or None
+            sender_domain = (sender_email.rsplit("@", 1)[1].strip() if "@" in sender_email else "").strip() or None
             msg["Message-ID"] = make_msgid(domain=sender_domain)
             
         msg.set_content(text_body)
@@ -256,7 +258,7 @@ class MailcowSMTPProvider(SMTPProvider):
             if getattr(server, "sock", None):
                 server.sock.settimeout(send_timeout)
             all_recipients = to_emails + (cc_emails or []) + (bcc_emails or [])
-            server.send_message(msg, from_addr=from_email, to_addrs=all_recipients)
+            server.send_message(msg, from_addr=sender_email, to_addrs=all_recipients)
             message_id = msg.get('Message-ID', 'unknown-id')
             return True, message_id
         except socket.gaierror:

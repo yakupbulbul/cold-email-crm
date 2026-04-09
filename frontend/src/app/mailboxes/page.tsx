@@ -189,6 +189,7 @@ export default function MailboxesPage() {
           <div>
             <label htmlFor="mailbox-display-name" className="block text-sm font-semibold text-slate-700 mb-2">Display Name</label>
             <input id="mailbox-display-name" data-testid="mailbox-display-name-input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Sales Team" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+            <p className="mt-2 text-xs text-slate-500">This becomes the visible sender name in email clients, for example: Sales Team &lt;sales@example.com&gt;.</p>
           </div>
           <div>
             <label htmlFor="mailbox-password" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Password</label>
@@ -255,6 +256,7 @@ export default function MailboxesPage() {
                       <div>
                         <p className="font-bold text-slate-800 text-sm mb-0.5">{mb.email}</p>
                         <p className="text-xs text-slate-500 font-medium">{mb.display_name || "SMTP/IMAP Account"}</p>
+                        <p className="mt-1 text-[11px] text-slate-500">Visible sender: {mb.display_name?.trim() ? `${mb.display_name} <${mb.email}>` : mb.email}</p>
                         <p className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                           mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
