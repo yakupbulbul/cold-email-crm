@@ -70,6 +70,10 @@ export interface Campaign {
         next_dispatch_at?: string | null;
         beat_interval_seconds?: number;
         detail?: string | null;
+        last_delivery_attempt_at?: string | null;
+        last_delivery_status?: "success" | "failed" | null;
+        last_delivery_target_email?: string | null;
+        last_delivery_error?: string | null;
     };
 }
 

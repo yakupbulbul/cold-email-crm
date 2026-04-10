@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from app.models.campaign import Campaign, CampaignLead, Contact
+from app.models.campaign import Campaign, CampaignLead, Contact, SendLog
 from app.models.core import Domain, Mailbox
 from app.models.lists import CampaignList, LeadList, LeadListMember
 from app.models.monitoring import JobLog
@@ -330,6 +330,66 @@ def test_list_campaigns_ignores_stale_queued_job_in_execution_summary(client: Te
     payload = next(item for item in resp.json() if item["id"] == str(campaign.id))
     assert payload["execution_summary"]["state"] == "waiting_for_beat"
     assert payload["execution_summary"]["detail"] == "No job is running right now. The next automatic campaign pass will be queued by beat."
+
+
+def test_list_campaigns_includes_last_delivery_attempt_in_execution_summary(client: TestClient, auth_headers: dict, db, monkeypatch):
+    monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
+
+    domain = Domain(name="delivery-summary.example.com")
+    db.add(domain)
+    db.commit()
+    db.refresh(domain)
+
+    mailbox = Mailbox(
+        domain_id=domain.id,
+        email="sender@delivery-summary.example.com",
+        display_name="Sender",
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_username="sender@delivery-summary.example.com",
+        smtp_password_encrypted="enc",
+        smtp_security_mode="starttls",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_username="sender@delivery-summary.example.com",
+        imap_password_encrypted="enc",
+    )
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+
+    campaign = Campaign(
+        name="Delivery Attempt Summary Campaign",
+        mailbox_id=mailbox.id,
+        template_subject="Subject",
+        template_body="Body",
+        daily_limit=10,
+        status="active",
+        campaign_type="b2c",
+        compliance_mode="standard",
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    db.add(
+        SendLog(
+            mailbox_id=mailbox.id,
+            campaign_id=campaign.id,
+            target_email="lead@example.com",
+            subject="Subject",
+            delivery_status="failed",
+            smtp_response="timed out",
+        )
+    )
+    db.commit()
+
+    resp = client.get("/api/v1/campaigns", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = next(item for item in resp.json() if item["id"] == str(campaign.id))
+    assert payload["execution_summary"]["last_delivery_status"] == "failed"
+    assert payload["execution_summary"]["last_delivery_target_email"] == "lead@example.com"
+    assert payload["execution_summary"]["last_delivery_error"] == "timed out"
 
 
 def test_delete_campaign_removes_draft_campaign(client: TestClient, auth_headers: dict, monkeypatch, db):

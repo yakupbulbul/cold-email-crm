@@ -684,6 +684,24 @@ export default function CampaignsPage() {
                     <div className="mt-1 text-sm text-slate-600">
                       Last completed: <span className="font-medium text-slate-800">{formatExecutionTime(campaign.execution_summary?.last_completed_at)}</span>
                     </div>
+                    {campaign.execution_summary?.last_delivery_attempt_at ? (
+                      <div className="mt-1 text-sm text-slate-600">
+                        Last delivery attempt:{' '}
+                        <span className="font-medium text-slate-800">
+                          {campaign.execution_summary.last_delivery_status || 'unknown'} at {formatExecutionTime(campaign.execution_summary.last_delivery_attempt_at)}
+                        </span>
+                      </div>
+                    ) : null}
+                    {campaign.execution_summary?.last_delivery_target_email ? (
+                      <div className="mt-1 text-sm text-slate-600">
+                        Last target: <span className="font-medium text-slate-800">{campaign.execution_summary.last_delivery_target_email}</span>
+                      </div>
+                    ) : null}
+                    {campaign.execution_summary?.last_delivery_error ? (
+                      <div className="mt-1 text-sm text-amber-700">
+                        Last delivery error: <span className="font-medium">{campaign.execution_summary.last_delivery_error}</span>
+                      </div>
+                    ) : null}
                     {campaign.execution_summary?.job_id ? (
                       <div className="mt-1 text-sm text-slate-600">
                         Current job: <span className="font-mono text-slate-800">{campaign.execution_summary.job_id}</span>

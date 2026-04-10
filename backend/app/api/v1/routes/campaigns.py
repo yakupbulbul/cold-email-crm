@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.campaign import Campaign, CampaignLead, Contact
+from app.models.campaign import Campaign, CampaignLead, Contact, SendLog
 from app.models.lists import CampaignList
 from app.models.monitoring import JobLog
 from app.schemas.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
@@ -49,7 +49,20 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
     latest_running = next((job for job in jobs if job.status == "running"), None)
     latest_completed = next((job for job in jobs if job.status == "completed"), None)
     latest_failed = next((job for job in jobs if job.status == "failed"), None)
+    latest_send_log = (
+        db.query(SendLog)
+        .filter(SendLog.campaign_id == campaign.id)
+        .order_by(SendLog.created_at.desc())
+        .first()
+    )
     stale_after = now - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)
+
+    delivery_summary = {
+        "last_delivery_attempt_at": latest_send_log.created_at.isoformat() if latest_send_log and latest_send_log.created_at else None,
+        "last_delivery_status": latest_send_log.delivery_status if latest_send_log else None,
+        "last_delivery_target_email": latest_send_log.target_email if latest_send_log else None,
+        "last_delivery_error": latest_send_log.smtp_response if latest_send_log and latest_send_log.delivery_status == "failed" else None,
+    }
 
     recent_queued = next(
         (
@@ -82,6 +95,7 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
             "next_dispatch_at": None,
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
             "detail": "A campaign worker is actively processing this campaign now.",
+            **delivery_summary,
         }
 
     if recent_queued:
@@ -94,10 +108,14 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
             "next_dispatch_at": None,
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
             "detail": "Queued for worker pickup. Sending starts when the worker consumes this job.",
+            **delivery_summary,
         }
 
     if campaign.status == "active" and settings.BACKGROUND_WORKERS_ENABLED:
         next_dispatch = _next_campaign_beat_at(now)
+        detail = "No job is running right now. The next automatic campaign pass will be queued by beat."
+        if latest_send_log and latest_send_log.delivery_status == "failed":
+            detail = "No job is running right now. The last delivery attempt failed, and the next automatic campaign pass will be queued by beat."
         return {
             "state": "waiting_for_beat",
             "job_id": None,
@@ -106,7 +124,8 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
             "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
             "next_dispatch_at": next_dispatch.isoformat(),
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
-            "detail": "No job is running right now. The next automatic campaign pass will be queued by beat.",
+            "detail": detail,
+            **delivery_summary,
         }
 
     return {
@@ -118,6 +137,7 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
         "next_dispatch_at": None,
         "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
         "detail": "Campaign dispatch runs only after the campaign is active.",
+        **delivery_summary,
     }
 
 
