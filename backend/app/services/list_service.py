@@ -72,6 +72,9 @@ class LeadListService:
             raise ValueError("Campaign not found")
 
         attached_lists = self.db.query(CampaignList).filter(CampaignList.campaign_id == campaign.id).all()
+        if not attached_lists:
+            return self.summarize_campaign_lists(str(campaign.id))
+
         deduped_contacts: dict[str, Contact] = {}
         for attached in attached_lists:
             for member in attached.lead_list.members:

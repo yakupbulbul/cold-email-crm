@@ -168,6 +168,12 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
+    # Re-sync attached list members into scheduled campaign leads at start time.
+    # This keeps campaign execution aligned with the current verification/contact-type/
+    # consent state even when a lead became eligible after the list was attached.
+    service = LeadListService(db)
+    service.sync_campaign_leads(campaign_id)
+
     scheduled_leads = (
         db.query(CampaignLead)
         .join(Contact)

@@ -3,6 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.core import Domain, Mailbox
+from app.models.lists import CampaignList, LeadList, LeadListMember
 from app.services.campaign_service import CampaignService
 from app.services.smtp_service import SMTPServiceError
 
@@ -467,6 +468,87 @@ def test_b2c_strict_campaign_excludes_unknown_consent_and_type_mismatch(client: 
     start_resp = client.post(f"/api/v1/campaigns/{campaign_id}/start", headers=auth_headers)
     assert start_resp.status_code == 200
     assert start_resp.json()["eligible_leads"] == 1
+
+
+def test_start_campaign_resyncs_attached_lists_after_lead_becomes_eligible(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+    queued_campaign_ids: list[str] = []
+
+    def _queue_task(campaign_id: str):
+        queued_campaign_ids.append(campaign_id)
+        return type("Task", (), {"id": "campaign-job-resync"})()
+
+    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", _queue_task)
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-resync.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-resync.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Resync Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+
+    lead = Contact(
+        email="late-verified@example.com",
+        first_name="Late",
+        email_status="unverified",
+        verification_score=None,
+        verification_integrity=None,
+        is_suppressed=False,
+        contact_type="b2b",
+        unsubscribe_status="subscribed",
+        consent_status="unknown",
+    )
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+
+    lead_list = LeadList(name="Late Eligible Leads", description="Test list")
+    db.add(lead_list)
+    db.commit()
+    db.refresh(lead_list)
+    db.add(LeadListMember(list_id=lead_list.id, lead_id=lead.id))
+    db.add(CampaignList(campaign_id=campaign_id, list_id=lead_list.id))
+    db.commit()
+
+    blocked_resp = client.post(f"/api/v1/campaigns/{campaign_id}/start", headers=auth_headers)
+    assert blocked_resp.status_code == 409
+
+    lead.email_status = "valid"
+    lead.verification_score = 100
+    lead.verification_integrity = "high"
+    db.add(lead)
+    db.commit()
+
+    start_resp = client.post(f"/api/v1/campaigns/{campaign_id}/start", headers=auth_headers)
+    assert start_resp.status_code == 200
+    assert start_resp.json()["eligible_leads"] == 1
+    assert queued_campaign_ids == [campaign_id]
+
+    scheduled = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign_id, CampaignLead.contact_id == lead.id).first()
+    assert scheduled is not None
+    assert scheduled.status == "scheduled"
 
 
 def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict, monkeypatch, db):
