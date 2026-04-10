@@ -30,9 +30,17 @@ function buildSenderPreview(mailbox?: Mailbox | null): string {
   return displayName ? `${displayName} <${mailbox.email}>` : mailbox.email;
 }
 
+function parseBackendDate(value?: string | null): Date | null {
+  if (!value) return null;
+  const normalized = /[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function formatExecutionTime(value?: string | null): string {
-  if (!value) return 'Not scheduled';
-  return new Date(value).toLocaleString();
+  const parsed = parseBackendDate(value);
+  if (!parsed) return 'Not scheduled';
+  return parsed.toLocaleString();
 }
 
 function executionTimingLabel(campaign: Campaign): { label: string; value: string } | null {
