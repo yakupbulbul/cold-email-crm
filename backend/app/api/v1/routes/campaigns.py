@@ -46,39 +46,74 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
     now = datetime.utcnow()
     jobs = _campaign_jobs_for_campaign(db, str(campaign.id))
     latest_job = jobs[0] if jobs else None
-    queued_or_running = next((job for job in jobs if job.status in {"queued", "running"}), None)
+    latest_running = next((job for job in jobs if job.status == "running"), None)
     latest_completed = next((job for job in jobs if job.status == "completed"), None)
+    latest_failed = next((job for job in jobs if job.status == "failed"), None)
+    stale_after = now - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)
 
-    if queued_or_running:
+    recent_queued = next(
+        (
+            job
+            for job in jobs
+            if job.status == "queued"
+            and job.created_at
+            and job.created_at >= stale_after
+            and not (
+                latest_completed
+                and latest_completed.created_at
+                and latest_completed.created_at >= job.created_at
+            )
+            and not (
+                latest_failed
+                and latest_failed.created_at
+                and latest_failed.created_at >= job.created_at
+            )
+        ),
+        None,
+    )
+
+    if latest_running:
         return {
-            "state": queued_or_running.status,
-            "job_id": queued_or_running.job_id,
-            "job_created_at": queued_or_running.created_at.isoformat() if queued_or_running.created_at else None,
-            "job_started_at": queued_or_running.started_at.isoformat() if queued_or_running.started_at else None,
+            "state": "running",
+            "job_id": latest_running.job_id,
+            "job_created_at": latest_running.created_at.isoformat() if latest_running.created_at else None,
+            "job_started_at": latest_running.started_at.isoformat() if latest_running.started_at else None,
             "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
-            "next_dispatch_at": now.isoformat(),
+            "next_dispatch_at": None,
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
-            "detail": "A campaign worker job is already queued or running.",
+            "detail": "A campaign worker is actively processing this campaign now.",
+        }
+
+    if recent_queued:
+        return {
+            "state": "queued",
+            "job_id": recent_queued.job_id,
+            "job_created_at": recent_queued.created_at.isoformat() if recent_queued.created_at else None,
+            "job_started_at": recent_queued.started_at.isoformat() if recent_queued.started_at else None,
+            "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
+            "next_dispatch_at": None,
+            "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
+            "detail": "Queued for worker pickup. Sending starts when the worker consumes this job.",
         }
 
     if campaign.status == "active" and settings.BACKGROUND_WORKERS_ENABLED:
         next_dispatch = _next_campaign_beat_at(now)
         return {
             "state": "waiting_for_beat",
-            "job_id": latest_job.job_id if latest_job else None,
-            "job_created_at": latest_job.created_at.isoformat() if latest_job and latest_job.created_at else None,
-            "job_started_at": latest_job.started_at.isoformat() if latest_job and latest_job.started_at else None,
+            "job_id": None,
+            "job_created_at": None,
+            "job_started_at": None,
             "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
             "next_dispatch_at": next_dispatch.isoformat(),
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
-            "detail": "Active campaigns are retried by beat every 5 minutes when no immediate job is queued.",
+            "detail": "No job is running right now. The next automatic campaign pass will be queued by beat.",
         }
 
     return {
         "state": "idle",
-        "job_id": latest_job.job_id if latest_job else None,
-        "job_created_at": latest_job.created_at.isoformat() if latest_job and latest_job.created_at else None,
-        "job_started_at": latest_job.started_at.isoformat() if latest_job and latest_job.started_at else None,
+        "job_id": None,
+        "job_created_at": None,
+        "job_started_at": None,
         "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
         "next_dispatch_at": None,
         "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,

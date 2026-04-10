@@ -35,6 +35,24 @@ function formatExecutionTime(value?: string | null): string {
   return new Date(value).toLocaleString();
 }
 
+function executionTimingLabel(campaign: Campaign): { label: string; value: string } | null {
+  const summary = campaign.execution_summary;
+  if (!summary) return null;
+  if (summary.state === 'waiting_for_beat') {
+    return {
+      label: 'Next automatic retry',
+      value: formatExecutionTime(summary.next_dispatch_at),
+    };
+  }
+  if (summary.state === 'queued') {
+    return {
+      label: 'Expected send start',
+      value: 'When the worker picks up this job',
+    };
+  }
+  return null;
+}
+
 export default function CampaignsPage() {
   const {
     getCampaigns,
@@ -650,9 +668,11 @@ export default function CampaignsPage() {
                     <div className="mt-1 text-sm text-slate-600">
                       {campaign.execution_summary?.detail || 'No dispatch timing available.'}
                     </div>
-                    <div className="mt-2 text-sm text-slate-600">
-                      Next dispatch: <span className="font-medium text-slate-800">{formatExecutionTime(campaign.execution_summary?.next_dispatch_at)}</span>
-                    </div>
+                    {executionTimingLabel(campaign) ? (
+                      <div className="mt-2 text-sm text-slate-600">
+                        {executionTimingLabel(campaign)?.label}: <span className="font-medium text-slate-800">{executionTimingLabel(campaign)?.value}</span>
+                      </div>
+                    ) : null}
                     <div className="mt-1 text-sm text-slate-600">
                       Last completed: <span className="font-medium text-slate-800">{formatExecutionTime(campaign.execution_summary?.last_completed_at)}</span>
                     </div>
