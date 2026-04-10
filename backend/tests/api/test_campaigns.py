@@ -620,6 +620,46 @@ def test_start_campaign_reschedules_failed_list_leads_when_still_eligible(client
     assert refreshed.status == "scheduled"
 
 
+def test_list_campaigns_includes_execution_summary(client: TestClient, auth_headers: dict, monkeypatch):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+    monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-execution.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-execution.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Execution Summary Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+
+    resp = client.get("/api/v1/campaigns", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = resp.json()
+    campaign = next(item for item in payload if item["name"] == "Execution Summary Campaign")
+    assert campaign["execution_summary"]["state"] == "idle"
+    assert campaign["execution_summary"]["beat_interval_seconds"] == 300
+    assert campaign["execution_summary"]["detail"]
+
+
 def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")

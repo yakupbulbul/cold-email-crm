@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -13,6 +14,7 @@ from app.services.list_service import LeadListService
 from app.workers.campaign_worker import run_campaign_cycle
 
 router = APIRouter()
+CAMPAIGN_BEAT_INTERVAL_SECONDS = 300
 
 
 def _campaign_job_for_status(db: Session, campaign_id: str, statuses: set[str]) -> JobLog | None:
@@ -21,6 +23,67 @@ def _campaign_job_for_status(db: Session, campaign_id: str, statuses: set[str]) 
         if payload_summary.get("campaign_id") == campaign_id and job.status in statuses:
             return job
     return None
+
+
+def _campaign_jobs_for_campaign(db: Session, campaign_id: str) -> list[JobLog]:
+    matched: list[JobLog] = []
+    for job in db.query(JobLog).filter(JobLog.job_type == "campaign_cycle").order_by(JobLog.created_at.desc()).all():
+        payload_summary = job.payload_summary or {}
+        if payload_summary.get("campaign_id") == campaign_id:
+            matched.append(job)
+    return matched
+
+
+def _next_campaign_beat_at(now: datetime) -> datetime:
+    interval_minutes = CAMPAIGN_BEAT_INTERVAL_SECONDS // 60
+    next_boundary_minute = ((now.minute // interval_minutes) + 1) * interval_minutes
+    if next_boundary_minute >= 60:
+        return now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    return now.replace(minute=next_boundary_minute, second=0, microsecond=0)
+
+
+def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
+    now = datetime.utcnow()
+    jobs = _campaign_jobs_for_campaign(db, str(campaign.id))
+    latest_job = jobs[0] if jobs else None
+    queued_or_running = next((job for job in jobs if job.status in {"queued", "running"}), None)
+    latest_completed = next((job for job in jobs if job.status == "completed"), None)
+
+    if queued_or_running:
+        return {
+            "state": queued_or_running.status,
+            "job_id": queued_or_running.job_id,
+            "job_created_at": queued_or_running.created_at.isoformat() if queued_or_running.created_at else None,
+            "job_started_at": queued_or_running.started_at.isoformat() if queued_or_running.started_at else None,
+            "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
+            "next_dispatch_at": now.isoformat(),
+            "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
+            "detail": "A campaign worker job is already queued or running.",
+        }
+
+    if campaign.status == "active" and settings.BACKGROUND_WORKERS_ENABLED:
+        next_dispatch = _next_campaign_beat_at(now)
+        return {
+            "state": "waiting_for_beat",
+            "job_id": latest_job.job_id if latest_job else None,
+            "job_created_at": latest_job.created_at.isoformat() if latest_job and latest_job.created_at else None,
+            "job_started_at": latest_job.started_at.isoformat() if latest_job and latest_job.started_at else None,
+            "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
+            "next_dispatch_at": next_dispatch.isoformat(),
+            "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
+            "detail": "Active campaigns are retried by beat every 5 minutes when no immediate job is queued.",
+        }
+
+    return {
+        "state": "idle",
+        "job_id": latest_job.job_id if latest_job else None,
+        "job_created_at": latest_job.created_at.isoformat() if latest_job and latest_job.created_at else None,
+        "job_started_at": latest_job.started_at.isoformat() if latest_job and latest_job.started_at else None,
+        "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
+        "next_dispatch_at": None,
+        "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
+        "detail": "Campaign dispatch runs only after the campaign is active.",
+    }
 
 
 def _campaign_payload(db: Session, campaign: Campaign) -> dict:
@@ -47,6 +110,7 @@ def _campaign_payload(db: Session, campaign: Campaign) -> dict:
         "sent_count": sent_count,
         "reply_rate": "0%",
         "lists_summary": campaign_lists_summary,
+        "execution_summary": _campaign_execution_summary(db, campaign),
     }
 
 @router.get("/")

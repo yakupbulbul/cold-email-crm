@@ -50,4 +50,5 @@ class CampaignResponse(BaseModel):
     sent_count: int | None = None
     reply_rate: str | int | None = None
     lists_summary: dict[str, Any] | None = None
+    execution_summary: dict[str, Any] | None = None
     created_at: datetime

@@ -61,6 +61,16 @@ export interface Campaign {
     lead_count?: number;
     reply_rate?: string | number;
     lists_summary?: CampaignListSummary;
+    execution_summary?: {
+        state: "idle" | "queued" | "running" | "waiting_for_beat";
+        job_id?: string | null;
+        job_created_at?: string | null;
+        job_started_at?: string | null;
+        last_completed_at?: string | null;
+        next_dispatch_at?: string | null;
+        beat_interval_seconds?: number;
+        detail?: string | null;
+    };
 }
 
 export interface CampaignActionResult {

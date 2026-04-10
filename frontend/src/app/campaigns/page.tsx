@@ -30,6 +30,11 @@ function buildSenderPreview(mailbox?: Mailbox | null): string {
   return displayName ? `${displayName} <${mailbox.email}>` : mailbox.email;
 }
 
+function formatExecutionTime(value?: string | null): string {
+  if (!value) return 'Not scheduled';
+  return new Date(value).toLocaleString();
+}
+
 export default function CampaignsPage() {
   const {
     getCampaigns,
@@ -636,6 +641,26 @@ export default function CampaignsPage() {
                   </div>
                   <div className="mt-2 text-sm font-medium text-slate-500">
                     Sender: <span className="font-mono text-slate-700">{buildSenderPreview(effectiveMailbox)}</span>
+                  </div>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Execution</div>
+                    <div className="mt-2 text-sm font-semibold text-slate-700">
+                      State: {campaign.execution_summary?.state || 'idle'}
+                    </div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      {campaign.execution_summary?.detail || 'No dispatch timing available.'}
+                    </div>
+                    <div className="mt-2 text-sm text-slate-600">
+                      Next dispatch: <span className="font-medium text-slate-800">{formatExecutionTime(campaign.execution_summary?.next_dispatch_at)}</span>
+                    </div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      Last completed: <span className="font-medium text-slate-800">{formatExecutionTime(campaign.execution_summary?.last_completed_at)}</span>
+                    </div>
+                    {campaign.execution_summary?.job_id ? (
+                      <div className="mt-1 text-sm text-slate-600">
+                        Current job: <span className="font-mono text-slate-800">{campaign.execution_summary.job_id}</span>
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
