@@ -551,6 +551,75 @@ def test_start_campaign_resyncs_attached_lists_after_lead_becomes_eligible(clien
     assert scheduled.status == "scheduled"
 
 
+def test_start_campaign_reschedules_failed_list_leads_when_still_eligible(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+    monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", lambda campaign_id: type("Task", (), {"id": "campaign-job-retry"})())
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-retry.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-retry.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Retry Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2c",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+
+    lead = Contact(
+        email="retry@example.com",
+        first_name="Retry",
+        email_status="valid",
+        verification_score=100,
+        verification_integrity="high",
+        is_suppressed=False,
+        contact_type="b2c",
+        consent_status="unknown",
+        unsubscribe_status="subscribed",
+    )
+    db.add(lead)
+    db.commit()
+    db.refresh(lead)
+
+    lead_list = LeadList(name="Retry Leads", description="Retry list")
+    db.add(lead_list)
+    db.commit()
+    db.refresh(lead_list)
+    db.add(LeadListMember(list_id=lead_list.id, lead_id=lead.id))
+    db.add(CampaignList(campaign_id=campaign_id, list_id=lead_list.id))
+    db.commit()
+
+    failed_row = CampaignLead(campaign_id=campaign_id, contact_id=lead.id, status="failed")
+    db.add(failed_row)
+    db.commit()
+
+    start_resp = client.post(f"/api/v1/campaigns/{campaign_id}/start", headers=auth_headers)
+    assert start_resp.status_code == 200
+    assert start_resp.json()["eligible_leads"] == 1
+
+    refreshed = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign_id, CampaignLead.contact_id == lead.id).first()
+    assert refreshed is not None
+    assert refreshed.status == "scheduled"
+
+
 def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
     monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")

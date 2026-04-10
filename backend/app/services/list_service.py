@@ -96,7 +96,13 @@ class LeadListService:
                 if existing and existing.status == "scheduled":
                     self.db.delete(existing)
                 continue
-            if contact_id in existing_by_contact:
+            existing = existing_by_contact.get(contact_id)
+            if existing:
+                if existing.status == "failed":
+                    existing.status = "scheduled"
+                    existing.sent_at = None
+                    existing.replied_at = None
+                    self.db.add(existing)
                 continue
             self.db.add(
                 CampaignLead(
