@@ -127,6 +127,8 @@ cleanup_children() {
 
 trap cleanup_children EXIT INT TERM
 cleanup_managed_processes
+setopt local_options null_glob
+rm -f backend/celerybeat-schedule.db backend/celerybeat-schedule.db.* 2>/dev/null || true
 
 BACKEND_CMD=(../backend/.venv/bin/python -m uvicorn app.main:app --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" --log-level "${UVICORN_LOG_LEVEL}")
 if [[ "${BACKEND_RELOAD}" == "true" ]]; then
@@ -142,7 +144,7 @@ echo "Starting host development mode: ${DISPLAY_MODE}"
 echo "Backend:  ${BACKEND_CMD[*]}"
 echo "Frontend: cd frontend && NODE_OPTIONS='${NODE_OPTIONS}' ${NPM_BIN} run dev -- --${NEXT_DEV_BUNDLER} --hostname 0.0.0.0 --port ${FRONTEND_PORT}"
 echo "Worker:   cd backend && ../backend/.venv/bin/python -m celery -A app.workers.celery_app worker --loglevel=${CELERY_LOGLEVEL} --pool=${CELERY_WORKER_POOL} --concurrency=${CELERY_WORKER_CONCURRENCY}"
-echo "Beat:     cd backend && ../backend/.venv/bin/python -m celery -A app.workers.celery_app beat --loglevel=${CELERY_LOGLEVEL}"
+echo "Beat:     cd backend && ../backend/.venv/bin/python -m scripts.dev_scheduler"
 echo "Logs:     ${BACKEND_LOG} ${FRONTEND_LOG} ${WORKER_LOG} ${BEAT_LOG}"
 
 : > "${BACKEND_LOG}"
@@ -165,7 +167,7 @@ if [[ "${MODE}" == "full" ]]; then
 
   (
     cd backend
-    BACKGROUND_WORKERS_ENABLED=true ../backend/.venv/bin/python -m celery -A app.workers.celery_app beat --loglevel="${CELERY_LOGLEVEL}" >> "../${BEAT_LOG}" 2>&1
+    BACKGROUND_WORKERS_ENABLED=true ../backend/.venv/bin/python -m scripts.dev_scheduler >> "../${BEAT_LOG}" 2>&1
   ) &
   echo $! > "${BEAT_PID_FILE}"
 else

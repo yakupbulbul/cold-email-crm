@@ -990,3 +990,84 @@ def test_campaign_processing_reschedules_failed_list_leads_on_next_cycle(db):
     refreshed = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign.id, CampaignLead.contact_id == contact.id).first()
     assert refreshed is not None
     assert refreshed.status == "sent"
+
+
+def test_campaign_processing_does_not_count_failed_logs_against_daily_limit(db):
+    domain = Domain(name="daily-limit-failed.example.com")
+    db.add(domain)
+    db.commit()
+    db.refresh(domain)
+
+    mailbox = Mailbox(
+        domain_id=domain.id,
+        email="sender@daily-limit-failed.example.com",
+        display_name="Sender",
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_username="sender@daily-limit-failed.example.com",
+        smtp_password_encrypted="enc",
+        smtp_security_mode="starttls",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_username="sender@daily-limit-failed.example.com",
+        imap_password_encrypted="enc",
+        status="active",
+    )
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+
+    contact = Contact(
+        email="limit-check@example.com",
+        first_name="Limit",
+        contact_type="b2c",
+        email_status="valid",
+        verification_score=100,
+        verification_integrity="high",
+        is_suppressed=False,
+    )
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+
+    campaign = Campaign(
+        name="Failed Logs Limit Campaign",
+        mailbox_id=mailbox.id,
+        template_subject="Hi {{first_name}}",
+        template_body="Hello {{first_name}}",
+        daily_limit=1,
+        status="active",
+        campaign_type="b2c",
+        compliance_mode="standard",
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    db.add(CampaignLead(campaign_id=campaign.id, contact_id=contact.id, status="scheduled"))
+    db.add(
+        SendLog(
+            mailbox_id=mailbox.id,
+            campaign_id=campaign.id,
+            contact_id=contact.id,
+            target_email=contact.email,
+            subject="Previous failed attempt",
+            delivery_status="failed",
+            smtp_response="timed out",
+        )
+    )
+    db.commit()
+
+    service = CampaignService(db)
+    service.smtp = type(
+        "StubSMTP",
+        (),
+        {"send_email": lambda self, req: (True, f"<limit@example.com>|{uuid4()}")},
+    )()
+
+    result = service.process_campaign_by_id(str(campaign.id))
+    assert result["processed"] == 1
+
+    refreshed = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign.id, CampaignLead.contact_id == contact.id).first()
+    assert refreshed is not None
+    assert refreshed.status == "sent"

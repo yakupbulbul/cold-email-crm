@@ -43,7 +43,8 @@ class CampaignService:
 
         sent_today = self.db.query(SendLog).filter(
             SendLog.campaign_id == campaign.id,
-            SendLog.created_at >= today
+            SendLog.created_at >= today,
+            SendLog.delivery_status == "success",
         ).count()
 
         if sent_today >= campaign.daily_limit:
