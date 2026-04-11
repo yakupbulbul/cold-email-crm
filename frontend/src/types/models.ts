@@ -43,7 +43,7 @@ export interface Mailbox {
 export interface Campaign {
     id: string;
     name: string;
-    status: string; // draft, active, paused, completed, etc.
+    status: string; // draft, active, paused, completed, archived, etc.
     mailbox_id?: string | null;
     template_subject: string;
     template_body: string;
@@ -62,7 +62,7 @@ export interface Campaign {
     reply_rate?: string | number;
     lists_summary?: CampaignListSummary;
     execution_summary?: {
-        state: "idle" | "queued" | "running" | "waiting_for_beat";
+        state: "idle" | "queued" | "running" | "waiting_for_beat" | "archived";
         job_id?: string | null;
         job_created_at?: string | null;
         job_started_at?: string | null;

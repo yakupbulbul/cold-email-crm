@@ -122,6 +122,7 @@ test("active campaigns show pause and update status after pause succeeds", async
   const card = page.getByTestId(`campaign-card-${campaignId}`);
   await expect(card).toBeVisible();
   await expect(card.getByRole("button", { name: "Pause" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Archive" })).toBeVisible();
 
   await card.getByRole("button", { name: "Pause" }).click();
 
@@ -364,8 +365,9 @@ test("draft campaigns can be deleted and disappear from the UI", async ({ page }
   await expect(card).toHaveCount(0);
 });
 
-test("non-draft campaigns show the backend delete block message", async ({ page }) => {
+test("non-draft campaigns can be archived from the card", async ({ page }) => {
   const campaignId = "66666666-6666-6666-6666-666666666666";
+  let archived = false;
 
   await page.route("**/api/v1/campaigns", async (route) => {
     await route.fulfill({
@@ -374,8 +376,8 @@ test("non-draft campaigns show the backend delete block message", async ({ page 
       body: JSON.stringify([
         {
           id: campaignId,
-          name: "Blocked Delete",
-          status: "paused",
+          name: "Archive Me",
+          status: archived ? "archived" : "paused",
           mailbox_id: "33333333-3333-3333-3333-333333333333",
           template_subject: "Subject",
           template_body: "Body",
@@ -403,19 +405,21 @@ test("non-draft campaigns show the backend delete block message", async ({ page 
   await page.route("**/api/v1/lists", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
   });
-  await page.route(`**/api/v1/campaigns/${campaignId}`, async (route) => {
+  await page.route(`**/api/v1/campaigns/${campaignId}/archive`, async (route) => {
+    archived = true;
     await route.fulfill({
-      status: 409,
+      status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        detail: "Only draft campaigns can be deleted. Pause or archive non-draft campaigns instead.",
-      }),
+      body: JSON.stringify({ status: "archived", id: campaignId }),
     });
   });
 
   await page.goto("/campaigns");
 
   const card = page.getByTestId(`campaign-card-${campaignId}`);
-  await card.getByRole("button", { name: "Delete" }).click();
-  await expect(card.locator('[data-testid^="campaign-message-"]')).toContainText("Only draft campaigns can be deleted");
+  await expect(card.getByRole("button", { name: "Archive" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Delete" })).toHaveCount(0);
+  await card.getByRole("button", { name: "Archive" }).click();
+  await expect(page.getByText("Campaign archived.")).toBeVisible();
+  await expect(page.getByTestId(`campaign-status-${campaignId}`)).toContainText("archived");
 });

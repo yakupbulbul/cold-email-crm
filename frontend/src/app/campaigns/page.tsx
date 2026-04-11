@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Trash2, Users, X } from 'lucide-react';
+import { AlertCircle, Archive, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Trash2, Users, X } from 'lucide-react';
 
 import Spinner from '@/components/ui/Spinner';
 import { useApiService } from '@/services/api';
 import { Campaign, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
 
 type ActionState = {
-  type: 'start' | 'pause' | 'preflight' | 'save' | 'delete' | 'attach-list' | 'remove-list';
+  type: 'start' | 'pause' | 'preflight' | 'save' | 'delete' | 'archive' | 'attach-list' | 'remove-list';
   campaignId: string;
 };
 
@@ -58,6 +58,12 @@ function executionTimingLabel(campaign: Campaign): { label: string; value: strin
       value: 'When the worker picks up this job',
     };
   }
+  if (summary.state === 'archived') {
+    return {
+      label: 'Execution',
+      value: 'Archived campaigns do not dispatch',
+    };
+  }
   return null;
 }
 
@@ -69,6 +75,7 @@ export default function CampaignsPage() {
     createCampaign,
     updateCampaign,
     deleteCampaign,
+    archiveCampaign,
     startCampaign,
     pauseCampaign,
     runPreflight,
@@ -358,6 +365,28 @@ export default function CampaignsPage() {
     }
   };
 
+  const handleArchive = async (campaignId: string) => {
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'archive', campaignId });
+    try {
+      await archiveCampaign(campaignId);
+      await refreshCampaigns();
+      if (editState?.campaignId === campaignId) {
+        setEditState(null);
+      }
+      setBanner({ tone: 'success', message: 'Campaign archived.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign archive failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
   const toggleCreateList = (listId: string) => {
     setSelectedCreateListIds((current) =>
       current.includes(listId) ? current.filter((id) => id !== listId) : [...current, listId],
@@ -534,6 +563,8 @@ export default function CampaignsPage() {
             const preflight = preflightResults[campaign.id];
             const canStart = campaign.status === 'draft' || campaign.status === 'paused';
             const canPause = campaign.status === 'active';
+            const canDelete = campaign.status === 'draft';
+            const canArchive = campaign.status === 'active' || campaign.status === 'paused' || campaign.status === 'completed';
             const isEditing = editState?.campaignId === campaign.id;
             const attachedLists = campaign.lists_summary?.lists || [];
             const availableLists = lists.filter((list) => !attachedLists.some((attached) => attached.id === list.id));
@@ -607,7 +638,7 @@ export default function CampaignsPage() {
                         </>
                       )}
                     </div>
-                    <span data-testid={`campaign-status-${campaign.id}`} className={`px-4 py-1 text-xs font-bold tracking-wide rounded-full border shadow-sm ${campaign.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : campaign.status === 'paused' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                    <span data-testid={`campaign-status-${campaign.id}`} className={`px-4 py-1 text-xs font-bold tracking-wide rounded-full border shadow-sm ${campaign.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : campaign.status === 'paused' ? 'bg-amber-50 text-amber-700 border-amber-200' : campaign.status === 'archived' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                       {campaign.status}
                     </span>
                   </div>
@@ -805,16 +836,30 @@ export default function CampaignsPage() {
                           <Pencil size={16} />
                           Edit
                         </button>
-                        <button
-                          data-testid={`delete-campaign-${campaign.id}`}
-                          type="button"
-                          onClick={() => void handleDelete(campaign.id)}
-                          disabled={!!actionState || !!editState}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isActionPending(campaign.id, 'delete') ? <LoaderCircle size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                          Delete
-                        </button>
+                        {canDelete ? (
+                          <button
+                            data-testid={`delete-campaign-${campaign.id}`}
+                            type="button"
+                            onClick={() => void handleDelete(campaign.id)}
+                            disabled={!!actionState || !!editState}
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isActionPending(campaign.id, 'delete') ? <LoaderCircle size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                            Delete
+                          </button>
+                        ) : null}
+                        {canArchive ? (
+                          <button
+                            data-testid={`archive-campaign-${campaign.id}`}
+                            type="button"
+                            onClick={() => void handleArchive(campaign.id)}
+                            disabled={!!actionState || !!editState}
+                            className="inline-flex items-center gap-2 rounded-xl border border-amber-200 px-4 py-2.5 text-sm font-bold text-amber-700 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isActionPending(campaign.id, 'archive') ? <LoaderCircle size={16} className="animate-spin" /> : <Archive size={16} />}
+                            Archive
+                          </button>
+                        ) : null}
                       </>
                     )}
                     {canStart && (
