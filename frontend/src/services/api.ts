@@ -108,6 +108,7 @@ export function useApiService() {
     const updateCampaign = useCallback((id: string, data: CampaignUpdatePayload) => requestOrThrow<Campaign>(`/campaigns/${id}`, { method: "PUT", body: data }), [requestOrThrow]);
     const deleteCampaign = useCallback((id: string) => requestOrThrow<{ status: string; id: string }>(`/campaigns/${id}`, { method: "DELETE" }), [requestOrThrow]);
     const archiveCampaign = useCallback((id: string) => requestOrThrow<{ status: string; id: string; campaign?: string }>(`/campaigns/${id}/archive`, { method: "POST" }), [requestOrThrow]);
+    const unarchiveCampaign = useCallback((id: string) => requestOrThrow<{ status: string; id: string; campaign?: string }>(`/campaigns/${id}/unarchive`, { method: "POST" }), [requestOrThrow]);
     const startCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/start`, { method: "POST" }), [requestOrThrow]);
     const pauseCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/pause`, { method: "POST" }), [requestOrThrow]);
     const runPreflight = useCallback((id: string) => requestOrThrow<CampaignPreflightResult>(`/campaigns/${id}/preflight`, { method: "POST" }), [requestOrThrow]);
@@ -183,6 +184,7 @@ export function useApiService() {
         updateCampaign,
         deleteCampaign,
         archiveCampaign,
+        unarchiveCampaign,
         startCampaign,
         pauseCampaign,
         runPreflight,

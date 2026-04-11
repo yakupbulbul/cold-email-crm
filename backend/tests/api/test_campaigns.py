@@ -550,6 +550,82 @@ def test_start_campaign_blocks_archived_campaign(client: TestClient, auth_header
     assert "Archived campaigns cannot be started" in resp.json()["detail"]
 
 
+def test_unarchive_campaign_restores_archived_to_paused(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-unarchive.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-unarchive.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Unarchive Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    campaign.status = "archived"
+    db.commit()
+
+    restore_resp = client.post(f"/api/v1/campaigns/{campaign_id}/unarchive", headers=auth_headers)
+    assert restore_resp.status_code == 200
+    assert restore_resp.json()["status"] == "paused"
+    db.refresh(campaign)
+    assert campaign.status == "paused"
+
+
+def test_unarchive_campaign_blocks_non_archived_records(client: TestClient, auth_headers: dict, monkeypatch):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-unarchive-block.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-unarchive-block.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Non Archived Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+
+    restore_resp = client.post(f"/api/v1/campaigns/{campaign_resp.json()['id']}/unarchive", headers=auth_headers)
+    assert restore_resp.status_code == 409
+    assert "Only archived campaigns can be restored" in restore_resp.json()["detail"]
+
+
 def test_list_campaigns_marks_archived_execution_state(client: TestClient, auth_headers: dict, db):
     domain = Domain(name="campaign-archive-summary.example.com")
     db.add(domain)

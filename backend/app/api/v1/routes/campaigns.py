@@ -269,6 +269,23 @@ def archive_campaign(campaign_id: str, db: Session = Depends(get_db)):
     return {"status": "archived", "id": str(campaign.id), "campaign": campaign.name}
 
 
+@router.post("/{campaign_id}/unarchive")
+def unarchive_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign.status != "archived":
+        raise HTTPException(
+            status_code=409,
+            detail="Only archived campaigns can be restored.",
+        )
+
+    campaign.status = "paused"
+    db.commit()
+    return {"status": "paused", "id": str(campaign.id), "campaign": campaign.name}
+
+
 @router.post("/{campaign_id}/lists")
 def attach_list_to_campaign(campaign_id: str, req: CampaignListAttachPayload, db: Session = Depends(get_db)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()

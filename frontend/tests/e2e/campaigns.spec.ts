@@ -423,3 +423,66 @@ test("non-draft campaigns can be archived from the card", async ({ page }) => {
   await expect(page.getByText("Campaign archived.")).toBeVisible();
   await expect(page.getByTestId(`campaign-status-${campaignId}`)).toContainText("archived");
 });
+
+test("archived campaigns can be restored from the card", async ({ page }) => {
+  const campaignId = "77777777-7777-7777-7777-777777777777";
+  let restored = false;
+
+  await page.route("**/api/v1/campaigns", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: campaignId,
+          name: "Restore Me",
+          status: restored ? "paused" : "archived",
+          mailbox_id: "33333333-3333-3333-3333-333333333333",
+          template_subject: "Subject",
+          template_body: "Body",
+          daily_limit: 25,
+          created_at: "2026-04-08T10:00:00Z",
+          lead_count: 0,
+          sent_count: 0,
+          reply_rate: "0%",
+          lists_summary: {
+            lead_count: 0,
+            reachable_count: 0,
+            risky_count: 0,
+            invalid_count: 0,
+            suppressed_count: 0,
+            status_counts: {},
+            lists: [],
+          },
+          execution_summary: {
+            state: restored ? "idle" : "archived",
+            detail: restored ? "Campaign dispatch runs only after the campaign is active." : "Archived campaigns are excluded from automatic execution until they are restored manually.",
+          },
+        },
+      ]),
+    });
+  });
+  await page.route("**/api/v1/mailboxes", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route("**/api/v1/lists", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  await page.route(`**/api/v1/campaigns/${campaignId}/unarchive`, async (route) => {
+    restored = true;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "paused", id: campaignId }),
+    });
+  });
+
+  await page.goto("/campaigns");
+
+  const card = page.getByTestId(`campaign-card-${campaignId}`);
+  await expect(card.getByRole("button", { name: "Restore" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Start" })).toHaveCount(0);
+  await card.getByRole("button", { name: "Restore" }).click();
+  await expect(page.getByText("Campaign restored as paused.")).toBeVisible();
+  await expect(page.getByTestId(`campaign-status-${campaignId}`)).toContainText("paused");
+});

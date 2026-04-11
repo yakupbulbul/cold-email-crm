@@ -8,7 +8,7 @@ import { useApiService } from '@/services/api';
 import { Campaign, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
 
 type ActionState = {
-  type: 'start' | 'pause' | 'preflight' | 'save' | 'delete' | 'archive' | 'attach-list' | 'remove-list';
+  type: 'start' | 'pause' | 'preflight' | 'save' | 'delete' | 'archive' | 'unarchive' | 'attach-list' | 'remove-list';
   campaignId: string;
 };
 
@@ -76,6 +76,7 @@ export default function CampaignsPage() {
     updateCampaign,
     deleteCampaign,
     archiveCampaign,
+    unarchiveCampaign,
     startCampaign,
     pauseCampaign,
     runPreflight,
@@ -387,6 +388,28 @@ export default function CampaignsPage() {
     }
   };
 
+  const handleUnarchive = async (campaignId: string) => {
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'unarchive', campaignId });
+    try {
+      await unarchiveCampaign(campaignId);
+      await refreshCampaigns();
+      if (editState?.campaignId === campaignId) {
+        setEditState(null);
+      }
+      setBanner({ tone: 'success', message: 'Campaign restored as paused.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign restore failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
   const toggleCreateList = (listId: string) => {
     setSelectedCreateListIds((current) =>
       current.includes(listId) ? current.filter((id) => id !== listId) : [...current, listId],
@@ -565,6 +588,7 @@ export default function CampaignsPage() {
             const canPause = campaign.status === 'active';
             const canDelete = campaign.status === 'draft';
             const canArchive = campaign.status === 'active' || campaign.status === 'paused' || campaign.status === 'completed';
+            const canUnarchive = campaign.status === 'archived';
             const isEditing = editState?.campaignId === campaign.id;
             const attachedLists = campaign.lists_summary?.lists || [];
             const availableLists = lists.filter((list) => !attachedLists.some((attached) => attached.id === list.id));
@@ -858,6 +882,18 @@ export default function CampaignsPage() {
                           >
                             {isActionPending(campaign.id, 'archive') ? <LoaderCircle size={16} className="animate-spin" /> : <Archive size={16} />}
                             Archive
+                          </button>
+                        ) : null}
+                        {canUnarchive ? (
+                          <button
+                            data-testid={`unarchive-campaign-${campaign.id}`}
+                            type="button"
+                            onClick={() => void handleUnarchive(campaign.id)}
+                            disabled={!!actionState || !!editState}
+                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 px-4 py-2.5 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isActionPending(campaign.id, 'unarchive') ? <LoaderCircle size={16} className="animate-spin" /> : <Archive size={16} />}
+                            Restore
                           </button>
                         ) : null}
                       </>
