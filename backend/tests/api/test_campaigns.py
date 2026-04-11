@@ -469,6 +469,129 @@ def test_delete_campaign_blocks_non_draft_campaign(client: TestClient, auth_head
     assert "Only draft campaigns can be deleted" in delete_resp.json()["detail"]
 
 
+def test_archive_campaign_updates_non_draft_status(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-archive.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-archive.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Archive Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    campaign.status = "paused"
+    db.commit()
+
+    archive_resp = client.post(f"/api/v1/campaigns/{campaign_id}/archive", headers=auth_headers)
+    assert archive_resp.status_code == 200
+    assert archive_resp.json()["status"] == "archived"
+    db.refresh(campaign)
+    assert campaign.status == "archived"
+
+
+def test_start_campaign_blocks_archived_campaign(client: TestClient, auth_headers: dict, monkeypatch, db):
+    monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+
+    domain_resp = client.post("/api/v1/domains", json={"name": "campaign-archived-start.example.com"}, headers=auth_headers)
+    mailbox_resp = client.post(
+        "/api/v1/mailboxes",
+        json={
+            "domain_id": domain_resp.json()["id"],
+            "email": "sender@campaign-archived-start.example.com",
+            "display_name": "Sender",
+            "smtp_password": "super-secret-password",
+            "imap_password": "super-secret-password",
+        },
+        headers=auth_headers,
+    )
+    campaign_resp = client.post(
+        "/api/v1/campaigns",
+        json={
+            "name": "Archived Campaign",
+            "mailbox_id": mailbox_resp.json()["id"],
+            "template_subject": "Subject",
+            "template_body": "Body",
+            "daily_limit": 10,
+            "campaign_type": "b2b",
+            "compliance_mode": "standard",
+        },
+        headers=auth_headers,
+    )
+    campaign_id = campaign_resp.json()["id"]
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    campaign.status = "archived"
+    db.commit()
+
+    resp = client.post(f"/api/v1/campaigns/{campaign_id}/start", headers=auth_headers)
+    assert resp.status_code == 409
+    assert "Archived campaigns cannot be started" in resp.json()["detail"]
+
+
+def test_list_campaigns_marks_archived_execution_state(client: TestClient, auth_headers: dict, db):
+    domain = Domain(name="campaign-archive-summary.example.com")
+    db.add(domain)
+    db.commit()
+    db.refresh(domain)
+
+    mailbox = Mailbox(
+        domain_id=domain.id,
+        email="sender@campaign-archive-summary.example.com",
+        display_name="Sender",
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_username="sender@campaign-archive-summary.example.com",
+        smtp_password_encrypted="enc",
+        smtp_security_mode="starttls",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_username="sender@campaign-archive-summary.example.com",
+        imap_password_encrypted="enc",
+    )
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+
+    campaign = Campaign(
+        name="Archived Summary Campaign",
+        mailbox_id=mailbox.id,
+        template_subject="Subject",
+        template_body="Body",
+        daily_limit=10,
+        status="archived",
+    )
+    db.add(campaign)
+    db.commit()
+
+    resp = client.get("/api/v1/campaigns", headers=auth_headers)
+    assert resp.status_code == 200
+    payload = next(item for item in resp.json() if item["id"] == str(campaign.id))
+    assert payload["status"] == "archived"
+    assert payload["execution_summary"]["state"] == "archived"
+
+
 def test_delete_campaign_returns_404_for_missing_record(client: TestClient, auth_headers: dict):
     delete_resp = client.delete("/api/v1/campaigns/00000000-0000-0000-0000-000000000000", headers=auth_headers)
     assert delete_resp.status_code == 404

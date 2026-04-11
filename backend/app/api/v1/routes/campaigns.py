@@ -64,6 +64,19 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
         "last_delivery_error": latest_send_log.smtp_response if latest_send_log and latest_send_log.delivery_status == "failed" else None,
     }
 
+    if campaign.status == "archived":
+        return {
+            "state": "archived",
+            "job_id": None,
+            "job_created_at": None,
+            "job_started_at": None,
+            "last_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
+            "next_dispatch_at": None,
+            "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
+            "detail": "Archived campaigns are excluded from automatic execution until they are restored manually.",
+            **delivery_summary,
+        }
+
     recent_queued = next(
         (
             job
@@ -242,6 +255,20 @@ def delete_campaign(campaign_id: str, db: Session = Depends(get_db)):
     return {"status": "deleted", "id": str(campaign.id)}
 
 
+@router.post("/{campaign_id}/archive")
+def archive_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    if campaign.status == "archived":
+        return {"status": "archived", "id": str(campaign.id), "campaign": campaign.name}
+
+    campaign.status = "archived"
+    db.commit()
+    return {"status": "archived", "id": str(campaign.id), "campaign": campaign.name}
+
+
 @router.post("/{campaign_id}/lists")
 def attach_list_to_campaign(campaign_id: str, req: CampaignListAttachPayload, db: Session = Depends(get_db)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
@@ -286,6 +313,11 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
+    if c.status == "archived":
+        raise HTTPException(
+            status_code=409,
+            detail="Archived campaigns cannot be started. Restore or duplicate the campaign before sending again.",
+        )
 
     # Re-sync attached list members into scheduled campaign leads at start time.
     # This keeps campaign execution aligned with the current verification/contact-type/
@@ -378,6 +410,8 @@ def pause_campaign(campaign_id: str, db: Session = Depends(get_db)):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
+    if c.status == "archived":
+        raise HTTPException(status_code=409, detail="Archived campaigns cannot be paused.")
         
     c.status = "paused"
     db.commit()

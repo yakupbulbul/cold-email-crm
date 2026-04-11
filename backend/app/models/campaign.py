@@ -56,7 +56,7 @@ class Campaign(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
-    status = Column(String, default="draft") # "draft", "active", "paused", "completed"
+    status = Column(String, default="draft") # "draft", "active", "paused", "completed", "archived"
     
     mailbox_id = Column(UUID(as_uuid=True), ForeignKey("mailboxes.id", ondelete="SET NULL"), nullable=True)
     daily_limit = Column(Integer, default=50)
