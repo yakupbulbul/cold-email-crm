@@ -1,5 +1,6 @@
 """test_campaigns.py — Campaign API + preflight tests."""
 from datetime import datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -901,12 +902,91 @@ def test_campaign_processing_marks_lead_failed_when_smtp_times_out(db):
 
     service = CampaignService(db)
 
-    def _raise_timeout(req):
-        raise SMTPServiceError("smtp_timeout", "SMTP server timed out before the email could be sent.", status_code=504)
-
-    service.smtp.send_email = _raise_timeout  # type: ignore[method-assign]
+    service.smtp.provider.send_email = lambda **kwargs: (False, "timed out")  # type: ignore[method-assign]
     result = service.process_campaign_by_id(str(campaign.id))
 
     assert result["processed"] == 1
     failed_lead = db.query(CampaignLead).filter(CampaignLead.id == lead.id).first()
     assert failed_lead.status == "failed"
+    failed_log = db.query(SendLog).filter(SendLog.campaign_id == campaign.id, SendLog.contact_id == contact.id).first()
+    assert failed_log is not None
+    assert failed_log.delivery_status == "failed"
+
+
+def test_campaign_processing_reschedules_failed_list_leads_on_next_cycle(db):
+    domain = Domain(name="retry-cycle.example.com")
+    db.add(domain)
+    db.commit()
+    db.refresh(domain)
+
+    mailbox = Mailbox(
+        domain_id=domain.id,
+        email="sender@retry-cycle.example.com",
+        display_name="Sender",
+        smtp_host="smtp.example.com",
+        smtp_port=587,
+        smtp_username="sender@retry-cycle.example.com",
+        smtp_password_encrypted="enc",
+        smtp_security_mode="starttls",
+        imap_host="imap.example.com",
+        imap_port=993,
+        imap_username="sender@retry-cycle.example.com",
+        imap_password_encrypted="enc",
+        status="active",
+    )
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+
+    campaign = Campaign(
+        name="Retry Cycle Campaign",
+        mailbox_id=mailbox.id,
+        template_subject="Hi {{first_name}}",
+        template_body="Hello {{first_name}}",
+        daily_limit=10,
+        status="active",
+        campaign_type="b2c",
+        compliance_mode="standard",
+    )
+    db.add(campaign)
+    db.commit()
+    db.refresh(campaign)
+
+    lead_list = LeadList(name="Retry Cycle List", description="Retry members", type="static")
+    db.add(lead_list)
+    db.commit()
+    db.refresh(lead_list)
+    db.add(CampaignList(campaign_id=campaign.id, list_id=lead_list.id))
+
+    contact = Contact(
+        email="retry@example.com",
+        first_name="Retry",
+        contact_type="b2c",
+        email_status="valid",
+        verification_score=100,
+        verification_integrity="high",
+        is_suppressed=False,
+    )
+    db.add(contact)
+    db.commit()
+    db.refresh(contact)
+    db.add(LeadListMember(list_id=lead_list.id, lead_id=contact.id))
+    db.commit()
+
+    failed_lead = CampaignLead(campaign_id=campaign.id, contact_id=contact.id, status="failed")
+    db.add(failed_lead)
+    db.commit()
+
+    service = CampaignService(db)
+    service.smtp = type(
+        "StubSMTP",
+        (),
+        {"send_email": lambda self, req: (True, f"<retry@example.com>|{uuid4()}")},
+    )()
+
+    processed = service.process_campaign_by_id(str(campaign.id))
+    assert processed["processed"] == 1
+
+    refreshed = db.query(CampaignLead).filter(CampaignLead.campaign_id == campaign.id, CampaignLead.contact_id == contact.id).first()
+    assert refreshed is not None
+    assert refreshed.status == "sent"

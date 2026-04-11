@@ -1,11 +1,13 @@
 import logging
 from datetime import datetime
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from app.models.campaign import Campaign, CampaignLead, SendLog
 from app.schemas.email import SendEmailRequest
 from app.services.audience_service import evaluate_contact_for_campaign
+from app.services.list_service import LeadListService
 from app.services.smtp_service import SMTPManagerService, SMTPServiceError
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,10 @@ class CampaignService:
         return {"campaign_id": str(campaign.id), "status": campaign.status, "processed": processed}
 
     def _process_campaign(self, campaign: Campaign):
+        # Re-sync attached list members on every active cycle so transient SMTP
+        # failures do not strand list-backed leads in a permanent failed state.
+        LeadListService(self.db).sync_campaign_leads(str(campaign.id))
+
         today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         sent_today = self.db.query(SendLog).filter(
@@ -72,7 +78,7 @@ class CampaignService:
                 message_id, log_id = response.split("|", 1)
                 lead.status = "sent" if success else "failed"
                 lead.sent_at = datetime.utcnow() if success else None
-                log = self.db.query(SendLog).filter(SendLog.id == log_id).first()
+                log = self.db.query(SendLog).filter(SendLog.id == UUID(log_id)).first()
                 if log:
                     log.campaign_id = campaign.id
                     log.contact_id = lead.contact_id
@@ -82,6 +88,13 @@ class CampaignService:
                 logger.warning("Campaign send failed for %s via %s: %s", lead.contact.email, campaign.id, exc.message)
                 lead.status = "failed"
                 lead.sent_at = None
+                if exc.log_id:
+                    log = self.db.query(SendLog).filter(SendLog.id == UUID(exc.log_id)).first()
+                    if log:
+                        log.campaign_id = campaign.id
+                        log.contact_id = lead.contact_id
+                        log.subject = subject
+                        self.db.add(log)
             processed_count += 1
             self.db.add(lead)
             self.db.commit()

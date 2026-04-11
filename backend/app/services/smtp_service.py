@@ -10,11 +10,12 @@ from app.integrations.smtp.provider import MailcowSMTPProvider, SMTPDiagnosticRe
 
 
 class SMTPServiceError(Exception):
-    def __init__(self, category: str, message: str, status_code: int = 502):
+    def __init__(self, category: str, message: str, status_code: int = 502, log_id: str | None = None):
         super().__init__(message)
         self.category = category
         self.message = message
         self.status_code = status_code
+        self.log_id = log_id
 
 class SMTPManagerService:
     def __init__(self, db: Session):
@@ -96,7 +97,7 @@ class SMTPManagerService:
             mailbox.smtp_last_check_message = message
             self.db.add(mailbox)
             self.db.commit()
-            raise SMTPServiceError(category, message, status_code=status_code)
+            raise SMTPServiceError(category, message, status_code=status_code, log_id=str(log.id))
 
         mailbox.smtp_last_checked_at = datetime.utcnow()
         mailbox.smtp_last_check_status = "healthy"
