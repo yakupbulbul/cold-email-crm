@@ -1,6 +1,6 @@
 from .base import Base
 from .core import Domain, Mailbox
-from .warmup import WarmupPair, WarmupEvent
+from .warmup import WarmupPair, WarmupEvent, WarmupSetting
 from .campaign import Contact, Campaign, CampaignLead, SendLog
 from .email import Thread, Message, AiSummary
 from .import_job import LeadImportJob, LeadImportRow
@@ -17,6 +17,7 @@ __all__ = [
     "Mailbox",
     "WarmupPair",
     "WarmupEvent",
+    "WarmupSetting",
     "Contact",
     "Campaign",
     "CampaignLead",

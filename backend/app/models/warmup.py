@@ -13,6 +13,11 @@ class WarmupPair(Base):
     recipient_mailbox_id = Column(UUID(as_uuid=True), ForeignKey("mailboxes.id", ondelete="CASCADE"), nullable=False)
     
     is_active = Column(Boolean, default=True)
+    state = Column(String, default="active", nullable=False)
+    last_sent_at = Column(DateTime, nullable=True)
+    next_scheduled_at = Column(DateTime, nullable=True)
+    last_result = Column(String, nullable=True)
+    last_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -26,6 +31,8 @@ class WarmupEvent(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mailbox_id = Column(UUID(as_uuid=True), ForeignKey("mailboxes.id", ondelete="CASCADE"), nullable=False)
+    pair_id = Column(UUID(as_uuid=True), ForeignKey("warmup_pairs.id", ondelete="SET NULL"), nullable=True)
+    recipient_mailbox_id = Column(UUID(as_uuid=True), ForeignKey("mailboxes.id", ondelete="SET NULL"), nullable=True)
     
     event_type = Column(String, nullable=False) # "send", "reply"
     target_email = Column(String, nullable=False)
@@ -34,9 +41,23 @@ class WarmupEvent(Base):
     body_preview = Column(Text, nullable=True)
     
     status = Column(String, default="pending") # "pending", "success", "failed"
+    error_category = Column(String, nullable=True)
+    result_detail = Column(Text, nullable=True)
+    scheduled_for = Column(DateTime, nullable=True)
     
     sent_at = Column(DateTime, nullable=True)
     replied_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     mailbox = relationship("Mailbox", foreign_keys=[mailbox_id])
+    recipient_mailbox = relationship("Mailbox", foreign_keys=[recipient_mailbox_id])
+    pair = relationship("WarmupPair", foreign_keys=[pair_id])
+
+
+class WarmupSetting(Base):
+    __tablename__ = "warmup_settings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    is_enabled = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

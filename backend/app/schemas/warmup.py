@@ -1,10 +1,13 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel
 
-class WarmupControlRequest(BaseModel):
-    mailbox_id: UUID4
 
-class WarmupStatusResponse(BaseModel):
-    mailbox_id: UUID4
-    is_active: bool
-    daily_limit: int
-    sent_today: int
+class WarmupMailboxToggleRequest(BaseModel):
+    warmup_enabled: bool
+
+
+class WarmupGlobalActionResponse(BaseModel):
+    status: str
+    detail: str
+    job_queued: bool | None = None
+    job_id: str | None = None
+

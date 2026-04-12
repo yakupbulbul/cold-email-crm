@@ -7,6 +7,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.integrations.mailcow.client import MailcowClient
 from app.models.core import Mailbox, Domain
+from app.schemas.warmup import WarmupMailboxToggleRequest
+from app.services.warmup_service import WarmupService
 
 router = APIRouter()
 
@@ -43,6 +45,10 @@ class MailboxResponse(BaseModel):
     imap_host: str
     imap_port: int
     warmup_enabled: bool
+    warmup_status: Optional[str] = None
+    warmup_last_checked_at: Optional[str] = None
+    warmup_last_result: Optional[str] = None
+    warmup_block_reason: Optional[str] = None
     daily_send_limit: int
     current_warmup_stage: int
     status: str
@@ -71,6 +77,10 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "imap_host": mb.imap_host,
         "imap_port": mb.imap_port,
         "warmup_enabled": mb.warmup_enabled,
+        "warmup_status": mb.warmup_status,
+        "warmup_last_checked_at": mb.warmup_last_checked_at.isoformat() if mb.warmup_last_checked_at else None,
+        "warmup_last_result": mb.warmup_last_result,
+        "warmup_block_reason": mb.warmup_block_reason,
         "daily_send_limit": mb.daily_send_limit,
         "current_warmup_stage": mb.current_warmup_stage,
         "status": mb.status,
@@ -251,3 +261,13 @@ def check_mailbox_smtp(mailbox_id: str, db: Session = Depends(get_db)):
 
     service = SMTPManagerService(db)
     return service.check_mailbox_smtp(mailbox_id)
+
+
+@router.patch("/{mailbox_id}/warmup")
+def update_mailbox_warmup(mailbox_id: str, req: WarmupMailboxToggleRequest, db: Session = Depends(get_db)):
+    service = WarmupService(db)
+    try:
+        mailbox = service.set_mailbox_participation(mailbox_id, req.warmup_enabled)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return mailbox_to_response(mailbox)

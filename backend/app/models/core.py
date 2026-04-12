@@ -56,6 +56,10 @@ class Mailbox(Base):
     warmup_enabled = Column(Boolean, default=False)
     daily_send_limit = Column(Integer, default=50) # Controls maximum capacity
     current_warmup_stage = Column(Integer, default=1)
+    warmup_status = Column(String, nullable=True)
+    warmup_last_checked_at = Column(DateTime, nullable=True)
+    warmup_last_result = Column(String, nullable=True)
+    warmup_block_reason = Column(String, nullable=True)
     
     status = Column(String, default="active")
     remote_mailcow_provisioned = Column(Boolean, default=False, nullable=False)

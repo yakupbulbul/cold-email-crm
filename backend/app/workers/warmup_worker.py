@@ -24,7 +24,11 @@ def run_warmup_cycle(self, force_send: bool = False):
 
         logger.info("Starting Warm-up Engine cycle")
         service = WarmupService(db)
-        service.process_all_active_pairs(force_send=force_send)
+        result = service.process_all_active_pairs(force_send=force_send)
+        job.payload_summary = {
+            **(job.payload_summary or {}),
+            **result,
+        }
         job.status = "completed"
         job.finished_at = datetime.utcnow()
         db.commit()
