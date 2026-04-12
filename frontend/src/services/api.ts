@@ -13,9 +13,10 @@ import {
     SendEmailPayload,
     SendEmailResult,
     SMTPDiagnosticResult,
+    WarmupLog,
+    WarmupPair,
+    WarmupStatus,
 } from "@/types/models";
-
-type WarmupStatus = { active_pairs: unknown[]; global_health?: number; total_sent?: number };
 type MailboxCreatePayload = {
     domain_id: string;
     email: string;
@@ -37,6 +38,10 @@ type MailboxUpdatePayload = {
     daily_send_limit: number;
     status: string;
     smtp_security_mode?: "starttls" | "ssl" | "plain";
+};
+
+type MailboxWarmupPayload = {
+    warmup_enabled: boolean;
 };
 
 type CampaignCreatePayload = {
@@ -131,8 +136,10 @@ export function useApiService() {
 
     // ── WARMUP ──
     const getWarmupStatus = useCallback(() => request<WarmupStatus>("/warmup/status"), [request]);
-    const startWarmup = useCallback((mailbox_id: string) => request("/warmup/start", { method: "POST", body: { mailbox_id } }), [request]);
-    const stopWarmup = useCallback((mailbox_id: string) => request("/warmup/stop", { method: "POST", body: { mailbox_id } }), [request]);
+    const getWarmupPairs = useCallback(() => request<WarmupPair[]>("/warmup/pairs"), [request]);
+    const getWarmupLogs = useCallback((limit: number = 50) => request<WarmupLog[]>(`/warmup/logs?limit=${limit}`), [request]);
+    const startWarmup = useCallback(() => requestOrThrow<{ status: string; detail: string; job_queued?: boolean; job_id?: string | null }>("/warmup/start", { method: "POST" }), [requestOrThrow]);
+    const pauseWarmup = useCallback(() => requestOrThrow<{ status: string; detail: string }>("/warmup/pause", { method: "POST" }), [requestOrThrow]);
 
     // ── DOMAINS ──
     const getDomains = useCallback(() => request<Domain[]>("/domains"), [request]);
@@ -147,6 +154,7 @@ export function useApiService() {
     const getMailboxes = useCallback(() => request<Mailbox[]>("/mailboxes"), [request]);
     const createMailbox = useCallback((data: MailboxCreatePayload) => requestOrThrow<Mailbox>("/mailboxes", { method: "POST", body: data }), [requestOrThrow]);
     const updateMailbox = useCallback((id: string, data: MailboxUpdatePayload) => request<Mailbox>(`/mailboxes/${id}`, { method: "PUT", body: data }), [request]);
+    const updateMailboxWarmup = useCallback((id: string, data: MailboxWarmupPayload) => requestOrThrow<Mailbox>(`/mailboxes/${id}/warmup`, { method: "PATCH", body: data }), [requestOrThrow]);
     const deleteMailbox = useCallback((id: string) => request<{ status: string; id: string }>(`/mailboxes/${id}`, { method: "DELETE" }), [request]);
     const checkMailboxSmtp = useCallback((id: string) => requestOrThrow<SMTPDiagnosticResult>(`/mailboxes/${id}/smtp-check`, { method: "POST" }), [requestOrThrow]);
     const sendEmail = useCallback((data: SendEmailPayload) => requestOrThrow<SendEmailResult>("/send-email", { method: "POST", body: data }), [requestOrThrow]);
@@ -213,8 +221,10 @@ export function useApiService() {
         addSuppression,
         deleteSuppression,
         getWarmupStatus,
+        getWarmupPairs,
+        getWarmupLogs,
         startWarmup,
-        stopWarmup,
+        pauseWarmup,
         getDomains,
         getDomainById,
         createDomain,
@@ -225,6 +235,7 @@ export function useApiService() {
         getMailboxes,
         createMailbox,
         updateMailbox,
+        updateMailboxWarmup,
         deleteMailbox,
         checkMailboxSmtp,
         sendEmail,

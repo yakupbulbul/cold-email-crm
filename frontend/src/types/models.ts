@@ -35,6 +35,10 @@ export interface Mailbox {
     daily_send_limit: number;
     current_warmup_stage: number;
     warmup_enabled: boolean;
+    warmup_status?: string | null;
+    warmup_last_checked_at?: string | null;
+    warmup_last_result?: string | null;
+    warmup_block_reason?: string | null;
     remote_mailcow_provisioned: boolean;
     provisioning_mode: "local_only" | "mailcow_synced";
     created_at: string;
@@ -272,6 +276,79 @@ export interface SettingsSummary {
     session_healthy: boolean;
     current_user: SettingsUserSummary;
     health: Record<string, SettingsHealthItem>;
+}
+
+export interface WarmupMailboxStatus {
+    id: string;
+    email: string;
+    display_name: string;
+    warmup_enabled: boolean;
+    warmup_status: string;
+    warmup_last_checked_at?: string | null;
+    warmup_last_result?: string | null;
+    warmup_block_reason?: string | null;
+    smtp_last_check_status?: string | null;
+    smtp_last_check_message?: string | null;
+    status: string;
+    current_warmup_stage: number;
+}
+
+export interface WarmupBlocker {
+    code: string;
+    message: string;
+}
+
+export interface WarmupPair {
+    id: string;
+    sender_mailbox_id: string;
+    recipient_mailbox_id: string;
+    sender_email: string;
+    recipient_email: string;
+    state: string;
+    last_send_at?: string | null;
+    next_scheduled_at?: string | null;
+    last_result?: string | null;
+    last_error?: string | null;
+    daily_sent_count: number;
+    daily_limit: number;
+}
+
+export interface WarmupLog {
+    id: string;
+    pair_id?: string | null;
+    sender_mailbox_id: string;
+    recipient_mailbox_id?: string | null;
+    sender_email?: string | null;
+    recipient_email?: string | null;
+    timestamp?: string | null;
+    event_type: string;
+    status: string;
+    error_category?: string | null;
+    result_detail?: string | null;
+    target_email: string;
+    subject?: string | null;
+    scheduled_for?: string | null;
+    sent_at?: string | null;
+}
+
+export interface WarmupStatus {
+    global_status: "enabled" | "paused";
+    worker_status: HealthComponent & { enabled?: boolean };
+    scheduler_status: {
+        status: string;
+        detail?: string | null;
+        last_seen_at?: string | null;
+    };
+    inboxes_warming_count: number;
+    eligible_mailboxes_count: number;
+    active_pairs_count: number;
+    successful_sends_today: number;
+    failed_sends_today: number;
+    health_percent?: number | null;
+    blockers: WarmupBlocker[];
+    last_run_at?: string | null;
+    next_run_at?: string | null;
+    mailboxes: WarmupMailboxStatus[];
 }
 
 export interface Alert {
