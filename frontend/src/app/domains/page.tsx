@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useApiService } from "@/services/api";
 import { Domain } from "@/types/models";
-import { ServerCrash, Globe, Plus, AlertCircle, RefreshCw, ShieldCheck, ShieldAlert, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { ServerCrash, Globe, Plus, RefreshCw, ShieldCheck, ShieldAlert, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
+import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
 const statusTone: Record<string, string> = {
     ready: "bg-green-50 text-green-700 border-green-200",
@@ -133,18 +134,15 @@ export default function DomainsPage() {
     };
 
     return (
-        <div className="p-8 animate-fade-in relative min-h-[50vh]">
-            <div className="flex flex-col gap-6 mb-6">
-                <div className="flex items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Domain Infrastructure</h1>
-                        <p className="text-sm text-slate-500 mt-2 max-w-2xl">
-                            Add domains to the local app database, then verify remote Mailcow visibility and DNS readiness. Safe mode never provisions or mutates Mailcow remotely.
-                        </p>
-                    </div>
-                </div>
+        <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
+            <PageHeader
+                eyebrow="Infrastructure"
+                title="Domain Infrastructure"
+                description="Add domains, verify readiness, and inspect DNS plus Mailcow state from one operational surface."
+            />
 
-                <form onSubmit={handleCreateDomain} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4 md:flex-row md:items-end">
+            <SurfaceCard className="p-5">
+                <form onSubmit={handleCreateDomain} className="flex flex-col gap-4 md:flex-row md:items-end">
                     <div className="flex-1">
                         <label htmlFor="domain-name" className="block text-sm font-semibold text-slate-700 mb-2">
                             Domain Name
@@ -156,59 +154,47 @@ export default function DomainsPage() {
                             value={domainName}
                             onChange={(event) => setDomainName(event.target.value)}
                             placeholder="example.com"
-                            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all"
+                            className="form-input"
                         />
                     </div>
                     <button
                         data-testid="create-domain-button"
                         type="submit"
                         disabled={isSubmitting}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="btn-primary"
                     >
                         <Plus size={18} />
                         {isSubmitting ? "Adding..." : "Add Domain"}
                     </button>
                 </form>
+            </SurfaceCard>
 
-                {submitError && (
-                    <div className="flex items-center gap-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        <AlertCircle size={18} />
-                        <span>{submitError}</span>
-                    </div>
-                )}
-
-                {submitSuccess && (
-                    <div className="rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-                        {submitSuccess}
-                    </div>
-                )}
-            </div>
+            {submitError ? <AlertBanner tone="danger" title="Domain action failed">{submitError}</AlertBanner> : null}
+            {submitSuccess ? <AlertBanner tone="success">{submitSuccess}</AlertBanner> : null}
             
             {error ? (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center">
+                <SurfaceCard className="flex flex-col items-center justify-center p-16 text-center">
                     <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
                         <ServerCrash className="text-red-500" size={28} />
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 mb-2">Failed to Load Domains</h3>
                     <p className="text-sm text-slate-500 max-w-sm mb-2">Something went wrong while fetching your domain infrastructure.</p>
                     <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded">{error}</p>
-                </div>
+                </SurfaceCard>
             ) : loading ? (
-                 <div className="flex justify-center items-center py-16 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                 <SurfaceCard className="flex justify-center items-center py-16">
                     <Spinner size="lg" />
-                 </div>
+                 </SurfaceCard>
             ) : domains.length === 0 ? (
-                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-                        <Globe className="text-slate-400" size={28} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-2">No Domains Added Yet</h3>
-                    <p className="text-sm text-slate-500 max-w-sm mb-6">Add a domain to see whether it exists in Mailcow and whether MX, SPF, DKIM, and DMARC are configured.</p>
-                 </div>
+                 <EmptyState
+                    icon={Globe}
+                    title="No domains added yet"
+                    description="Add a domain to inspect Mailcow visibility and MX, SPF, DKIM, and DMARC readiness."
+                 />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      {domains.map((d) => (
-                         <div key={d.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-slate-800">
+                         <SurfaceCard key={d.id} className="p-6 text-slate-800">
                              <div className="flex flex-col gap-4">
                                  <div className="flex items-start justify-between gap-4">
                                      <div>
@@ -362,7 +348,7 @@ export default function DomainsPage() {
                                      </div>
                                  )}
                              </div>
-                         </div>
+                         </SurfaceCard>
                      ))}
                 </div>
             )}

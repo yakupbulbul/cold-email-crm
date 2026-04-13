@@ -4,6 +4,7 @@ import { Plus, Mail, Edit2, ShieldCheck, Trash2, ServerCrash } from 'lucide-reac
 import { useApiService } from '@/services/api';
 import { Domain, Mailbox, SMTPDiagnosticResult, SettingsSummary } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
+import { AlertBanner, EmptyState, MetricCard, PageHeader, SurfaceCard } from '@/components/ui/primitives';
 
 export default function MailboxesPage() {
   const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, checkMailboxSmtp, loading, error } = useApiService();
@@ -168,14 +169,23 @@ export default function MailboxesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Infrastructure</h1>
+      <PageHeader
+        eyebrow="Infrastructure"
+        title="Mailbox management"
+        description="Configure sender identity, SMTP transport posture, and operational mailbox status from one place."
+      />
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <MetricCard title="Configured mailboxes" value={mailboxes.length} detail="Senders currently available in the app." icon={Mail} />
+        <MetricCard title="Domains" value={domains.length} detail="Verified or local domains ready for mailbox creation." icon={ShieldCheck} tone="info" />
+        <MetricCard title="Provisioning mode" value={settingsSummary?.mailcow_mutations_enabled ? "Synced" : "Local only"} detail={mailboxModeMessage} icon={Edit2} tone={settingsSummary?.mailcow_mutations_enabled ? "success" : "warning"} />
       </div>
 
-      <form onSubmit={handleCreateMailbox} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 grid gap-4 md:grid-cols-2">
+      <SurfaceCard className="p-5">
+      <form onSubmit={handleCreateMailbox} className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="mailbox-domain" className="block text-sm font-semibold text-slate-700 mb-2">Domain</label>
-            <select id="mailbox-domain" data-testid="mailbox-domain-select" value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+            <select id="mailbox-domain" data-testid="mailbox-domain-select" value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)} className="form-input">
               <option value="">Select a domain</option>
               {domains.map((domain) => (
                 <option key={domain.id} value={domain.id}>{domain.name}</option>
@@ -184,20 +194,20 @@ export default function MailboxesPage() {
           </div>
           <div>
             <label htmlFor="mailbox-local-part" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Local Part</label>
-            <input id="mailbox-local-part" data-testid="mailbox-local-part-input" value={localPart} onChange={(event) => setLocalPart(event.target.value)} placeholder="sales" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+            <input id="mailbox-local-part" data-testid="mailbox-local-part-input" value={localPart} onChange={(event) => setLocalPart(event.target.value)} placeholder="sales" className="form-input" />
           </div>
           <div>
             <label htmlFor="mailbox-display-name" className="block text-sm font-semibold text-slate-700 mb-2">Display Name</label>
-            <input id="mailbox-display-name" data-testid="mailbox-display-name-input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Sales Team" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+            <input id="mailbox-display-name" data-testid="mailbox-display-name-input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Sales Team" className="form-input" />
             <p className="mt-2 text-xs text-slate-500">This becomes the visible sender name in email clients, for example: Sales Team &lt;sales@example.com&gt;.</p>
           </div>
           <div>
             <label htmlFor="mailbox-password" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Password</label>
-            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Local mailbox password" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Local mailbox password" className="form-input" />
           </div>
           <div>
             <label htmlFor="mailbox-smtp-mode" className="block text-sm font-semibold text-slate-700 mb-2">SMTP Security Mode</label>
-            <select id="mailbox-smtp-mode" value={smtpSecurityMode} onChange={(event) => setSmtpSecurityMode(event.target.value as 'starttls' | 'ssl' | 'plain')} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+            <select id="mailbox-smtp-mode" value={smtpSecurityMode} onChange={(event) => setSmtpSecurityMode(event.target.value as 'starttls' | 'ssl' | 'plain')} className="form-input">
               <option value="starttls">STARTTLS</option>
               <option value="ssl">SSL/TLS</option>
               <option value="plain">Plain</option>
@@ -205,33 +215,30 @@ export default function MailboxesPage() {
           </div>
           <div className="md:col-span-2 flex items-center justify-between gap-4">
             {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div data-testid="mailbox-mode-message" className="text-sm text-slate-500">{mailboxModeMessage}</div>}
-            <button data-testid="create-mailbox-button" type="submit" disabled={isSubmitting || domains.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition-colors shadow-lg shadow-slate-900/20 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">
+            <button data-testid="create-mailbox-button" type="submit" disabled={isSubmitting || domains.length === 0} className="btn-primary">
               <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add Mailbox'}
             </button>
           </div>
       </form>
+      </SurfaceCard>
 
       {error ? (
-         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center mt-6">
+         <SurfaceCard className="mt-6 flex flex-col items-center justify-center p-16 text-center">
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
                 <ServerCrash className="text-red-500" size={28} />
             </div>
             <h3 className="text-lg font-bold text-slate-800 mb-2">Failed to Load Mailboxes</h3>
             <p className="text-sm text-slate-500 max-w-sm mb-2">Something went wrong while fetching your mailbox infrastructure.</p>
             <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded">{error}</p>
-        </div>
+        </SurfaceCard>
       ) : loading ? (
-         <div className="flex justify-center items-center py-16 bg-white rounded-2xl border border-slate-200 shadow-sm mt-6">
+         <SurfaceCard className="mt-6 flex justify-center items-center py-16">
             <Spinner size="lg" />
-         </div>
+         </SurfaceCard>
       ) : mailboxes.length > 0 ? (
         <div className="space-y-4">
-          {actionError && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {actionError}
-            </div>
-          )}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {actionError ? <AlertBanner tone="danger" title="Mailbox action failed">{actionError}</AlertBanner> : null}
+        <SurfaceCard className="overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
@@ -369,16 +376,14 @@ export default function MailboxesPage() {
               )})}
             </tbody>
           </table>
-        </div>
+        </SurfaceCard>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col items-center justify-center p-16">
-           <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-slate-100">
-             <Mail className="text-slate-300" size={32} />
-           </div>
-           <h3 className="text-xl font-bold text-slate-800 mb-2">No Mailboxes Found</h3>
-           <p className="text-sm text-slate-500 mb-6 max-w-sm text-center">Use the form above to add the first local mailbox for a verified or local-only domain.</p>
-        </div>
+        <EmptyState
+          icon={Mail}
+          title="No mailboxes found"
+          description="Use the form above to add the first local mailbox for a verified or local-only domain."
+        />
       )}
     </div>
   );

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, ListPlus, LoaderCircle, Pencil, Trash2, Users, X } from "lucide-react";
+import { ListPlus, LoaderCircle, Pencil, Trash2, Users, X } from "lucide-react";
 
 import Spinner from "@/components/ui/Spinner";
 import Table, { TableCell, TableRow } from "@/components/ui/Table";
+import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from "@/components/ui/primitives";
 import { useApiService } from "@/services/api";
 import { Contact, LeadList, LeadListLeadResponse } from "@/types/models";
 
@@ -245,43 +246,37 @@ export default function ListsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-800">Lead Lists</h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">Create reusable static lead groups and attach them to multiple campaigns.</p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Audience"
+        title="Reusable lead lists"
+        description="Create, inspect, and reuse persistent static lead groups across campaigns without reselecting leads manually."
+      />
 
-      {banner && (
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-medium text-blue-700">
-          {banner}
-        </div>
-      )}
+      {banner ? <AlertBanner tone="info">{banner}</AlertBanner> : null}
 
-      <form onSubmit={handleCreate} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2">
+      <SurfaceCard className="p-5">
+      <form onSubmit={handleCreate} className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-700">List Name</label>
-          <input value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3" placeholder="Verified High Score" />
+          <input value={name} onChange={(event) => setName(event.target.value)} className="form-input" placeholder="Verified High Score" />
         </div>
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-700">Description</label>
-          <input value={description} onChange={(event) => setDescription(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3" placeholder="Reusable list for strong verified leads" />
+          <input value={description} onChange={(event) => setDescription(event.target.value)} className="form-input" placeholder="Reusable list for strong verified leads" />
         </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
           {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">Static lists persist and can be reused across campaigns.</div>}
-          <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white">
+          <button type="submit" className="btn-primary">
             <ListPlus size={18} /> Create List
           </button>
         </div>
       </form>
+      </SurfaceCard>
 
       {error && lists.length === 0 ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 py-16 text-center text-red-700">
-          <AlertCircle className="mx-auto mb-4" size={32} />
-          Failed to load lists
-        </div>
+        <AlertBanner tone="danger" title="Failed to load lists">Check the backend response and try again.</AlertBanner>
       ) : loading && lists.length === 0 ? (
-        <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white"><Spinner size="lg" /></div>
+        <SurfaceCard className="flex h-64 items-center justify-center"><Spinner size="lg" /></SurfaceCard>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
           <div className="space-y-4">
@@ -338,11 +333,7 @@ export default function ListsPage() {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             {!selectedListLeads ? (
-              <div className="flex min-h-[320px] flex-col items-center justify-center text-center text-slate-500">
-                <Users size={32} className="mb-3" />
-                <div className="text-lg font-bold text-slate-700">Select a list</div>
-                <div className="text-sm">Open a list to inspect members and manage membership.</div>
-              </div>
+              <EmptyState icon={Users} title="Select a list" description="Open a list to inspect members, manage membership, and review quality counts." />
             ) : (
               <div className="space-y-4">
                 <div className="flex items-start justify-between">

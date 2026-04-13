@@ -29,7 +29,7 @@ export default function Dashboard() {
     <div className="space-y-8 animate-fade-in">
       <PageHeader
         eyebrow="Overview"
-        title="Operational overview"
+        title="Dashboard Overview"
         description="See infrastructure readiness, audience quality, and the next action your operators should take."
         actions={(
           <div className="flex flex-wrap items-center gap-3">
@@ -107,7 +107,7 @@ export default function Dashboard() {
                 <ActionRow
                   title="Check mailbox SMTP health"
                   detail="Confirm senders are active and transport checks pass before warm-up or campaigns run."
-                  href="/mailboxes"
+                  href="/mailboxes?focus=smtp"
                 />
                 <ActionRow
                   title="Inspect warm-up readiness"

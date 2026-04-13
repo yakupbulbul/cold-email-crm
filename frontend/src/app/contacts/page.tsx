@@ -19,6 +19,7 @@ import {
 
 import Table, { TableCell, TableRow } from "@/components/ui/Table";
 import Spinner from "@/components/ui/Spinner";
+import { PageHeader, SurfaceCard } from "@/components/ui/primitives";
 import { useApiService } from "@/services/api";
 import { Contact, LeadList, LeadVerificationResult } from "@/types/models";
 
@@ -444,22 +445,21 @@ export default function ContactsPage() {
 
   return (
     <div className="relative min-h-screen space-y-6 pb-12 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-800">Lead Directory</h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">
-            Verify individual leads or run bulk checks. Unverified means the email has not been checked yet.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Audience"
+        title="Lead Directory"
+        description="Search, verify, segment, and bulk-update audience records while keeping verification and compliance state visible. Unverified means the email has not been checked yet."
+        actions={(
         <div className="flex items-center gap-3">
-          <button onClick={handleExportFiltered} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 font-bold text-slate-700 shadow-sm transition-all active:scale-95 hover:bg-slate-50">
+          <button onClick={handleExportFiltered} className="btn-secondary">
             <Download size={18} /> Export CSV
           </button>
-          <Link href="/contacts/import" className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 font-bold text-white shadow-lg shadow-blue-600/30 transition-all active:scale-95 hover:bg-blue-700">
+          <Link href="/contacts/import" className="btn-primary">
             <Upload size={18} /> Bulk Import Leads
           </Link>
         </div>
-      </div>
+        )}
+      />
 
       {banner && (
         <div className="flex items-start justify-between rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-medium text-blue-700">
@@ -468,13 +468,13 @@ export default function ContactsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <SurfaceCard className="flex flex-wrap items-center justify-between gap-4 p-4">
         <input
           type="text"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search by email, name, or company..."
-          className="w-full rounded-xl bg-slate-50 px-5 py-3 font-medium text-slate-700 outline-none ring-0 focus:ring-2 focus:ring-blue-500 md:w-[420px]"
+          className="form-input md:w-[420px]"
         />
         <div className="flex flex-wrap items-center gap-3">
           <select
@@ -588,7 +588,7 @@ export default function ContactsPage() {
             </button>
           )}
         </div>
-      </div>
+      </SurfaceCard>
 
       {bulkState && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, Archive, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Trash2, Users, X } from 'lucide-react';
+import { Archive, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Trash2, Users, X } from 'lucide-react';
 
 import Spinner from '@/components/ui/Spinner';
+import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from '@/components/ui/primitives';
 import { useApiService } from '@/services/api';
 import { Campaign, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
 
@@ -461,9 +462,11 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Campaigns</h1>
-      </div>
+      <PageHeader
+        eyebrow="Sending"
+        title="Campaign operations"
+        description="Create, inspect, and control reusable campaigns with honest execution timing, preflight state, and list-based audience reuse."
+      />
 
       {banner && (
         <div className={`rounded-2xl border px-5 py-4 text-sm font-medium ${
@@ -475,14 +478,15 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 grid gap-4 md:grid-cols-2">
+      <SurfaceCard className="p-5">
+      <form onSubmit={handleCreate} className="grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="campaign-name" className="block text-sm font-semibold text-slate-700 mb-2">Campaign Name</label>
-          <input id="campaign-name" data-testid="campaign-name-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="April outreach" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+          <input id="campaign-name" data-testid="campaign-name-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="April outreach" className="form-input" />
         </div>
         <div>
           <label htmlFor="campaign-mailbox" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox</label>
-          <select id="campaign-mailbox" data-testid="campaign-mailbox-select" value={mailboxId} onChange={(event) => setMailboxId(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+          <select id="campaign-mailbox" data-testid="campaign-mailbox-select" value={mailboxId} onChange={(event) => setMailboxId(event.target.value)} className="form-input">
             <option value="">Select a mailbox</option>
             {mailboxes.map((mailbox) => (
               <option key={mailbox.id} value={mailbox.id}>{mailbox.email}</option>
@@ -491,18 +495,18 @@ export default function CampaignsPage() {
         </div>
         <div>
           <label htmlFor="campaign-subject" className="block text-sm font-semibold text-slate-700 mb-2">Template Subject</label>
-          <input id="campaign-subject" data-testid="campaign-subject-input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Quick introduction" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+          <input id="campaign-subject" data-testid="campaign-subject-input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Quick introduction" className="form-input" />
         </div>
         <div>
           <label htmlFor="campaign-type" className="block text-sm font-semibold text-slate-700 mb-2">Campaign Type</label>
-          <select id="campaign-type" value={campaignType} onChange={(event) => setCampaignType(event.target.value as 'b2b' | 'b2c')} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+          <select id="campaign-type" value={campaignType} onChange={(event) => setCampaignType(event.target.value as 'b2b' | 'b2c')} className="form-input">
             <option value="b2b">B2B</option>
             <option value="b2c">B2C</option>
           </select>
         </div>
         <div>
           <label htmlFor="campaign-goal" className="block text-sm font-semibold text-slate-700 mb-2">Goal Type</label>
-          <select id="campaign-goal" value={goalType} onChange={(event) => setGoalType(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+          <select id="campaign-goal" value={goalType} onChange={(event) => setGoalType(event.target.value)} className="form-input">
             <option value="outreach">Outreach</option>
             <option value="promotion">Promotion</option>
             <option value="newsletter">Newsletter</option>
@@ -511,18 +515,18 @@ export default function CampaignsPage() {
         </div>
         <div>
           <label htmlFor="campaign-compliance" className="block text-sm font-semibold text-slate-700 mb-2">Compliance Mode</label>
-          <select id="campaign-compliance" value={complianceMode} onChange={(event) => setComplianceMode(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all">
+          <select id="campaign-compliance" value={complianceMode} onChange={(event) => setComplianceMode(event.target.value)} className="form-input">
             <option value="standard">Standard</option>
             <option value="strict_b2c">Strict B2C</option>
           </select>
         </div>
         <div>
           <label htmlFor="campaign-daily-limit" className="block text-sm font-semibold text-slate-700 mb-2">Daily Limit</label>
-          <input id="campaign-daily-limit" data-testid="campaign-daily-limit-input" type="number" min="1" value={dailyLimit} onChange={(event) => setDailyLimit(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all" />
+          <input id="campaign-daily-limit" data-testid="campaign-daily-limit-input" type="number" min="1" value={dailyLimit} onChange={(event) => setDailyLimit(event.target.value)} className="form-input" />
         </div>
         <div className="md:col-span-2">
           <label htmlFor="campaign-body" className="block text-sm font-semibold text-slate-700 mb-2">Template Body</label>
-          <textarea id="campaign-body" data-testid="campaign-body-input" value={body} onChange={(event) => setBody(event.target.value)} rows={5} placeholder="Hi {{first_name}}, ..." className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all resize-y" />
+          <textarea id="campaign-body" data-testid="campaign-body-input" value={body} onChange={(event) => setBody(event.target.value)} rows={5} placeholder="Hi {{first_name}}, ..." className="form-input resize-y" />
         </div>
         <div className="md:col-span-2">
           <div className="mb-2 text-sm font-semibold text-slate-700">Reusable lead lists</div>
@@ -555,30 +559,21 @@ export default function CampaignsPage() {
             <div>{campaignType === 'b2c' ? 'B2C campaigns surface stricter consent and unsubscribe blockers in preflight.' : 'B2B campaigns allow risky leads with warnings when compliance stays standard.'}</div>
             <div className="mt-1">Sender preview: <span className="font-mono text-slate-700">{buildSenderPreview(mailboxes.find((mailbox) => mailbox.id === mailboxId))}</span></div>
           </div>}
-          <button data-testid="create-campaign-button" type="submit" disabled={isSubmitting || mailboxes.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+          <button data-testid="create-campaign-button" type="submit" disabled={isSubmitting || mailboxes.length === 0} className="btn-primary">
             <Plus size={18} strokeWidth={3} /> {isSubmitting ? 'Creating...' : 'Create Campaign'}
           </button>
         </div>
       </form>
+      </SurfaceCard>
 
       {isPageLoading ? (
-        <div className="flex justify-center items-center py-16 bg-white rounded-2xl border border-slate-200">
+        <SurfaceCard className="flex justify-center items-center py-16">
            <Spinner size="lg" />
-        </div>
+        </SurfaceCard>
       ) : pageError ? (
-        <div className="p-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex flex-col items-center justify-center py-16 text-center">
-            <AlertCircle className="mb-4 text-red-500" size={32} />
-            <span className="font-bold mb-2">Error Fetching Campaigns</span>
-            <span className="text-sm">{pageError}</span>
-        </div>
+        <AlertBanner tone="danger" title="Error fetching campaigns">{pageError}</AlertBanner>
       ) : campaigns.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center">
-          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-             <Calendar className="text-slate-400" size={28} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-800 mb-2">No Campaigns Found</h3>
-          <p className="text-sm text-slate-500 max-w-sm mb-6">You haven&apos;t created any campaigns yet. Use the form above to create the first draft.</p>
-        </div>
+        <EmptyState icon={Calendar} title="No campaigns found" description="Create the first draft above to start list-based sending from the app." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {campaigns.map((campaign) => {
