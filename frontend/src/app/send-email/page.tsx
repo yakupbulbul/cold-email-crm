@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, LoaderCircle, MailCheck, Send } from "lucide-react";
+import { CheckCircle2, LoaderCircle, MailCheck, Send } from "lucide-react";
 
 import Spinner from "@/components/ui/Spinner";
 import { useApiService } from "@/services/api";
 import { Mailbox, SMTPDiagnosticResult, SendEmailLog, SendEmailResult } from "@/types/models";
+import { AlertBanner, EmptyState, MetricCard, PageHeader, SectionTitle, SurfaceCard } from "@/components/ui/primitives";
 
 function parseRecipients(raw: string): string[] {
   return raw
@@ -109,28 +110,33 @@ export default function SendEmailPage() {
 
   if (loadingPage) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+      <SurfaceCard className="flex min-h-[50vh] items-center justify-center">
         <Spinner size="lg" />
-      </div>
+      </SurfaceCard>
     );
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-800">Send Email</h1>
+      <PageHeader
+        eyebrow="Testing"
+        title="Send Email"
+        description="Send one real email immediately through the backend SMTP integration and inspect the result without campaigns or worker timing."
+      />
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <MetricCard title="Sender mailboxes" value={mailboxes.length} detail="Mailboxes available for direct testing." icon={MailCheck} />
+        <MetricCard title="Recent attempts" value={logs.length} detail="Persisted send attempts shown below." icon={Send} tone="info" />
+        <MetricCard title="Selected sender" value={selectedMailbox ? selectedMailbox.email : "None"} detail={selectedMailbox ? buildSenderPreview(selectedMailbox) : "Choose a mailbox to preview sender identity."} icon={CheckCircle2} tone="success" />
       </div>
 
-      {pageError ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
-          {pageError}
-        </div>
-      ) : null}
+      {pageError ? <AlertBanner tone="danger" title="Failed to load direct-send data">{pageError}</AlertBanner> : null}
 
-      <form onSubmit={handleSend} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2">
+      <SurfaceCard className="p-5">
+      <form onSubmit={handleSend} className="grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="send-email-mailbox" className="mb-2 block text-sm font-semibold text-slate-700">Sender Mailbox</label>
-          <select id="send-email-mailbox" value={mailboxId} onChange={(event) => setMailboxId(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+          <select id="send-email-mailbox" value={mailboxId} onChange={(event) => setMailboxId(event.target.value)} className="form-input">
             <option value="">Select a mailbox</option>
             {mailboxes.map((mailbox) => (
               <option key={mailbox.id} value={mailbox.id}>
@@ -141,45 +147,46 @@ export default function SendEmailPage() {
         </div>
         <div>
           <label htmlFor="send-email-to" className="mb-2 block text-sm font-semibold text-slate-700">To</label>
-          <input id="send-email-to" value={to} onChange={(event) => setTo(event.target.value)} placeholder="recipient@example.com" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+          <input id="send-email-to" value={to} onChange={(event) => setTo(event.target.value)} placeholder="recipient@example.com" className="form-input" />
         </div>
         <div>
           <label htmlFor="send-email-cc" className="mb-2 block text-sm font-semibold text-slate-700">CC</label>
-          <input id="send-email-cc" value={cc} onChange={(event) => setCc(event.target.value)} placeholder="Optional, comma separated" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+          <input id="send-email-cc" value={cc} onChange={(event) => setCc(event.target.value)} placeholder="Optional, comma separated" className="form-input" />
         </div>
         <div>
           <label htmlFor="send-email-bcc" className="mb-2 block text-sm font-semibold text-slate-700">BCC</label>
-          <input id="send-email-bcc" value={bcc} onChange={(event) => setBcc(event.target.value)} placeholder="Optional, comma separated" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+          <input id="send-email-bcc" value={bcc} onChange={(event) => setBcc(event.target.value)} placeholder="Optional, comma separated" className="form-input" />
         </div>
         <div className="md:col-span-2">
           <label htmlFor="send-email-subject" className="mb-2 block text-sm font-semibold text-slate-700">Subject</label>
-          <input id="send-email-subject" value={subject} onChange={(event) => setSubject(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+          <input id="send-email-subject" value={subject} onChange={(event) => setSubject(event.target.value)} className="form-input" />
         </div>
         <div className="md:col-span-2">
           <label htmlFor="send-email-text-body" className="mb-2 block text-sm font-semibold text-slate-700">Text Body</label>
-          <textarea id="send-email-text-body" value={textBody} onChange={(event) => setTextBody(event.target.value)} rows={6} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+          <textarea id="send-email-text-body" value={textBody} onChange={(event) => setTextBody(event.target.value)} rows={6} className="form-input" />
         </div>
         <div className="md:col-span-2">
           <label htmlFor="send-email-html-body" className="mb-2 block text-sm font-semibold text-slate-700">HTML Body</label>
-          <textarea id="send-email-html-body" value={htmlBody} onChange={(event) => setHtmlBody(event.target.value)} rows={4} placeholder="<p>Hello from the app</p>" className="w-full rounded-xl border border-slate-200 px-4 py-3 font-mono text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+          <textarea id="send-email-html-body" value={htmlBody} onChange={(event) => setHtmlBody(event.target.value)} rows={4} placeholder="<p>Hello from the app</p>" className="form-input font-mono text-sm" />
         </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
           <div className="text-sm text-slate-500">Direct send uses the backend SMTP integration only. It bypasses campaign lists, workers, and preflight.</div>
           <div className="flex items-center gap-3">
-            <button data-testid="check-smtp-button" type="button" onClick={() => void handleCheckSelectedMailbox()} disabled={!mailboxId || submitting} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+            <button data-testid="check-smtp-button" type="button" onClick={() => void handleCheckSelectedMailbox()} disabled={!mailboxId || submitting} className="btn-secondary">
               <MailCheck size={16} />
               Check SMTP
             </button>
-            <button type="submit" disabled={submitting || mailboxes.length === 0} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="submit" disabled={submitting || mailboxes.length === 0} className="btn-primary">
               {submitting ? <LoaderCircle size={18} className="animate-spin" /> : <Send size={18} />}
               {submitting ? "Sending..." : "Send Email"}
             </button>
           </div>
         </div>
       </form>
+      </SurfaceCard>
 
       {selectedMailbox ? (
-        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <SurfaceCard className="px-5 py-4">
           <div className="text-sm font-semibold text-slate-700">Selected mailbox transport</div>
           <div className="mt-2 text-sm font-medium text-slate-700">
             From preview: <span className="font-mono">{buildSenderPreview(selectedMailbox)}</span>
@@ -190,38 +197,17 @@ export default function SendEmailPage() {
           <div className={`mt-2 text-sm font-medium ${(smtpDiagnostic?.status || selectedMailbox.smtp_last_check_status) === 'healthy' ? 'text-emerald-700' : 'text-slate-600'}`}>
             {smtpDiagnostic?.message || selectedMailbox.smtp_last_check_message || 'SMTP has not been checked yet for this mailbox.'}
           </div>
-        </div>
+        </SurfaceCard>
       ) : null}
 
-      {result ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
-          <div className="flex items-center gap-2 font-semibold">
-            <CheckCircle2 size={18} />
-            Email sent through {result.provider}.
-          </div>
-          <div className="mt-2">Message ID: <span className="font-mono">{result.message_id}</span></div>
-        </div>
-      ) : null}
+      {result ? <AlertBanner tone="success" title={`Email sent through ${result.provider}.`}>Message ID: <span className="font-mono">{result.message_id}</span></AlertBanner> : null}
 
-      {submitError ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-          <div className="flex items-center gap-2 font-semibold">
-            <AlertCircle size={18} />
-            Send failed
-          </div>
-          <div className="mt-2">{submitError}</div>
-        </div>
-      ) : null}
+      {submitError ? <AlertBanner tone="danger" title="Send failed">{submitError}</AlertBanner> : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <MailCheck size={18} className="text-slate-500" />
-          <h2 className="text-lg font-bold text-slate-800">Recent Send Attempts</h2>
-        </div>
+      <SurfaceCard className="p-5">
+        <SectionTitle title="Recent send attempts" description="Operational history for direct SMTP tests." />
         {logs.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-            No send attempts logged yet.
-          </div>
+          <EmptyState icon={MailCheck} title="No send attempts logged yet" description="Direct test sends will appear here with real message IDs and results." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -254,7 +240,7 @@ export default function SendEmailPage() {
             </table>
           </div>
         )}
-      </section>
+      </SurfaceCard>
     </div>
   );
 }

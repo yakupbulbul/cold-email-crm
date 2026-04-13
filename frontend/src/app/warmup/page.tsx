@@ -6,6 +6,7 @@ import { Activity, AlertCircle, Clock3, Mailbox, Pause, Play, RefreshCcw, Shield
 import Spinner from "@/components/ui/Spinner";
 import { useApiService } from "@/services/api";
 import { WarmupLog, WarmupPair, WarmupStatus } from "@/types/models";
+import { AlertBanner, MetricCard, PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
 function formatDateTime(value?: string | null): string {
   if (!value) return "Not available";
@@ -107,14 +108,12 @@ export default function WarmupPage() {
 
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Warm-up Engine</h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">
-            Warm-up is worker-backed, separate from campaign sending, and depends on healthy participating mailboxes.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
+      <PageHeader
+        eyebrow="Operations"
+        title="Warm-up Engine"
+        description="Operate warm-up with real worker, scheduler, mailbox, SMTP, and log truth instead of placeholder stats."
+        actions={(
+          <div className="flex flex-wrap gap-3">
           <button
             type="button"
             onClick={() => void handlePause()}
@@ -143,59 +142,28 @@ export default function WarmupPage() {
             Refresh
           </button>
         </div>
-      </div>
+        )}
+      />
 
-      {banner ? (
-        <div className={`rounded-2xl border px-5 py-4 text-sm font-medium ${
-          banner.tone === "success"
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-            : "border-red-200 bg-red-50 text-red-700"
-        }`}>
-          {banner.message}
-        </div>
-      ) : null}
+      {banner ? <AlertBanner tone={banner.tone === "success" ? "success" : "danger"}>{banner.message}</AlertBanner> : null}
 
       {pageError ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700 shadow-sm">
+        <SurfaceCard className="flex h-64 flex-col items-center justify-center p-6 text-center text-red-700">
           <AlertCircle className="mb-4 text-red-500" size={32} />
           <span className="mb-2 font-bold">Failed to load Warm-up data</span>
           <span className="text-sm">{pageError}</span>
-        </div>
+        </SurfaceCard>
       ) : pageLoading ? (
-        <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <SurfaceCard className="flex h-64 items-center justify-center">
           <Spinner size="lg" />
-        </div>
+        </SurfaceCard>
       ) : status ? (
         <>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-            <SummaryCard
-              title="Global Health"
-              value={status.health_percent == null ? "N/A" : `${status.health_percent}%`}
-              detail={status.global_status === "enabled" ? "Warm-up is enabled globally." : "Warm-up is paused globally."}
-              icon={<ShieldAlert size={26} />}
-              tone="emerald"
-            />
-            <SummaryCard
-              title="Total Sent Today"
-              value={String(status.successful_sends_today)}
-              detail={`${status.failed_sends_today} failed`}
-              icon={<Activity size={26} />}
-              tone="blue"
-            />
-            <SummaryCard
-              title="Inboxes Warming"
-              value={String(status.inboxes_warming_count)}
-              detail={`${status.eligible_mailboxes_count} eligible now`}
-              icon={<Mailbox size={26} />}
-              tone="violet"
-            />
-            <SummaryCard
-              title="Active Pairs"
-              value={String(status.active_pairs_count)}
-              detail={status.next_run_at ? `Next run ${formatDateTime(status.next_run_at)}` : "Not schedulable right now"}
-              icon={<Zap size={26} />}
-              tone="amber"
-            />
+            <MetricCard title="Global health" value={status.health_percent == null ? "N/A" : `${status.health_percent}%`} detail={status.global_status === "enabled" ? "Warm-up is enabled globally." : "Warm-up is paused globally."} icon={ShieldAlert} tone="success" />
+            <MetricCard title="Sent today" value={status.successful_sends_today} detail={`${status.failed_sends_today} failed`} icon={Activity} tone="info" />
+            <MetricCard title="Inboxes warming" value={status.inboxes_warming_count} detail={`${status.eligible_mailboxes_count} eligible now`} icon={Mailbox} />
+            <MetricCard title="Active pairs" value={status.active_pairs_count} detail={status.next_run_at ? `Next run ${formatDateTime(status.next_run_at)}` : "Not schedulable right now"} icon={Zap} tone="warning" />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
@@ -357,40 +325,6 @@ export default function WarmupPage() {
           </section>
         </>
       ) : null}
-    </div>
-  );
-}
-
-function SummaryCard({
-  title,
-  value,
-  detail,
-  icon,
-  tone,
-}: {
-  title: string;
-  value: string;
-  detail: string;
-  icon: React.ReactNode;
-  tone: "emerald" | "blue" | "violet" | "amber";
-}) {
-  const tones = {
-    emerald: "bg-emerald-100 text-emerald-700",
-    blue: "bg-blue-100 text-blue-700",
-    violet: "bg-violet-100 text-violet-700",
-    amber: "bg-amber-100 text-amber-700",
-  };
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm font-semibold uppercase tracking-wider text-slate-500">{title}</div>
-          <div className="mt-1 text-4xl font-extrabold text-slate-800">{value}</div>
-          <div className="mt-2 text-sm text-slate-500">{detail}</div>
-        </div>
-        <div className={`rounded-2xl p-4 shadow-sm ${tones[tone]}`}>{icon}</div>
-      </div>
     </div>
   );
 }

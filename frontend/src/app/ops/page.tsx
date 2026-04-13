@@ -3,8 +3,9 @@
 import { useApiService } from "@/services/api";
 import { ReactNode, useEffect, useState } from "react";
 import { SystemHealth, Alert, DeliverabilitySummary, HealthComponent } from "@/types/models";
-import { Activity, Database, Server, ServerCrash, CheckCircle2, AlertTriangle, XCircle, MailWarning, Network } from "lucide-react";
+import { Database, Server, ServerCrash, CheckCircle2, AlertTriangle, XCircle, MailWarning, Network } from "lucide-react";
 import Link from "next/link";
+import { PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
 function getStatusIcon(status: string) {
     if (status === "healthy") return <CheckCircle2 className="text-emerald-500" size={24} />;
@@ -74,15 +75,11 @@ export default function OpsDashboard() {
 
     return (
         <div className="space-y-6 animate-fade-in relative min-h-screen pb-12">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-                        <Activity className="text-blue-500" size={32} /> Ops Command Center
-                    </h1>
-                    <p className="text-slate-500 mt-2 text-sm font-medium">
-                        Real-time Telemetry, Observability, and Delivery Infrastructure monitoring arrays.
-                    </p>
-                </div>
+            <PageHeader
+                eyebrow="Operations"
+                title="Ops command center"
+                description="Inspect backend, worker, alert, and deliverability posture with backend-driven readiness and blocker visibility."
+                actions={(
                 <div className="flex items-center gap-3">
                     <Link href="/ops/jobs" className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all shadow-sm active:scale-95">
                         Worker Queues
@@ -91,7 +88,8 @@ export default function OpsDashboard() {
                         System Alerts
                     </Link>
                 </div>
-            </div>
+                )}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8 items-stretch">
                 <StatusCard title="Core Database" icon={<Database/>} data={health?.components?.postgres} />
@@ -102,7 +100,7 @@ export default function OpsDashboard() {
 
             {/* Live Action Feed Panel */}
             <div className="grid grid-cols-3 gap-6 mt-8">
-                <div className="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-y-auto h-96">
+                <SurfaceCard className="col-span-2 p-6 overflow-y-auto h-96">
                     <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 sticky top-0 bg-white z-10 pb-2 border-b border-slate-100">
                         <MailWarning size={20} className="text-amber-500" /> Recent System Alerts & Blockers
                     </h3>
@@ -120,9 +118,9 @@ export default function OpsDashboard() {
                             ))
                         )}
                     </div>
-                </div>
+                </SurfaceCard>
                 
-                <div className="col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-hidden">
+                <SurfaceCard className="col-span-1 p-6 overflow-hidden">
                     <h3 className="font-bold text-slate-800 mb-6">Live Pulse</h3>
                     <div className="flex flex-col gap-4">
                         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
@@ -140,7 +138,7 @@ export default function OpsDashboard() {
                             </div>
                         ))}
                     </div>
-                </div>
+                </SurfaceCard>
             </div>
 
         </div>

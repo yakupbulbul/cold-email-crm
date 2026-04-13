@@ -17,6 +17,7 @@ import {
     XCircle,
 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
+import { EmptyState, PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
 const toneMap: Record<string, string> = {
     healthy: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -84,7 +85,7 @@ function formatMessage(summary: SettingsSummary) {
     if (summary.mailcow_status === "healthy") {
         return summary.safe_mode
             ? "Mailcow integration is configured and reachable in read-only safe mode."
-            : "Mailcow integration is configured and mutation-enabled.";
+            : "Mailcow integration is configured and reachable with mutation mode enabled.";
     }
 
     if (summary.mailcow_reason === "unauthorized") {
@@ -132,12 +133,11 @@ export default function SettingsPage() {
     if (error && !summary) {
         return (
             <div className="space-y-6 animate-fade-in">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-800">System Settings</h1>
-                    <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                        Runtime and integration settings are loaded from the backend. This view never exposes raw secrets.
-                    </p>
-                </div>
+                <PageHeader
+                    eyebrow="Configuration"
+                    title="System settings"
+                    description="Review backend runtime state, worker mode, and integration posture without exposing secrets."
+                />
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
                     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-red-200 bg-white">
                         <AlertCircle className="text-red-500" size={26} />
@@ -152,15 +152,14 @@ export default function SettingsPage() {
     if (loading && !summary) {
         return (
             <div className="space-y-6 animate-fade-in">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-800">System Settings</h1>
-                    <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                        Runtime and integration settings are loaded from the backend. This view never exposes raw secrets.
-                    </p>
-                </div>
-                <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <PageHeader
+                    eyebrow="Configuration"
+                    title="System settings"
+                    description="Review backend runtime state, worker mode, and integration posture without exposing secrets."
+                />
+                <SurfaceCard className="flex min-h-[320px] items-center justify-center">
                     <Spinner size="lg" />
-                </div>
+                </SurfaceCard>
             </div>
         );
     }
@@ -168,38 +167,34 @@ export default function SettingsPage() {
     if (!summary) {
         return (
             <div className="space-y-6 animate-fade-in">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-800">System Settings</h1>
-                    <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                        Runtime and integration settings are loaded from the backend. This view never exposes raw secrets.
-                    </p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-                    <p className="text-sm font-medium text-slate-600">No settings data is available yet.</p>
-                </div>
+                <PageHeader
+                    eyebrow="Configuration"
+                    title="System settings"
+                    description="Review backend runtime state, worker mode, and integration posture without exposing secrets."
+                />
+                <EmptyState title="No settings data available yet" description="Refresh after the backend settings summary becomes available." />
             </div>
         );
     }
 
     return (
         <div className="space-y-6 animate-fade-in">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-800">System Settings</h1>
-                    <p className="mt-2 max-w-3xl text-sm text-slate-500">
-                        Real runtime state for the local app, infrastructure, worker mode, and backend-only Mailcow integration.
-                    </p>
-                </div>
+            <PageHeader
+                eyebrow="Configuration"
+                title="System settings"
+                description="Review real runtime state for the app, infrastructure, worker mode, and backend-only Mailcow integration."
+                actions={(
                 <button
                     type="button"
                     onClick={() => void loadSummary()}
                     disabled={refreshing}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-secondary"
                 >
                     <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
                     {refreshing ? "Refreshing..." : "Refresh Status"}
                 </button>
-            </div>
+                )}
+            />
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -356,7 +351,7 @@ export default function SettingsPage() {
                         <div className="mt-2">
                             {summary.worker_available
                                 ? "Warmup and campaign execution can be processed in this runtime."
-                                : "Warmup execution and campaign sending require worker availability. Restart with make dev or make dev-full to process queued work."}
+                                : "Background workers are disabled in lean development mode. Warmup execution and campaign sending require worker availability. Restart with make dev or make dev-full to process queued work."}
                         </div>
                     </div>
                 </div>

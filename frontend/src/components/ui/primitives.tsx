@@ -192,6 +192,7 @@ export function EmptyState({
 }) {
   return (
     <SurfaceCard className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
+      <div data-testid="empty-state" className="contents" />
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-500">
         <Icon size={24} />
       </div>

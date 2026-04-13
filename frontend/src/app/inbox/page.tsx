@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Search, Sparkles, Send, Reply, Archive, ServerCrash, Inbox as InboxIcon } from 'lucide-react';
+import { Sparkles, Send, Reply, Archive, ServerCrash, Inbox as InboxIcon } from 'lucide-react';
 import { useApiService } from '@/services/api';
 import { Thread, Message } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
+import { EmptyState, PageHeader, SurfaceCard } from '@/components/ui/primitives';
 
 export default function InboxPage() {
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
@@ -31,45 +32,46 @@ export default function InboxPage() {
 
   if (error) {
     return (
-        <div className="h-[calc(100vh-8rem)] flex items-center justify-center animate-fade-in">
-           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center max-w-lg">
+        <div className="space-y-6 animate-fade-in">
+           <PageHeader eyebrow="Inbox" title="Inbox" description="Review active conversations, inspect message history, and keep operator attention on live replies." />
+           <SurfaceCard className="mx-auto flex max-w-lg flex-col items-center justify-center p-16 text-center">
                 <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
                     <ServerCrash className="text-red-500" size={28} />
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 mb-2">Inbox Unavailable</h3>
                 <p className="text-sm text-slate-500 mb-4">The local backend responded with an error while loading inbox threads or messages.</p>
                 <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded w-full break-words">Error: {error}</p>
-            </div>
+            </SurfaceCard>
         </div>
     );
   }
 
   if (loading && threads.length === 0) {
       return (
-          <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-white rounded-2xl border border-slate-200 shadow-sm animate-fade-in">
+          <div className="space-y-6 animate-fade-in">
+            <PageHeader eyebrow="Inbox" title="Inbox" description="Review active conversations, inspect message history, and keep operator attention on live replies." />
+            <SurfaceCard className="flex h-[calc(100vh-8rem)] items-center justify-center">
               <Spinner size="lg" />
+            </SurfaceCard>
           </div>
       );
   }
 
   if (threads.length === 0) {
       return (
-          <div className="h-[calc(100vh-8rem)] flex items-center justify-center animate-fade-in">
-           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-16 text-center max-w-lg">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-                    <InboxIcon className="text-slate-400" size={28} />
-                </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Inbox Empty</h3>
-                <p className="text-sm text-slate-500 mb-4">You have no active threads or unread replies right now.</p>
-            </div>
-        </div>
+          <div className="space-y-6 animate-fade-in">
+            <PageHeader eyebrow="Inbox" title="Inbox" description="Review active conversations, inspect message history, and keep operator attention on live replies." />
+            <EmptyState icon={InboxIcon} title="Inbox Empty" description="You have no active threads or unread replies right now." />
+          </div>
       );
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex gap-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader eyebrow="Inbox" title="Inbox" description="Review thread history, inspect replies, and keep the operator workflow separate from campaign execution." />
+      <div className="h-[calc(100vh-13rem)] flex gap-6">
       {/* Thread List */}
-      <div className="w-1/3 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+      <div data-testid="thread-list" className="w-1/3 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-800">Inbox</h2>
           <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2.5 py-1 rounded-full">{threads.filter(t => t.unread).length} Unread</span>
@@ -159,6 +161,7 @@ export default function InboxPage() {
             </div>
           </div>
       )}
+      </div>
     </div>
   );
 }
