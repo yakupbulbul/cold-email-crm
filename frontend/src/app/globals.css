@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f7fb;
+  --foreground: #0f172a;
+  --muted-foreground: #5f6b85;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --border: #dbe3ef;
+  --border-strong: #c4d0e3;
+  --accent: #eef4ff;
+  --accent-strong: #dbe8ff;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #cbd5e1;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
 @theme inline {
@@ -12,15 +24,118 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+* {
+  border-color: var(--border);
+}
+
+button,
+input,
+select,
+textarea {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 2px;
+}
+
+.surface-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.panel-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.page-container {
+  width: 100%;
+  max-width: 92rem;
+  margin-inline: auto;
+}
+
+.form-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: white;
+  padding: 0.875rem 1rem;
+  color: var(--foreground);
+  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.02);
+}
+
+.form-input::placeholder {
+  color: #94a3b8;
+}
+
+.form-input:focus {
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: var(--foreground);
+  color: white;
+  padding: 0.85rem 1.2rem;
+  font-weight: 600;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.btn-primary:hover {
+  background: #020617;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--foreground);
+  padding: 0.85rem 1.2rem;
+  font-weight: 600;
+}
+
+.btn-secondary:hover {
+  background: var(--surface-muted);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.form-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+  .page-container {
+    max-width: 100%;
+  }
 }

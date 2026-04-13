@@ -1,26 +1,51 @@
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, User } from "lucide-react";
 
-export default function TopBar() {
+import { useAuth } from "@/context/AuthContext";
+
+export default function TopBar({
+  title,
+  description,
+  menuButton,
+}: {
+  title: string;
+  description: string;
+  menuButton?: React.ReactNode;
+}) {
+  const { user } = useAuth();
+
   return (
-    <header className="h-20 bg-white/70 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-10 sticky top-0 z-10 w-full transition-all">
-      <div className="flex items-center bg-slate-100 rounded-full px-4 py-2.5 w-[400px] border border-slate-200 focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300 transition-all">
-        <Search className="text-slate-400" size={20} />
-        <input 
-          type="text" 
-          placeholder="Search campaigns, leads..." 
-          className="bg-transparent border-none outline-none ml-3 w-full text-sm font-medium text-slate-700 placeholder:text-slate-400"
-        />
-      </div>
-      <div className="flex items-center gap-6">
-        <button className="p-2 hover:bg-slate-100 rounded-full relative transition-colors">
-          <Bell size={22} className="text-slate-600" />
-          <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-        </button>
-        <div className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-1.5 pr-4 rounded-full border border-transparent hover:border-slate-200 transition-all">
-          <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-full flex items-center justify-center text-white font-medium shadow-md">
-            <User size={18} />
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[rgba(244,247,251,0.9)] backdrop-blur">
+      <div className="page-container flex flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="lg:hidden">{menuButton}</div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+                Operations Platform
+              </div>
+              <div className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[var(--foreground)] sm:text-[2rem]">
+                {title}
+              </div>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted-foreground)]">
+                {description}
+              </p>
+            </div>
           </div>
-          <span className="text-sm font-semibold text-slate-700">Admin</span>
+          <div className="flex items-center gap-3">
+            <button className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50">
+              <Bell size={18} />
+              <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white"></span>
+            </button>
+            <div className="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                <User size={16} />
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-900">{user?.full_name || "Admin"}</div>
+                <div className="text-xs text-[var(--muted-foreground)]">{user?.email || "Authenticated session"}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </header>

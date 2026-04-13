@@ -1,11 +1,12 @@
 "use client";
 
-import { Send, Globe, Inbox, Activity, AlertCircle } from 'lucide-react';
+import Link from "next/link";
+import { Send, Globe, Inbox, AlertCircle, ArrowRight, Users } from 'lucide-react';
 import { useApiService } from '@/services/api';
 import { useEffect, useState } from 'react';
 import Spinner from '@/components/ui/Spinner';
 import { DeliverabilitySummary } from '@/types/models';
-import { ReactNode } from 'react';
+import { AlertBanner, EmptyState, MetricCard, PageHeader, SectionTitle, StatusBadge, SurfaceCard } from "@/components/ui/primitives";
 
 export default function Dashboard() {
   const { getDeliverabilitySummary, getMailboxes, loading, error } = useApiService();
@@ -25,55 +26,128 @@ export default function Dashboard() {
   }, [getDeliverabilitySummary, getMailboxes]);
 
   return (
-    <div className="space-y-6 animate-fade-in relative min-h-screen">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Dashboard Overview</h1>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-blue-600/30 active:scale-95">
-          + New Campaign
-        </button>
-      </div>
+    <div className="space-y-8 animate-fade-in">
+      <PageHeader
+        eyebrow="Overview"
+        title="Operational overview"
+        description="See infrastructure readiness, audience quality, and the next action your operators should take."
+        actions={(
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/campaigns" className="btn-primary">
+              New campaign
+            </Link>
+            <Link href="/send-email" className="btn-secondary">
+              Test direct send
+            </Link>
+          </div>
+        )}
+      />
       
       {error && !stats ? (
-        <div className="p-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex flex-col items-center justify-center h-64 shadow-sm text-center">
-            <AlertCircle className="mb-4 text-red-500" size={32} />
-            <span className="font-bold mb-2">Backend Connection Error</span>
-            <span className="text-sm">{error}</span>
-        </div>
+        <AlertBanner tone="danger" title="Backend connection error">
+          {error}
+        </AlertBanner>
       ) : loading && !stats ? (
-        <div className="h-64 flex items-center justify-center bg-white rounded-2xl border border-slate-200">
+        <SurfaceCard className="flex h-64 items-center justify-center">
           <Spinner size="lg" />
-        </div>
+        </SurfaceCard>
+      ) : !stats ? (
+        <EmptyState
+          icon={AlertCircle}
+          title="No operational summary available"
+          description="The backend did not return dashboard summary data yet. Refresh after the API becomes available."
+        />
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard title="Total Contacts" value={stats?.total_contacts || 0} icon={<Send size={24} />} trend="Unified B2B + B2C audience" />
-            <StatCard title="Active Mailboxes" value={stats?.mailbox_count || mailboxCount} icon={<Globe size={24} />} trend="Global infrastructure" />
-            <StatCard title="B2B Campaigns" value={stats?.b2b_campaigns || 0} icon={<Inbox size={24} />} trend="Typed outreach engine" />
-            <StatCard title="B2C Campaigns" value={stats?.b2c_campaigns || 0} icon={<Activity size={24} />} trend="Compliance-aware audience sends" success={true} />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard title="Total contacts" value={stats.total_contacts || 0} icon={Users} detail="Unified B2B and B2C audience base." />
+            <MetricCard title="Active mailboxes" value={stats.mailbox_count || mailboxCount} icon={Globe} detail="Configured senders across domains." tone="info" />
+            <MetricCard title="B2B campaigns" value={stats.b2b_campaigns || 0} icon={Send} detail="Mailbox-driven outreach programs." />
+            <MetricCard title="B2C campaigns" value={stats.b2c_campaigns || 0} icon={Inbox} detail="Consent-aware audience campaigns." tone="success" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-            <div className="col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center justify-center min-h-[300px]">
-              <h2 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2 self-start">
-                <Activity className="text-blue-500" size={20} /> Audience Quality
-              </h2>
-              <div className="grid w-full gap-4 md:grid-cols-3">
-                <StatMini label="Valid" value={stats?.valid_contacts || 0} tone="emerald" />
-                <StatMini label="Risky" value={stats?.risky_contacts || 0} tone="amber" />
-                <StatMini label="Invalid / Blocked" value={(stats?.invalid_contacts || 0) + (stats?.suppressed_contacts || 0)} tone="rose" />
+          <div className="grid gap-6 xl:grid-cols-[1.4fr,0.9fr]">
+            <SurfaceCard className="p-6">
+              <SectionTitle
+                title="Audience quality"
+                description="Keep deliverable, risky, and blocked inventory obvious before operators start sending."
+              />
+              <div className="grid gap-4 md:grid-cols-3">
+                <MiniMetric label="Valid" value={stats.valid_contacts || 0} tone="success" />
+                <MiniMetric label="Risky" value={stats.risky_contacts || 0} tone="warning" />
+                <MiniMetric label="Invalid or blocked" value={(stats.invalid_contacts || 0) + (stats.suppressed_contacts || 0)} tone="danger" />
               </div>
-            </div>
-            
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col">
-              <h2 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                <Inbox className="text-indigo-500" size={20} /> Compliance Snapshot
-              </h2>
+            </SurfaceCard>
+
+            <SurfaceCard className="p-6">
+              <SectionTitle
+                title="Operator priorities"
+                description="Use these counts to decide whether the next step is quality cleanup, suppression review, or campaign execution."
+              />
+              <div className="space-y-3">
+                <PriorityRow label="Unsubscribed contacts" value={stats.unsubscribed_contacts || 0} tone="warning" />
+                <PriorityRow label="Suppressed contacts" value={stats.suppressed_contacts || 0} tone="danger" />
+                <PriorityRow label="Active campaigns" value={stats.active_campaigns || 0} tone="info" />
+              </div>
+            </SurfaceCard>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
+            <SurfaceCard className="p-6">
+              <SectionTitle
+                title="Next steps"
+                description="The product should tell non-technical operators what to do next without sending them digging across pages."
+              />
+              <div className="grid gap-3">
+                <ActionRow
+                  title="Verify audience quality before launch"
+                  detail="Review contacts with risky or blocked status before you start list-based sends."
+                  href="/contacts"
+                />
+                <ActionRow
+                  title="Check mailbox SMTP health"
+                  detail="Confirm senders are active and transport checks pass before warm-up or campaigns run."
+                  href="/mailboxes"
+                />
+                <ActionRow
+                  title="Inspect warm-up readiness"
+                  detail="Make sure scheduler, workers, and participating mailboxes are all healthy."
+                  href="/warmup"
+                />
+              </div>
+            </SurfaceCard>
+
+            <SurfaceCard className="p-6">
+              <SectionTitle
+                title="Operational posture"
+                description="A quick explanation of the current database-backed state, without decorative filler."
+              />
               <div className="space-y-4">
-                 <StatMini label="Unsubscribed" value={stats?.unsubscribed_contacts || 0} tone="rose" />
-                 <StatMini label="Suppressed" value={stats?.suppressed_contacts || 0} tone="amber" />
-                 <StatMini label="Active campaigns" value={stats?.active_campaigns || 0} tone="blue" />
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Audience mix</div>
+                    <div className="mt-1 text-sm text-[var(--muted-foreground)]">B2B and B2C counts come from the backend deliverability summary.</div>
+                  </div>
+                  <StatusBadge tone="info">Live data</StatusBadge>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Suppression safety</div>
+                    <div className="mt-1 text-sm text-[var(--muted-foreground)]">Suppressed and unsubscribed contacts remain visible as blockers.</div>
+                  </div>
+                  <StatusBadge tone={(stats.suppressed_contacts || 0) > 0 ? "warning" : "success"}>
+                    {(stats.suppressed_contacts || 0) > 0 ? "Needs review" : "Healthy"}
+                  </StatusBadge>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Campaign workload</div>
+                    <div className="mt-1 text-sm text-[var(--muted-foreground)]">Use the campaigns page to inspect preflight, lists, and real execution timing.</div>
+                  </div>
+                  <StatusBadge tone="neutral">{stats.active_campaigns || 0} active</StatusBadge>
+                </div>
               </div>
-            </div>
+            </SurfaceCard>
           </div>
         </>
       )}
@@ -81,42 +155,44 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ title, value, icon, trend, alert = false, success = false }: { title: string; value: number | string; icon: ReactNode; trend: string; alert?: boolean; success?: boolean }) {
+function MiniMetric({ label, value, tone }: { label: string; value: number; tone: "success" | "warning" | "danger" }) {
+  const classes = {
+    success: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    danger: "border-rose-200 bg-rose-50 text-rose-900",
+  } as const;
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${success ? 'from-green-50 to-green-100' : alert ? 'from-red-50 to-red-100' : 'from-blue-50 to-indigo-50'} rounded-full blur-3xl -mr-16 -mt-16 opacity-50 group-hover:opacity-100 transition-opacity`}></div>
-      <div className="relative z-10">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold text-slate-500 mb-2 uppercase tracking-wider">{title}</p>
-            <h3 className="text-4xl font-extrabold text-slate-800 tracking-tight">{value}</h3>
-          </div>
-          <div className={`p-3.5 rounded-2xl ${alert ? 'bg-red-100 text-red-600' : success ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'} shadow-sm`}>
-            {icon}
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 mt-5">
-          <div className={`w-2 h-2 rounded-full ${alert ? 'bg-red-500' : success ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-          <p className={`text-sm font-medium ${alert ? 'text-red-600' : success ? 'text-green-600' : 'text-slate-600'}`}>
-            {trend}
-          </p>
-        </div>
-      </div>
+    <div className={`rounded-3xl border p-5 ${classes[tone]}`}>
+      <div className="text-sm font-medium">{label}</div>
+      <div className="mt-3 text-4xl font-semibold tracking-[-0.04em]">{value}</div>
     </div>
   );
 }
 
-function StatMini({ label, value, tone }: { label: string; value: number; tone: "emerald" | "amber" | "rose" | "blue" }) {
-  const styles = {
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    amber: "border-amber-200 bg-amber-50 text-amber-700",
-    rose: "border-rose-200 bg-rose-50 text-rose-700",
-    blue: "border-blue-200 bg-blue-50 text-blue-700",
+function PriorityRow({ label, value, tone }: { label: string; value: number; tone: "warning" | "danger" | "info" }) {
+  const toneClasses = {
+    warning: "bg-amber-50 text-amber-900 border-amber-200",
+    danger: "bg-rose-50 text-rose-900 border-rose-200",
+    info: "bg-sky-50 text-sky-900 border-sky-200",
   } as const;
   return (
-    <div className={`rounded-2xl border p-4 ${styles[tone]}`}>
-      <div className="text-xs font-bold uppercase tracking-wide">{label}</div>
-      <div className="mt-2 text-3xl font-extrabold">{value}</div>
+    <div className={`flex items-center justify-between rounded-2xl border px-4 py-4 ${toneClasses[tone]}`}>
+      <div className="text-sm font-medium">{label}</div>
+      <div className="text-2xl font-semibold tracking-[-0.04em]">{value}</div>
     </div>
+  );
+}
+
+function ActionRow({ title, detail, href }: { title: string; detail: string; href: string }) {
+  return (
+    <Link href={href} className="group flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition-colors hover:bg-white">
+      <div>
+        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        <div className="mt-1 text-sm text-[var(--muted-foreground)]">{detail}</div>
+      </div>
+      <div className="mt-1 rounded-full bg-white p-2 text-slate-500 transition-colors group-hover:text-slate-900">
+        <ArrowRight size={16} />
+      </div>
+    </Link>
   );
 }

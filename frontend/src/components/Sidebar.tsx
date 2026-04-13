@@ -1,101 +1,161 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks, MailPlus } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks, MailPlus, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { cn } from '@/lib/utils';
 
-export default function Sidebar() {
+const NAV_GROUPS = [
+  {
+    title: "Overview",
+    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    title: "Infrastructure",
+    items: [
+      { href: "/domains", label: "Domains", icon: Server },
+      { href: "/mailboxes", label: "Mailboxes", icon: Globe },
+      { href: "/warmup", label: "Warm-up", icon: Activity },
+    ],
+  },
+  {
+    title: "Audience & Sending",
+    items: [
+      { href: "/campaigns", label: "Campaigns", icon: Send },
+      { href: "/send-email", label: "Send Email", icon: MailPlus },
+      { href: "/contacts", label: "Contacts", icon: Users },
+      { href: "/lists", label: "Lists", icon: ListChecks },
+      { href: "/inbox", label: "Inbox", icon: Inbox },
+      { href: "/suppression", label: "Suppression", icon: ShieldX },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      { href: "/ops", label: "System Health", icon: Activity },
+      { href: "/ops/deliverability", label: "Deliverability", icon: TrendingUp },
+      { href: "/ops/jobs", label: "Worker Queues", icon: Network },
+      { href: "/ops/alerts", label: "System Alerts", icon: Bell },
+      { href: "/ops/readiness", label: "Prod Readiness", icon: Cpu },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
+] as const;
+
+export default function Sidebar({
+  mobileOpen = false,
+  onClose,
+}: {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}) {
   const { logout, user } = useAuth();
+  const pathname = usePathname();
 
   return (
-    <div className="w-64 bg-slate-900 text-slate-400 flex flex-col h-screen fixed top-0 left-0 border-r border-slate-800">
-      <div className="border-b border-slate-700 bg-slate-100 px-4 py-2">
-        <Link href="/" className="flex justify-center transition-transform hover:scale-[1.01]">
-          <Image
-            src="/crm-logo.png"
-            alt="Campaign Manager"
-            width={85}
-            height={43}
-            priority
-            className="h-auto w-full max-w-[85px]"
-          />
+    <>
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm transition-opacity lg:hidden",
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+        onClick={onClose}
+      />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-[18rem] flex-col border-r border-slate-800 bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform lg:z-20 lg:translate-x-0",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+      <div className="border-b border-slate-800 px-5 py-5">
+        <div className="mb-4 flex items-center justify-between lg:hidden">
+          <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Navigation</div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700 text-slate-300"
+            aria-label="Close navigation"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <Link href="/" className="flex items-center gap-4" onClick={onClose}>
+          <div className="rounded-2xl bg-white px-4 py-3">
+            <Image
+              src="/crm-logo.png"
+              alt="Campaign Manager"
+              width={78}
+              height={40}
+              priority
+              className="h-auto w-full max-w-[78px]"
+            />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-white">Campaign Manager</div>
+            <div className="text-xs text-slate-400">B2B + B2C outreach ops</div>
+          </div>
         </Link>
       </div>
-      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-        <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <LayoutDashboard size={20} className="group-hover:scale-110 transition-transform"/> Dashboard
-        </Link>
-        <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Infrastructure</div>
-        <Link href="/domains" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Server size={20} className="group-hover:scale-110 transition-transform"/> Domains
-        </Link>
-        <Link href="/mailboxes" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Globe size={20} className="group-hover:scale-110 transition-transform"/> Mailboxes
-        </Link>
-        <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Outreach</div>
-        <Link href="/warmup" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Activity size={20} className="group-hover:scale-110 transition-transform"/> Warm-up
-        </Link>
-        <Link href="/campaigns" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Send size={20} className="group-hover:scale-110 transition-transform"/> Campaigns
-        </Link>
-        <Link href="/send-email" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <MailPlus size={20} className="group-hover:scale-110 transition-transform"/> Send Email
-        </Link>
-        <Link href="/contacts" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Users size={20} className="group-hover:scale-110 transition-transform"/> Contacts
-        </Link>
-        <Link href="/lists" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <ListChecks size={20} className="group-hover:scale-110 transition-transform"/> Lists
-        </Link>
-        <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Intelligence</div>
-        <Link href="/inbox" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Inbox size={20} className="group-hover:scale-110 transition-transform"/> Inbox
-        </Link>
-        <Link href="/suppression" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <ShieldX size={20} className="group-hover:scale-110 transition-transform"/> Suppression
-        </Link>
-        <div className="pt-4 pb-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">Operations & Telemetry</div>
-        <Link href="/ops" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Activity size={20} className="group-hover:scale-110 transition-transform"/> System Health
-        </Link>
-        <Link href="/ops/deliverability" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <TrendingUp size={20} className="group-hover:scale-110 transition-transform"/> Deliverability
-        </Link>
-        <Link href="/ops/jobs" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Network size={20} className="group-hover:scale-110 transition-transform"/> Worker Queues
-        </Link>
-        <Link href="/ops/alerts" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Bell size={20} className="group-hover:scale-110 transition-transform"/> System Alerts
-        </Link>
-        <Link href="/ops/readiness" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-          <Cpu size={20} className="group-hover:scale-110 transition-transform"/> Prod Readiness
-        </Link>
+      <nav className="flex-1 space-y-7 overflow-y-auto px-4 py-6">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.title}>
+            <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              {group.title}
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {group.items.map((item) => {
+                const isActive = item.href === "/ops"
+                  ? pathname === "/ops" || pathname.startsWith("/ops/")
+                  : item.href === "/contacts"
+                    ? pathname === "/contacts" || pathname.startsWith("/contacts/")
+                    : pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onClose}
+                    className={cn(
+                      "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
+                      isActive
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                    )}
+                  >
+                    <div className={cn("rounded-xl p-2", isActive ? "bg-slate-100 text-slate-700" : "bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-slate-200")}>
+                      <Icon size={16} />
+                    </div>
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
       
       <div className="mt-auto border-t border-slate-800 p-4 space-y-4">
         {user && (
-          <div className="flex items-center gap-3 px-4 py-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs">
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 font-bold text-white text-xs">
               {user.email[0].toUpperCase()}
             </div>
             <div className="flex-1 overflow-hidden">
-               <p className="text-sm font-bold text-white truncate">{user.full_name || 'Admin'}</p>
-               <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{user.is_admin ? 'Super Admin' : 'User'}</p>
+               <p className="truncate text-sm font-semibold text-white">{user.full_name || 'Admin'}</p>
+               <p className="truncate text-xs text-slate-400">{user.email}</p>
             </div>
           </div>
         )}
         <div className="space-y-1">
-          <Link href="/settings" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all duration-200 font-medium group text-[15px]">
-            <Settings size={20} className="group-hover:rotate-90 transition-transform duration-300"/> Settings
-          </Link>
           <button 
             onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-900/20 hover:text-red-400 transition-all duration-200 font-bold group text-[15px] text-red-500/80"
+            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-300 transition-all hover:bg-rose-900/20 hover:text-rose-200"
           >
-            <LogOut size={20} className="group-hover:-translate-x-1 transition-transform"/> Sign Out
+            <LogOut size={18} /> Sign Out
           </button>
         </div>
       </div>
-    </div>
+    </aside>
+    </>
   );
 }
