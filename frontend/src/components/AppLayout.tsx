@@ -105,7 +105,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:ml-72">
                 <TopBar
                     title={pageMeta.title}
-                    description={pageMeta.description}
                     menuButton={(
                         <button
                             type="button"
@@ -117,7 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </button>
                     )}
                 />
-                <main className="flex-1 overflow-y-auto px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+                <main className="flex-1 overflow-y-auto px-4 pb-8 pt-4 sm:px-6 lg:px-8">
                     <div className="page-container">
                     {children}
                     </div>
