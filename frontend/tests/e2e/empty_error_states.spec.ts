@@ -33,7 +33,7 @@ test("no-seed empty states render as honest success states", async ({ page }) =>
   await expect(page.getByText("No suppression entries yet.")).toBeVisible();
 
   await page.goto("/inbox");
-  await expect(page.getByText("Inbox Empty")).toBeVisible();
+  await expect(page.getByText("No inbox threads yet")).toBeVisible();
 });
 
 test("settings and inbox show honest backend failure states", async ({ page }) => {

@@ -39,6 +39,11 @@ export interface Mailbox {
     warmup_last_checked_at?: string | null;
     warmup_last_result?: string | null;
     warmup_block_reason?: string | null;
+    inbox_sync_enabled?: boolean;
+    inbox_sync_status?: string | null;
+    inbox_last_synced_at?: string | null;
+    inbox_last_success_at?: string | null;
+    inbox_last_error?: string | null;
     remote_mailcow_provisioned: boolean;
     provisioning_mode: "local_only" | "mailcow_synced";
     created_at: string;
@@ -437,12 +442,22 @@ export interface DeliverabilitySummary {
 export interface Thread {
     id: string;
     subject: string;
+    mailbox_id: string;
+    mailbox_email?: string | null;
     contact_email: string;
     contact_name?: string;
+    campaign_id?: string | null;
+    campaign_name?: string | null;
+    contact_id?: string | null;
+    linkage_status?: string | null;
+    participants?: string[];
     status: string;
     last_message_at: string;
     snippet?: string;
     unread: boolean;
+    unread_count?: number;
+    last_message_direction?: string | null;
+    last_message_preview?: string | null;
 }
 
 export interface Message {
@@ -454,5 +469,64 @@ export interface Message {
     body_html?: string;
     from_address: string;
     to_address: string;
+    cc_address?: string;
+    is_read?: boolean;
     sent_at: string;
+}
+
+export interface InboxStatusMailbox {
+    id: string;
+    email: string;
+    display_name: string;
+    status: string;
+    inbox_sync_enabled: boolean;
+    inbox_sync_status: string;
+    inbox_last_synced_at?: string | null;
+    inbox_last_success_at?: string | null;
+    inbox_last_error?: string | null;
+    smtp_last_check_status?: string | null;
+    imap_host?: string | null;
+    imap_port?: number | null;
+}
+
+export interface InboxStatus {
+    sync_enabled: boolean;
+    workers_enabled: boolean;
+    worker_status: {
+        status: string;
+        detail?: string | null;
+        last_seen_at?: string | null;
+    };
+    scheduler_status: {
+        status: string;
+        detail?: string | null;
+        last_seen_at?: string | null;
+        next_run_at?: string | null;
+    };
+    mailboxes: InboxStatusMailbox[];
+    configured_mailboxes_count: number;
+    sync_enabled_mailboxes_count: number;
+    healthy_mailboxes_count: number;
+    threads_count: number;
+    unread_threads_count: number;
+    messages_received_today: number;
+    last_sync_at?: string | null;
+    last_message_at?: string | null;
+    blockers: Array<{ code: string; message: string }>;
+}
+
+export interface InboxSyncResult {
+    status: string;
+    mailboxes_processed: number;
+    results: Array<{
+        mailbox_id: string;
+        mailbox_email: string;
+        status: string;
+        detail: string;
+        fetched_count: number;
+        imported_count: number;
+        duplicate_count: number;
+        thread_count: number;
+        last_synced_at?: string | null;
+    }>;
 }

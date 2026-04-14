@@ -16,6 +16,8 @@ import {
     WarmupLog,
     WarmupPair,
     WarmupStatus,
+    InboxStatus,
+    InboxSyncResult,
 } from "@/types/models";
 type MailboxCreatePayload = {
     domain_id: string;
@@ -160,8 +162,11 @@ export function useApiService() {
     const sendEmail = useCallback((data: SendEmailPayload) => requestOrThrow<SendEmailResult>("/send-email", { method: "POST", body: data }), [requestOrThrow]);
     const getSendEmailLogs = useCallback((limit: number = 20) => request<SendEmailLog[]>(`/send-email/logs?limit=${limit}`), [request]);
 
-    // ── INBOX & THREADS (Missing Backend - Graceful Fallback) ──
-    const getThreads = useCallback(() => request<Thread[]>("/inbox/threads"), [request]);
+    // ── INBOX & THREADS ──
+    const getInboxStatus = useCallback(() => request<InboxStatus>("/inbox/status"), [request]);
+    const syncInbox = useCallback((mailboxId?: string) => requestOrThrow<InboxSyncResult>(`/inbox/sync${mailboxId ? `?mailbox_id=${mailboxId}` : ""}`, { method: "POST" }), [requestOrThrow]);
+    const getThreads = useCallback((query: string = "") => request<Thread[]>(`/inbox/threads${query ? `?${query}` : ""}`), [request]);
+    const getThread = useCallback((threadId: string) => request<Thread & { messages: Message[] }>(`/inbox/threads/${threadId}`), [request]);
     const getMessages = useCallback((threadId: string) => request<Message[]>(`/inbox/threads/${threadId}/messages`), [request]);
 
     // ── LISTS ──
@@ -240,7 +245,10 @@ export function useApiService() {
         checkMailboxSmtp,
         sendEmail,
         getSendEmailLogs,
+        getInboxStatus,
+        syncInbox,
         getThreads,
+        getThread,
         getMessages
     };
 }
