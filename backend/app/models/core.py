@@ -52,6 +52,12 @@ class Mailbox(Base):
     imap_port = Column(Integer, nullable=False)
     imap_username = Column(String, nullable=False)
     imap_password_encrypted = Column(String, nullable=False)
+    inbox_sync_enabled = Column(Boolean, default=True, nullable=False)
+    inbox_sync_status = Column(String, nullable=True)
+    inbox_last_synced_at = Column(DateTime, nullable=True)
+    inbox_last_success_at = Column(DateTime, nullable=True)
+    inbox_last_error = Column(String, nullable=True)
+    inbox_last_seen_uid = Column(String, nullable=True)
     
     warmup_enabled = Column(Boolean, default=False)
     daily_send_limit = Column(Integer, default=50) # Controls maximum capacity

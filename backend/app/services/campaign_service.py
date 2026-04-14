@@ -72,7 +72,9 @@ class CampaignService:
                 mailbox_id=campaign.mailbox_id,
                 to=[lead.contact.email],
                 subject=subject,
-                text_body=body
+                text_body=body,
+                campaign_id=campaign.id,
+                contact_id=lead.contact_id,
             )
             try:
                 success, response = self.smtp.send_email(req)

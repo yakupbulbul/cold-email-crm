@@ -49,6 +49,11 @@ class MailboxResponse(BaseModel):
     warmup_last_checked_at: Optional[str] = None
     warmup_last_result: Optional[str] = None
     warmup_block_reason: Optional[str] = None
+    inbox_sync_enabled: bool
+    inbox_sync_status: Optional[str] = None
+    inbox_last_synced_at: Optional[str] = None
+    inbox_last_success_at: Optional[str] = None
+    inbox_last_error: Optional[str] = None
     daily_send_limit: int
     current_warmup_stage: int
     status: str
@@ -81,6 +86,11 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "warmup_last_checked_at": mb.warmup_last_checked_at.isoformat() if mb.warmup_last_checked_at else None,
         "warmup_last_result": mb.warmup_last_result,
         "warmup_block_reason": mb.warmup_block_reason,
+        "inbox_sync_enabled": mb.inbox_sync_enabled,
+        "inbox_sync_status": mb.inbox_sync_status,
+        "inbox_last_synced_at": mb.inbox_last_synced_at.isoformat() if mb.inbox_last_synced_at else None,
+        "inbox_last_success_at": mb.inbox_last_success_at.isoformat() if mb.inbox_last_success_at else None,
+        "inbox_last_error": mb.inbox_last_error,
         "daily_send_limit": mb.daily_send_limit,
         "current_warmup_stage": mb.current_warmup_stage,
         "status": mb.status,

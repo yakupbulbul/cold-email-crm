@@ -2,7 +2,7 @@ from app.models.core import Domain, Mailbox
 from app.workers.imap_sync_worker import sync_all_inboxes
 
 
-def test_imap_sync_skips_local_only_domains(db, monkeypatch):
+def test_imap_sync_skips_disabled_mailboxes(db, monkeypatch):
     synced_mailboxes: list[str] = []
 
     verified_domain = Domain(name="verified-workers.example.com", mailcow_status="verified")
@@ -37,6 +37,7 @@ def test_imap_sync_skips_local_only_domains(db, monkeypatch):
                 imap_port=993,
                 imap_username="local@local-workers.example.com",
                 imap_password_encrypted="encrypted",
+                inbox_sync_enabled=False,
             ),
         ]
     )

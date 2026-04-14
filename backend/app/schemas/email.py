@@ -12,6 +12,8 @@ class SendEmailRequest(BaseModel):
     html_body: Optional[str] = None
     in_reply_to: Optional[str] = None
     references: Optional[str] = None
+    campaign_id: Optional[UUID] = None
+    contact_id: Optional[UUID] = None
 
 class SendEmailResponse(BaseModel):
     success: bool

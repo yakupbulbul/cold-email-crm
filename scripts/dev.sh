@@ -66,8 +66,10 @@ NPM_BIN="$(resolve_bin npm \
   }
 
 BACKGROUND_WORKERS_ENABLED_VALUE=false
+BACKGROUND_IMAP_SYNC_ENABLED_VALUE=false
 if [[ "${MODE}" == "full" ]]; then
   BACKGROUND_WORKERS_ENABLED_VALUE=true
+  BACKGROUND_IMAP_SYNC_ENABLED_VALUE=true
 fi
 
 if [[ "${BACKEND_RELOAD}" == "auto" ]]; then
@@ -154,20 +156,20 @@ echo "Logs:     ${BACKEND_LOG} ${FRONTEND_LOG} ${WORKER_LOG} ${BEAT_LOG}"
 
 (
   cd backend
-  BACKGROUND_WORKERS_ENABLED="${BACKGROUND_WORKERS_ENABLED_VALUE}" "${BACKEND_CMD[@]}" >> "../${BACKEND_LOG}" 2>&1
+  BACKGROUND_WORKERS_ENABLED="${BACKGROUND_WORKERS_ENABLED_VALUE}" BACKGROUND_IMAP_SYNC_ENABLED="${BACKGROUND_IMAP_SYNC_ENABLED_VALUE}" "${BACKEND_CMD[@]}" >> "../${BACKEND_LOG}" 2>&1
 ) &
 echo $! > "${BACKEND_PID_FILE}"
 
 if [[ "${MODE}" == "full" ]]; then
   (
     cd backend
-    BACKGROUND_WORKERS_ENABLED=true ../backend/.venv/bin/python -m celery -A app.workers.celery_app worker --loglevel="${CELERY_LOGLEVEL}" --pool="${CELERY_WORKER_POOL}" --concurrency="${CELERY_WORKER_CONCURRENCY}" >> "../${WORKER_LOG}" 2>&1
+    BACKGROUND_WORKERS_ENABLED=true BACKGROUND_IMAP_SYNC_ENABLED=true ../backend/.venv/bin/python -m celery -A app.workers.celery_app worker --loglevel="${CELERY_LOGLEVEL}" --pool="${CELERY_WORKER_POOL}" --concurrency="${CELERY_WORKER_CONCURRENCY}" >> "../${WORKER_LOG}" 2>&1
   ) &
   echo $! > "${WORKER_PID_FILE}"
 
   (
     cd backend
-    BACKGROUND_WORKERS_ENABLED=true ../backend/.venv/bin/python -m scripts.dev_scheduler >> "../${BEAT_LOG}" 2>&1
+    BACKGROUND_WORKERS_ENABLED=true BACKGROUND_IMAP_SYNC_ENABLED=true ../backend/.venv/bin/python -m scripts.dev_scheduler >> "../${BEAT_LOG}" 2>&1
   ) &
   echo $! > "${BEAT_PID_FILE}"
 else

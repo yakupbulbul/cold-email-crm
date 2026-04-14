@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.models.core import Mailbox
 from app.models.campaign import SendLog
+from app.models.email import Message
 from app.schemas.email import SendEmailLogResponse, SendEmailRequest
 from app.integrations.smtp.provider import MailcowSMTPProvider, SMTPDiagnosticResult
+from app.services.imap_service import MessageParserService, ThreadResolverService
 
 
 class SMTPServiceError(Exception):
@@ -106,6 +108,13 @@ class SMTPManagerService:
         self.db.add(mailbox)
         self.db.commit()
 
+        if success:
+            self._persist_outbound_message(
+                mailbox=mailbox,
+                req=req,
+                message_id=message_id_or_error,
+            )
+
         return success, f"{message_id_or_error}|{log.id}"
 
     def list_recent_logs(self, limit: int = 20) -> list[SendEmailLogResponse]:
@@ -173,3 +182,62 @@ class SMTPManagerService:
             "tls_negotiated": result.tls_negotiated,
             "auth_succeeded": result.auth_succeeded,
         }
+
+    def _persist_outbound_message(self, *, mailbox: Mailbox, req: SendEmailRequest, message_id: str) -> None:
+        normalized_message_id = MessageParserService.normalize_message_id(message_id) or message_id
+        referenced_ids = [
+            MessageParserService.normalize_message_id(req.in_reply_to),
+            *MessageParserService.normalize_references(req.references),
+        ]
+        thread = ThreadResolverService.ensure_thread_for_outbound(
+            self.db,
+            mailbox=mailbox,
+            subject=req.subject,
+            to_email=req.to[0] if req.to else None,
+            message_ids=[message_id for message_id in referenced_ids if message_id],
+            contact_id=req.contact_id,
+            campaign_id=req.campaign_id,
+        )
+        thread.subject = req.subject or thread.subject
+        thread.last_message_at = datetime.utcnow()
+        if req.to:
+            participant_email = req.to[0].strip().lower()
+            thread.contact_email = participant_email
+            participants = set(thread.participants or [])
+            participants.add(mailbox.email.lower())
+            participants.add(participant_email)
+            thread.participants = sorted(address for address in participants if address)
+        if req.contact_id and thread.contact_id is None:
+            thread.contact_id = req.contact_id
+        if req.campaign_id and thread.campaign_id is None:
+            thread.campaign_id = req.campaign_id
+        if req.contact_id or req.campaign_id:
+            thread.linkage_status = "linked"
+
+        existing_message = (
+            self.db.query(Message)
+            .filter(Message.mailbox_id == mailbox.id, Message.message_id_header == normalized_message_id)
+            .first()
+        )
+        if existing_message is None:
+            outbound_message = Message(
+                thread_id=thread.id,
+                mailbox_id=mailbox.id,
+                direction="outbound",
+                from_email=mailbox.email.lower(),
+                to_emails=[address.lower() for address in req.to],
+                cc_emails=[address.lower() for address in req.cc or []],
+                bcc_emails=[address.lower() for address in req.bcc or []],
+                subject=req.subject,
+                text_body=req.text_body,
+                html_body=req.html_body,
+                message_id_header=normalized_message_id,
+                in_reply_to=MessageParserService.normalize_message_id(req.in_reply_to),
+                references_header=" ".join(MessageParserService.normalize_references(req.references)) or None,
+                is_read=True,
+                status="synced",
+                sent_at=datetime.utcnow(),
+            )
+            self.db.add(thread)
+            self.db.add(outbound_message)
+            self.db.commit()
