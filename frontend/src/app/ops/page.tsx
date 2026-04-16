@@ -2,8 +2,8 @@
 
 import { useApiService } from "@/services/api";
 import { ReactNode, useEffect, useState } from "react";
-import { SystemHealth, Alert, DeliverabilitySummary, HealthComponent } from "@/types/models";
-import { Database, Server, ServerCrash, CheckCircle2, AlertTriangle, XCircle, MailWarning, Network } from "lucide-react";
+import { SystemHealth, Alert, DeliverabilitySummary, HealthComponent, SettingsSummary } from "@/types/models";
+import { Database, Server, ServerCrash, CheckCircle2, AlertTriangle, XCircle, MailWarning, Network, Mail } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
@@ -49,10 +49,11 @@ function StatusCard({ title, icon, data }: { title: string; icon: ReactNode; dat
 }
 
 export default function OpsDashboard() {
-    const { getHealth, getAlerts, getDeliverabilitySummary, loading } = useApiService();
+    const { getHealth, getAlerts, getDeliverabilitySummary, getSettingsSummary, loading } = useApiService();
     const [health, setHealth] = useState<SystemHealth | null>(null);
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [deliverability, setDeliverability] = useState<DeliverabilitySummary | null>(null);
+    const [settingsSummary, setSettingsSummary] = useState<SettingsSummary | null>(null);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -62,9 +63,11 @@ export default function OpsDashboard() {
             if (a) setAlerts(a);
             const d = await getDeliverabilitySummary();
             if (d) setDeliverability(d);
+            const s = await getSettingsSummary();
+            if (s) setSettingsSummary(s);
         };
         fetchDashboardData();
-    }, [getHealth, getAlerts, getDeliverabilitySummary]);
+    }, [getHealth, getAlerts, getDeliverabilitySummary, getSettingsSummary]);
 
     const liveMetrics = [
         { label: "Valid Contacts", value: deliverability?.valid_contacts ?? 0, tone: "text-emerald-600" },
@@ -140,6 +143,39 @@ export default function OpsDashboard() {
                     </div>
                 </SurfaceCard>
             </div>
+
+            {settingsSummary ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 mt-8">
+                    {(["mailcow", "google_workspace"] as const).map((provider) => {
+                        const item = settingsSummary.providers[provider];
+                        return (
+                            <SurfaceCard key={provider} className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Provider</div>
+                                        <div className="mt-2 text-xl font-extrabold text-slate-900">{provider === "mailcow" ? "Mailcow" : "Google Workspace"}</div>
+                                    </div>
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
+                                        <Mail size={18} />
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                        {item.enabled ? "Enabled" : "Disabled"}
+                                    </span>
+                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                        {item.configured ? "Configured" : "Not configured"}
+                                    </span>
+                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                        {item.status}
+                                    </span>
+                                </div>
+                                <div className="mt-4 text-sm text-slate-600">{item.detail || "No provider detail available."}</div>
+                            </SurfaceCard>
+                        );
+                    })}
+                </div>
+            ) : null}
 
         </div>
     );

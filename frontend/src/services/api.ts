@@ -18,20 +18,24 @@ import {
     WarmupStatus,
     InboxStatus,
     InboxSyncResult,
+    MailProviderType,
 } from "@/types/models";
 type MailboxCreatePayload = {
     domain_id: string;
     email: string;
     display_name: string;
+    provider_type?: MailProviderType;
     smtp_host?: string;
     smtp_port?: number;
     smtp_username?: string;
     smtp_security_mode?: "starttls" | "ssl" | "plain";
-    smtp_password: string;
+    smtp_password?: string;
     imap_host?: string;
     imap_port?: number;
     imap_username?: string;
-    imap_password: string;
+    imap_password?: string;
+    imap_security_mode?: "starttls" | "ssl" | "plain";
+    oauth_enabled?: boolean;
     daily_send_limit?: number;
 };
 
@@ -40,10 +44,19 @@ type MailboxUpdatePayload = {
     daily_send_limit: number;
     status: string;
     smtp_security_mode?: "starttls" | "ssl" | "plain";
+    provider_type?: MailProviderType;
+    oauth_enabled?: boolean;
 };
 
 type MailboxWarmupPayload = {
     warmup_enabled: boolean;
+};
+
+type ProviderSettingsUpdatePayload = {
+    mailcow_enabled?: boolean;
+    google_workspace_enabled?: boolean;
+    default_provider?: MailProviderType;
+    allow_existing_disabled_provider_mailboxes?: boolean;
 };
 
 type CampaignCreatePayload = {
@@ -104,6 +117,7 @@ export function useApiService() {
     // ── OPS / METRICS ──
     const getHealth = useCallback(() => request<SystemHealth>("/ops/health"), [request]);
     const getSettingsSummary = useCallback(() => request<SettingsSummary>("/settings/summary"), [request]);
+    const updateProviderSettings = useCallback((data: ProviderSettingsUpdatePayload) => requestOrThrow<SettingsSummary>("/settings/providers", { method: "PATCH", body: data }), [requestOrThrow]);
     const getAlerts = useCallback(() => request<Alert[]>("/ops/alerts"), [request]);
     const getJobs = useCallback(() => request<JobLog[]>("/ops/jobs"), [request]);
     const getDeliverabilitySummary = useCallback(() => request<DeliverabilitySummary>("/ops/deliverability/summary"), [request]);
@@ -159,6 +173,23 @@ export function useApiService() {
     const updateMailboxWarmup = useCallback((id: string, data: MailboxWarmupPayload) => requestOrThrow<Mailbox>(`/mailboxes/${id}/warmup`, { method: "PATCH", body: data }), [requestOrThrow]);
     const deleteMailbox = useCallback((id: string) => request<{ status: string; id: string }>(`/mailboxes/${id}`, { method: "DELETE" }), [request]);
     const checkMailboxSmtp = useCallback((id: string) => requestOrThrow<SMTPDiagnosticResult>(`/mailboxes/${id}/smtp-check`, { method: "POST" }), [requestOrThrow]);
+    const checkMailboxProvider = useCallback((id: string) => requestOrThrow<{
+        provider_type: MailProviderType;
+        status: string;
+        smtp: { status: string; category: string; message: string };
+        imap: { status: string; category: string; message: string };
+    }>(`/mailboxes/${id}/provider-check`, { method: "POST" }), [requestOrThrow]);
+    const getMailboxOAuthStatus = useCallback((id: string) => requestOrThrow<{
+        oauth_enabled: boolean;
+        oauth_provider?: string | null;
+        oauth_connection_status?: string | null;
+        oauth_last_checked_at?: string | null;
+        oauth_last_error?: string | null;
+        external_account_email?: string | null;
+        scopes?: string[];
+    }>(`/mailboxes/${id}/oauth-status`), [requestOrThrow]);
+    const startMailboxOAuth = useCallback((id: string) => requestOrThrow<{ status: string; authorization_url: string }>(`/mailboxes/${id}/oauth/start`, { method: "POST" }), [requestOrThrow]);
+    const disconnectMailboxOAuth = useCallback((id: string) => requestOrThrow<Mailbox>(`/mailboxes/${id}/oauth/disconnect`, { method: "POST" }), [requestOrThrow]);
     const sendEmail = useCallback((data: SendEmailPayload) => requestOrThrow<SendEmailResult>("/send-email", { method: "POST", body: data }), [requestOrThrow]);
     const getSendEmailLogs = useCallback((limit: number = 20) => request<SendEmailLog[]>(`/send-email/logs?limit=${limit}`), [request]);
 
@@ -188,6 +219,7 @@ export function useApiService() {
         error,
         getHealth,
         getSettingsSummary,
+        updateProviderSettings,
         getAlerts,
         getJobs,
         getDeliverabilitySummary,
@@ -243,6 +275,10 @@ export function useApiService() {
         updateMailboxWarmup,
         deleteMailbox,
         checkMailboxSmtp,
+        checkMailboxProvider,
+        getMailboxOAuthStatus,
+        startMailboxOAuth,
+        disconnectMailboxOAuth,
         sendEmail,
         getSendEmailLogs,
         getInboxStatus,

@@ -121,7 +121,7 @@ export default function SendEmailPage() {
       <PageHeader
         eyebrow="Testing"
         title="Send Email"
-        description="Send one real email immediately through the backend SMTP integration and inspect the result without campaigns or worker timing."
+        description="Send one real email immediately through the backend mail provider integration and inspect the result without campaigns or worker timing."
       />
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -189,18 +189,21 @@ export default function SendEmailPage() {
         <SurfaceCard className="px-5 py-4">
           <div className="text-sm font-semibold text-slate-700">Selected mailbox transport</div>
           <div className="mt-2 text-sm font-medium text-slate-700">
-            From preview: <span className="font-mono">{buildSenderPreview(selectedMailbox)}</span>
+            From preview: <span className="break-all text-slate-800">{buildSenderPreview(selectedMailbox)}</span>
           </div>
           <div className="mt-2 text-sm text-slate-600">
-            {selectedMailbox.email} via {selectedMailbox.smtp_host}:{selectedMailbox.smtp_port} using {selectedMailbox.smtp_security_mode.toUpperCase()}
+            {selectedMailbox.email} via {(selectedMailbox.provider_type || "mailcow").replaceAll("_", " ")} on {selectedMailbox.smtp_host}:{selectedMailbox.smtp_port} using {selectedMailbox.smtp_security_mode.toUpperCase()}
+          </div>
+          <div className="mt-2 text-sm text-slate-600">
+            Provider state: {(selectedMailbox.provider_status || "active").replaceAll("_", " ")} · OAuth {(selectedMailbox.oauth_connection_status || "not_connected").replaceAll("_", " ")}
           </div>
           <div className={`mt-2 text-sm font-medium ${(smtpDiagnostic?.status || selectedMailbox.smtp_last_check_status) === 'healthy' ? 'text-emerald-700' : 'text-slate-600'}`}>
-            {smtpDiagnostic?.message || selectedMailbox.smtp_last_check_message || 'SMTP has not been checked yet for this mailbox.'}
+            {smtpDiagnostic?.message || selectedMailbox.last_provider_check_message || selectedMailbox.smtp_last_check_message || 'Provider diagnostics have not been checked yet for this mailbox.'}
           </div>
         </SurfaceCard>
       ) : null}
 
-      {result ? <AlertBanner tone="success" title={`Email sent through ${result.provider}.`}>Message ID: <span className="font-mono">{result.message_id}</span></AlertBanner> : null}
+      {result ? <AlertBanner tone="success" title={`Email sent through ${result.provider}.`}>Message ID: <span className="font-mono" data-testid="send-result-message-id">{result.message_id}</span></AlertBanner> : null}
 
       {submitError ? <AlertBanner tone="danger" title="Send failed">{submitError}</AlertBanner> : null}
 

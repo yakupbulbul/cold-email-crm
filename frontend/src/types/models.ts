@@ -1,3 +1,5 @@
+export type MailProviderType = "mailcow" | "google_workspace";
+
 export interface Domain {
     id: string;
     name: string;
@@ -24,9 +26,26 @@ export interface Mailbox {
     domain_id?: string;
     email: string;
     display_name: string;
+    provider_type: MailProviderType;
+    provider_status: string;
+    provider_mailbox_id?: string | null;
+    provider_domain_id?: string | null;
+    provider_config_status?: string;
+    last_provider_check_at?: string | null;
+    last_provider_check_status?: string | null;
+    last_provider_check_message?: string | null;
     smtp_host?: string;
     smtp_port?: number;
     smtp_security_mode: "starttls" | "ssl" | "plain";
+    imap_host?: string;
+    imap_port?: number;
+    imap_security_mode?: "starttls" | "ssl" | "plain";
+    oauth_enabled?: boolean;
+    oauth_provider?: string | null;
+    oauth_connection_status?: string | null;
+    oauth_last_checked_at?: string | null;
+    oauth_last_error?: string | null;
+    external_account_email?: string | null;
     smtp_last_checked_at?: string | null;
     smtp_last_check_status?: string | null;
     smtp_last_check_category?: string | null;
@@ -260,6 +279,17 @@ export interface SettingsHealthItem {
     detail?: string | null;
 }
 
+export interface ProviderStatusItem {
+    enabled: boolean;
+    configured: boolean;
+    status: string;
+    detail?: string | null;
+    reason?: string | null;
+    checked_at?: string | null;
+    oauth_connection_status?: string | null;
+    safe_mode?: boolean | null;
+}
+
 export interface SettingsSummary {
     app_env: string;
     project_name: string;
@@ -277,6 +307,10 @@ export interface SettingsSummary {
     mailcow_reason?: string | null;
     mailcow_detail?: string | null;
     frontend_mailcow_direct_access: boolean;
+    default_provider: MailProviderType;
+    enabled_providers: MailProviderType[];
+    allow_existing_disabled_provider_mailboxes: boolean;
+    providers: Record<MailProviderType, ProviderStatusItem>;
     auth_enabled: boolean;
     session_healthy: boolean;
     current_user: SettingsUserSummary;
@@ -287,6 +321,7 @@ export interface WarmupMailboxStatus {
     id: string;
     email: string;
     display_name: string;
+    provider_type?: MailProviderType;
     warmup_enabled: boolean;
     warmup_status: string;
     warmup_last_checked_at?: string | null;
@@ -390,7 +425,7 @@ export interface SendEmailResult {
     success: boolean;
     status: string;
     message_id: string;
-    provider: string;
+    provider: MailProviderType | string;
     log_id?: string | null;
 }
 
@@ -444,6 +479,7 @@ export interface Thread {
     subject: string;
     mailbox_id: string;
     mailbox_email?: string | null;
+    mailbox_provider?: MailProviderType | null;
     contact_email: string;
     contact_name?: string;
     campaign_id?: string | null;
@@ -479,6 +515,8 @@ export interface InboxStatusMailbox {
     email: string;
     display_name: string;
     status: string;
+    provider_type?: MailProviderType;
+    oauth_connection_status?: string | null;
     inbox_sync_enabled: boolean;
     inbox_sync_status: string;
     inbox_last_synced_at?: string | null;

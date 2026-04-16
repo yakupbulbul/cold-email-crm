@@ -203,6 +203,9 @@ export default function WarmupPage() {
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="font-semibold text-slate-800">{mailbox.email}</div>
+                        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          {(mailbox.provider_type || "mailcow").replaceAll("_", " ")}
+                        </div>
                         <div className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                           {mailbox.warmup_status}
                         </div>

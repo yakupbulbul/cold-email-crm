@@ -217,7 +217,9 @@ export default function InboxPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-900">{mailbox.email}</p>
-                      <p className="text-xs text-slate-500">{mailbox.inbox_sync_status}</p>
+                      <p className="text-xs text-slate-500">
+                        {mailbox.inbox_sync_status} · {(mailbox.provider_type || "mailcow").replaceAll("_", " ")}
+                      </p>
                     </div>
                     <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
                       mailbox.inbox_sync_status === "healthy"
@@ -272,6 +274,9 @@ export default function InboxPage() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-900">{thread.subject || "No subject"}</p>
                         <p className="truncate text-sm text-slate-600">{thread.contact_email || "Unknown sender"}</p>
+                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          {(thread.mailbox_provider || "mailcow").replaceAll("_", " ")}
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-slate-500">{formatDateTime(thread.last_message_at)}</p>

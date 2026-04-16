@@ -1,19 +1,20 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Plus, Mail, Edit2, ShieldCheck, Trash2, ServerCrash } from 'lucide-react';
+import { Plus, Mail, Edit2, ShieldCheck, Trash2, ServerCrash, Link2, Unplug } from 'lucide-react';
 import { useApiService } from '@/services/api';
-import { Domain, Mailbox, SMTPDiagnosticResult, SettingsSummary } from '@/types/models';
+import { Domain, MailProviderType, Mailbox, SMTPDiagnosticResult, SettingsSummary } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
 import { AlertBanner, EmptyState, MetricCard, PageHeader, SurfaceCard } from '@/components/ui/primitives';
 
 export default function MailboxesPage() {
-  const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, checkMailboxSmtp, loading, error } = useApiService();
+  const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, checkMailboxProvider, startMailboxOAuth, disconnectMailboxOAuth, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [settingsSummary, setSettingsSummary] = useState<SettingsSummary | null>(null);
   const [selectedDomainId, setSelectedDomainId] = useState('');
   const [localPart, setLocalPart] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [providerType, setProviderType] = useState<MailProviderType>('mailcow');
   const [password, setPassword] = useState('');
   const [smtpSecurityMode, setSmtpSecurityMode] = useState<'starttls' | 'ssl' | 'plain'>('starttls');
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -35,7 +36,10 @@ export default function MailboxesPage() {
           setDomains(domainData);
           setSelectedDomainId((current) => current || domainData[0]?.id || '');
         }
-        if (settingsData) setSettingsSummary(settingsData);
+        if (settingsData) {
+          setSettingsSummary(settingsData);
+          setProviderType(settingsData.default_provider);
+        }
     };
     fetchPageData();
   }, [getMailboxes, getDomains, getSettingsSummary]);
@@ -47,9 +51,12 @@ export default function MailboxesPage() {
     if (refreshed) setMailboxes(refreshed);
   };
 
-  const mailboxModeMessage = settingsSummary?.mailcow_mutations_enabled
-    ? 'Mutation mode creates the mailbox in Mailcow and CRM together. If Mailcow rejects the request, nothing is stored locally.'
-    : 'Safe mode stores the mailbox locally only. It does not provision anything in Mailcow.';
+  const enabledProviders = settingsSummary?.enabled_providers || [];
+  const mailboxModeMessage = providerType === "mailcow"
+    ? (settingsSummary?.mailcow_mutations_enabled
+      ? 'Mutation mode creates the mailbox in Mailcow and CRM together. If Mailcow rejects the request, nothing is stored locally.'
+      : 'Safe mode stores the Mailcow mailbox locally only. It does not provision anything in Mailcow.')
+    : 'Google Workspace mailboxes use backend-only OAuth. SMTP and IMAP routing stay unified after connection.';
 
   const handleCreateMailbox = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,8 +65,12 @@ export default function MailboxesPage() {
       setSubmitError('Create a domain first before adding a mailbox.');
       return;
     }
-    if (!localPart.trim() || !displayName.trim() || !password.trim()) {
-      setSubmitError('Mailbox local-part, display name, and password are required.');
+    if (!localPart.trim() || !displayName.trim()) {
+      setSubmitError('Mailbox local-part and display name are required.');
+      return;
+    }
+    if (providerType === "mailcow" && !password.trim()) {
+      setSubmitError('Mailcow mailboxes require the mailbox password.');
       return;
     }
     const email = `${localPart.trim().toLowerCase()}@${selectedDomain.name}`;
@@ -70,9 +81,11 @@ export default function MailboxesPage() {
         domain_id: selectedDomain.id,
         email,
         display_name: displayName.trim(),
+        provider_type: providerType,
         smtp_security_mode: smtpSecurityMode,
-        smtp_password: password,
-        imap_password: password,
+        smtp_password: providerType === "mailcow" ? password : undefined,
+        imap_password: providerType === "mailcow" ? password : undefined,
+        oauth_enabled: providerType === "google_workspace",
       });
     } catch (createError) {
       setSubmitError(createError instanceof Error ? createError.message : 'Mailbox create failed.');
@@ -136,15 +149,41 @@ export default function MailboxesPage() {
     cancelEditMailbox();
   };
 
-  const handleCheckMailboxSmtp = async (mailboxId: string) => {
+  const handleCheckMailboxProvider = async (mailboxId: string) => {
     setActionError(null);
     setBusyMailboxId(mailboxId);
     try {
-      const result = await checkMailboxSmtp(mailboxId);
-      setSmtpDiagnostics((current) => ({ ...current, [mailboxId]: result }));
+      const result = await checkMailboxProvider(mailboxId);
+      setSmtpDiagnostics((current) => ({ ...current, [mailboxId]: { ...current[mailboxId], status: result.smtp.status, category: result.smtp.category, message: `${result.smtp.message} IMAP: ${result.imap.message}`, host: "", port: 0, security_mode: "starttls", dns_resolved: true, connected: true, tls_negotiated: true, auth_succeeded: result.smtp.status === "healthy" } }));
       await refreshMailboxes();
     } catch (checkError) {
-      setActionError(checkError instanceof Error ? checkError.message : 'SMTP check failed.');
+      setActionError(checkError instanceof Error ? checkError.message : 'Provider check failed.');
+    } finally {
+      setBusyMailboxId(null);
+    }
+  };
+
+  const handleStartOAuth = async (mailboxId: string) => {
+    setActionError(null);
+    setBusyMailboxId(mailboxId);
+    try {
+      const result = await startMailboxOAuth(mailboxId);
+      window.open(result.authorization_url, "_blank", "noopener,noreferrer");
+    } catch (oauthError) {
+      setActionError(oauthError instanceof Error ? oauthError.message : "Google OAuth start failed.");
+    } finally {
+      setBusyMailboxId(null);
+    }
+  };
+
+  const handleDisconnectOAuth = async (mailboxId: string) => {
+    setActionError(null);
+    setBusyMailboxId(mailboxId);
+    try {
+      const updated = await disconnectMailboxOAuth(mailboxId);
+      setMailboxes((current) => current.map((mailbox) => mailbox.id === mailboxId ? updated : mailbox));
+    } catch (oauthError) {
+      setActionError(oauthError instanceof Error ? oauthError.message : "Google OAuth disconnect failed.");
     } finally {
       setBusyMailboxId(null);
     }
@@ -178,11 +217,19 @@ export default function MailboxesPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard title="Configured mailboxes" value={mailboxes.length} detail="Senders currently available in the app." icon={Mail} />
         <MetricCard title="Domains" value={domains.length} detail="Verified or local domains ready for mailbox creation." icon={ShieldCheck} tone="info" />
-        <MetricCard title="Provisioning mode" value={settingsSummary?.mailcow_mutations_enabled ? "Synced" : "Local only"} detail={mailboxModeMessage} icon={Edit2} tone={settingsSummary?.mailcow_mutations_enabled ? "success" : "warning"} />
+        <MetricCard title="Provisioning mode" value={providerType === "mailcow" ? (settingsSummary?.mailcow_mutations_enabled ? "Mailcow synced" : "Local only") : "OAuth mailbox"} detail={mailboxModeMessage} icon={Edit2} tone={providerType === "mailcow" && settingsSummary?.mailcow_mutations_enabled ? "success" : "warning"} />
       </div>
 
       <SurfaceCard className="p-5">
       <form onSubmit={handleCreateMailbox} className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label htmlFor="mailbox-provider" className="block text-sm font-semibold text-slate-700 mb-2">Provider</label>
+            <select id="mailbox-provider" value={providerType} onChange={(event) => setProviderType(event.target.value as MailProviderType)} className="form-input">
+              {(["mailcow", "google_workspace"] as MailProviderType[]).filter((provider) => enabledProviders.includes(provider)).map((provider) => (
+                <option key={provider} value={provider}>{provider === "mailcow" ? "Mailcow" : "Google Workspace"}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label htmlFor="mailbox-domain" className="block text-sm font-semibold text-slate-700 mb-2">Domain</label>
             <select id="mailbox-domain" data-testid="mailbox-domain-select" value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)} className="form-input">
@@ -203,7 +250,7 @@ export default function MailboxesPage() {
           </div>
           <div>
             <label htmlFor="mailbox-password" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Password</label>
-            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Local mailbox password" className="form-input" />
+            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={providerType === "mailcow" ? "Local mailbox password" : "Not required for OAuth mailboxes"} disabled={providerType !== "mailcow"} className="form-input disabled:bg-slate-100 disabled:text-slate-400" />
           </div>
           <div>
             <label htmlFor="mailbox-smtp-mode" className="block text-sm font-semibold text-slate-700 mb-2">SMTP Security Mode</label>
@@ -263,16 +310,24 @@ export default function MailboxesPage() {
                       <div>
                         <p className="font-bold text-slate-800 text-sm mb-0.5">{mb.email}</p>
                         <p className="text-xs text-slate-500 font-medium">{mb.display_name || "SMTP/IMAP Account"}</p>
+                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{mb.provider_type.replaceAll("_", " ")}</p>
                         <p className="mt-1 text-[11px] text-slate-500">Visible sender: {mb.display_name?.trim() ? `${mb.display_name} <${mb.email}>` : mb.email}</p>
                         <p className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                          mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          mb.provider_type === "mailcow" && mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}>
-                          {mb.remote_mailcow_provisioned ? 'Mailcow synced' : 'Local only'}
+                          {mb.provider_type === "mailcow" ? (mb.remote_mailcow_provisioned ? 'Mailcow synced' : 'Local only') : (mb.oauth_connection_status || 'OAuth pending').replaceAll("_", " ")}
                         </p>
                         <p className="mt-1 text-[11px] font-medium text-slate-500">SMTP {mb.smtp_security_mode.toUpperCase()} on {mb.smtp_host}:{mb.smtp_port}</p>
+                        <p className="mt-1 text-[11px] font-medium text-slate-500">IMAP {(mb.imap_security_mode || 'ssl').toUpperCase()} on {mb.imap_host}:{mb.imap_port}</p>
                         <p className={`mt-1 text-[11px] font-medium ${((diagnostic?.status || mb.smtp_last_check_status) === 'healthy') ? 'text-emerald-700' : 'text-slate-500'}`}>
-                          {diagnostic?.message || mb.smtp_last_check_message || 'SMTP has not been checked yet.'}
+                          {diagnostic?.message || mb.last_provider_check_message || mb.smtp_last_check_message || 'Provider diagnostics have not been checked yet.'}
                         </p>
+                        {mb.provider_type === "google_workspace" ? (
+                          <p className="mt-1 text-[11px] font-medium text-slate-500">
+                            OAuth: {(mb.oauth_connection_status || "not_connected").replaceAll("_", " ")}
+                            {mb.external_account_email ? ` as ${mb.external_account_email}` : ""}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </td>
@@ -348,11 +403,34 @@ export default function MailboxesPage() {
                           <button
                             data-testid={`check-smtp-mailbox-${mb.id}`}
                             disabled={isBusy}
-                            onClick={() => void handleCheckMailboxSmtp(mb.id)}
+                            onClick={() => void handleCheckMailboxProvider(mb.id)}
                             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100 disabled:opacity-50"
                           >
                             <ShieldCheck size={16} />
                           </button>
+                          {mb.provider_type === "google_workspace" ? (
+                            mb.oauth_connection_status === "connected" ? (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => void handleDisconnectOAuth(mb.id)}
+                                className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-transparent hover:border-amber-100 disabled:opacity-50"
+                                title="Disconnect Google OAuth"
+                              >
+                                <Unplug size={16} />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => void handleStartOAuth(mb.id)}
+                                className="p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors border border-transparent hover:border-violet-100 disabled:opacity-50"
+                                title="Connect Google OAuth"
+                              >
+                                <Link2 size={16} />
+                              </button>
+                            )
+                          ) : null}
                           <button
                             data-testid={`edit-mailbox-${mb.id}`}
                             onClick={() => beginEditMailbox(mb)}

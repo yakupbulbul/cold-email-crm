@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useApiService } from "@/services/api";
-import { SettingsSummary } from "@/types/models";
+import { useAuth } from "@/context/AuthContext";
+import { MailProviderType, SettingsSummary } from "@/types/models";
 import {
     AlertCircle,
     CheckCircle2,
@@ -17,7 +18,20 @@ import {
     XCircle,
 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
-import { EmptyState, PageHeader, SurfaceCard } from "@/components/ui/primitives";
+import { PageHeader, SurfaceCard } from "@/components/ui/primitives";
+
+async function loadSettingsWithRetry(fetchSummary: () => Promise<SettingsSummary | null>, attempts: number = 5) {
+    for (let index = 0; index < attempts; index += 1) {
+        const data = await fetchSummary();
+        if (data) {
+            return data;
+        }
+        if (index < attempts - 1) {
+            await new Promise((resolve) => window.setTimeout(resolve, 200));
+        }
+    }
+    return null;
+}
 
 const toneMap: Record<string, string> = {
     healthy: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -100,24 +114,57 @@ function formatMessage(summary: SettingsSummary) {
 }
 
 export default function SettingsPage() {
-    const { getSettingsSummary, loading, error } = useApiService();
+    const { user } = useAuth();
+    const { getSettingsSummary, updateProviderSettings, loading, error } = useApiService();
     const [summary, setSummary] = useState<SettingsSummary | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [providerSaving, setProviderSaving] = useState<MailProviderType | "default" | null>(null);
+    const [providerError, setProviderError] = useState<string | null>(null);
 
     const loadSummary = useCallback(async () => {
         setRefreshing(true);
-        const data = await getSettingsSummary();
+        const data = await loadSettingsWithRetry(getSettingsSummary);
         if (data) {
             setSummary(data);
         }
         setRefreshing(false);
     }, [getSettingsSummary]);
 
+    const handleProviderToggle = useCallback(async (provider: MailProviderType, enabled: boolean) => {
+        setProviderSaving(provider);
+        setProviderError(null);
+        try {
+            const updated = await updateProviderSettings(
+                provider === "mailcow"
+                    ? { mailcow_enabled: enabled }
+                    : { google_workspace_enabled: enabled },
+            );
+            setSummary(updated);
+        } catch (err) {
+            setProviderError(err instanceof Error ? err.message : "Provider settings update failed.");
+        } finally {
+            setProviderSaving(null);
+        }
+    }, [updateProviderSettings]);
+
+    const handleDefaultProvider = useCallback(async (provider: MailProviderType) => {
+        setProviderSaving("default");
+        setProviderError(null);
+        try {
+            const updated = await updateProviderSettings({ default_provider: provider });
+            setSummary(updated);
+        } catch (err) {
+            setProviderError(err instanceof Error ? err.message : "Default provider update failed.");
+        } finally {
+            setProviderSaving(null);
+        }
+    }, [updateProviderSettings]);
+
     useEffect(() => {
         let isMounted = true;
 
         const fetchInitialSummary = async () => {
-            const data = await getSettingsSummary();
+            const data = await loadSettingsWithRetry(getSettingsSummary);
             if (isMounted && data) {
                 setSummary(data);
             }
@@ -165,6 +212,8 @@ export default function SettingsPage() {
     }
 
     if (!summary) {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+        const backendUrl = apiBase.startsWith("http") ? apiBase.replace(/\/api\/v1\/?$/, "") : "http://127.0.0.1:8060";
         return (
             <div className="space-y-6 animate-fade-in">
                 <PageHeader
@@ -172,7 +221,45 @@ export default function SettingsPage() {
                     title="System settings"
                     description="Review backend runtime state, worker mode, and integration posture without exposing secrets."
                 />
-                <EmptyState title="No settings data available yet" description="Refresh after the backend settings summary becomes available." />
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    The backend settings summary is temporarily unavailable. This page is showing degraded local runtime context while it retries.
+                </div>
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    <SettingCard
+                        title="Application Environment"
+                        subtitle="Fallback runtime context while the backend summary is unavailable."
+                        icon={<Server size={20} />}
+                    >
+                        <DetailRow label="Backend URL" value={backendUrl} />
+                        <DetailRow label="Frontend API Path" value={apiBase} />
+                        <DetailRow label="Readiness" value={<StatusBadge value="unknown" />} />
+                    </SettingCard>
+                    <SettingCard
+                        title="Mailcow Integration"
+                        subtitle="Backend summary is unavailable, so provider detail could not be refreshed."
+                        icon={<Mail size={20} />}
+                    >
+                        <DetailRow label="Status" value={<StatusBadge value="unknown" />} />
+                        <DetailRow label="Mode" value="Read only" />
+                    </SettingCard>
+                    <SettingCard
+                        title="Worker / Queue Mode"
+                        subtitle="Worker detail is unavailable until the backend settings summary returns."
+                        icon={<Cpu size={20} />}
+                    >
+                        <DetailRow label="Current mode" value="Unknown" />
+                        <DetailRow label="Workers available" value="Unknown" />
+                    </SettingCard>
+                    <SettingCard
+                        title="Auth / Session"
+                        subtitle="Current operator information from the authenticated client session."
+                        icon={<UserCircle2 size={20} />}
+                    >
+                        <DetailRow label="Signed-in user" value={user?.email || "Unknown"} />
+                        <DetailRow label="Display name" value={user?.full_name || "Bootstrap Admin"} />
+                        <DetailRow label="Role" value={user?.is_admin ? "Admin" : "User"} />
+                    </SettingCard>
+                </div>
             </div>
         );
     }
@@ -234,6 +321,12 @@ export default function SettingsPage() {
                 </div>
             </div>
 
+            {providerError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {providerError}
+                </div>
+            ) : null}
+
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 <SettingCard
                     title="Application Environment"
@@ -274,6 +367,70 @@ export default function SettingsPage() {
                             {summary.health.workers.detail}
                         </div>
                     ) : null}
+                </SettingCard>
+
+                <SettingCard
+                    title="Mail Providers"
+                    subtitle="Enable or disable mailbox providers globally, inspect provider health, and control the default provider for new mailboxes."
+                    icon={<Mail size={20} />}
+                >
+                    <div className="space-y-4">
+                        {(["mailcow", "google_workspace"] as MailProviderType[]).map((provider) => {
+                            const providerSummary = summary.providers[provider];
+                            const checked = providerSummary?.enabled ?? false;
+                            return (
+                                <div key={provider} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-900">{provider === "mailcow" ? "Mailcow" : "Google Workspace"}</div>
+                                            <div className="mt-1 text-sm text-slate-600">{providerSummary?.detail || "No provider detail available."}</div>
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                <StatusBadge value={providerSummary?.status || "unknown"} />
+                                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                                    {providerSummary?.configured ? "Configured" : "Not configured"}
+                                                </span>
+                                                {provider === "google_workspace" ? (
+                                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                                        OAuth {providerSummary?.oauth_connection_status?.replaceAll("_", " ") || "not connected"}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        <label className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800">
+                                            <span>{checked ? "Enabled" : "Disabled"}</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={checked}
+                                                onChange={(event) => void handleProviderToggle(provider, event.target.checked)}
+                                                disabled={providerSaving === provider}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="text-sm font-bold text-slate-900">Default provider</div>
+                            <div className="mt-1 text-sm text-slate-600">New mailbox setup defaults to this provider unless the operator chooses another one.</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {(["mailcow", "google_workspace"] as MailProviderType[]).map((provider) => (
+                                    <button
+                                        key={provider}
+                                        type="button"
+                                        onClick={() => void handleDefaultProvider(provider)}
+                                        disabled={providerSaving === "default"}
+                                        className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                                            summary.default_provider === provider
+                                                ? "border-slate-900 bg-slate-900 text-white"
+                                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                        }`}
+                                    >
+                                        {provider === "mailcow" ? "Mailcow" : "Google Workspace"}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </SettingCard>
 
                 <SettingCard
