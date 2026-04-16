@@ -14,6 +14,7 @@ from app.integrations.imap.provider import IMAPFetchedMessage, IMAPProviderError
 from app.models.campaign import Campaign, Contact, SendLog
 from app.models.core import Mailbox
 from app.models.email import Message, Thread
+from app.services.mail_provider_service import MailProviderRegistry, ProviderUnavailableError
 
 
 MESSAGE_ID_RE = re.compile(r"<[^>]+>")
@@ -286,6 +287,7 @@ class IMAPSyncManager:
     def __init__(self, db: Session):
         self.db = db
         self.provider = MailcowIMAPProvider()
+        self.registry = MailProviderRegistry(db)
 
     def diagnose_mailbox(self, mailbox: Mailbox) -> dict:
         if not mailbox.inbox_sync_enabled:
@@ -294,12 +296,15 @@ class IMAPSyncManager:
             return {"status": "disabled", "detail": "Mailbox is not active."}
         if not mailbox.imap_host or not mailbox.imap_username or not mailbox.imap_password_encrypted:
             return {"status": "not_configured", "detail": "IMAP settings are incomplete."}
-        result = self.provider.diagnose_connection(
-            mailbox.imap_host,
-            mailbox.imap_port,
-            mailbox.imap_username,
-            mailbox.imap_password_encrypted,
-        )
+        try:
+            provider = self.registry.resolve_mailbox_provider(mailbox)
+        except ProviderUnavailableError as exc:
+            return {"status": "disabled", "detail": exc.message, "category": exc.category}
+        self.provider = getattr(provider, "imap", self.provider)
+        try:
+            result = provider.diagnose_imap(mailbox)
+        except Exception as exc:
+            return {"status": "failing", "detail": str(exc), "category": "imap_failed"}
         return {"status": result.status, "detail": result.message, "category": result.category}
 
     def sync_mailbox(self, mailbox_id: str | UUID) -> InboxSyncOutcome:
@@ -344,12 +349,21 @@ class IMAPSyncManager:
             )
 
         try:
-            fetched_messages = self.provider.fetch_messages(
-                mailbox.imap_host,
-                mailbox.imap_port,
-                mailbox.imap_username,
-                mailbox.imap_password_encrypted,
-                since_uid=mailbox.inbox_last_seen_uid,
+            provider = self.registry.resolve_mailbox_provider(mailbox)
+            self.provider = getattr(provider, "imap", self.provider)
+            fetched_messages = provider.sync_inbox(mailbox)
+        except ProviderUnavailableError as exc:
+            mailbox.inbox_sync_status = "disabled"
+            mailbox.inbox_last_synced_at = datetime.utcnow()
+            mailbox.inbox_last_error = exc.message
+            self.db.add(mailbox)
+            self.db.commit()
+            return InboxSyncOutcome(
+                mailbox_id=str(mailbox.id),
+                mailbox_email=mailbox.email,
+                status="disabled",
+                detail=exc.message,
+                last_synced_at=mailbox.inbox_last_synced_at.isoformat() if mailbox.inbox_last_synced_at else None,
             )
         except IMAPProviderError as exc:
             mailbox.inbox_sync_status = "failing"
@@ -468,6 +482,7 @@ def build_inbox_thread_summary(thread: Thread) -> dict:
         "subject": thread.subject or "",
         "mailbox_id": str(thread.mailbox_id),
         "mailbox_email": thread.mailbox.email if thread.mailbox else None,
+        "mailbox_provider": thread.mailbox.provider_type if thread.mailbox else None,
         "contact_email": thread.contact_email or "",
         "contact_name": contact_name,
         "campaign_id": str(thread.campaign_id) if thread.campaign_id else None,

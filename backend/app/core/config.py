@@ -47,6 +47,23 @@ class Settings(BaseSettings):
     MAILCOW_IMAP_HOST: str | None = None
     MAILCOW_IMAP_PORT: int = 993
 
+    # Google Workspace OAuth / XOAUTH2
+    GOOGLE_WORKSPACE_CLIENT_ID: str | None = None
+    GOOGLE_WORKSPACE_CLIENT_SECRET: str | None = None
+    GOOGLE_WORKSPACE_REDIRECT_URI: str | None = None
+    GOOGLE_WORKSPACE_AUTH_URI: str = "https://accounts.google.com/o/oauth2/v2/auth"
+    GOOGLE_WORKSPACE_TOKEN_URI: str = "https://oauth2.googleapis.com/token"
+    GOOGLE_WORKSPACE_SCOPES: list[str] = [
+        "https://mail.google.com/",
+        "openid",
+        "email",
+        "profile",
+    ]
+    GOOGLE_WORKSPACE_SMTP_HOST: str = "smtp.gmail.com"
+    GOOGLE_WORKSPACE_SMTP_PORT: int = 587
+    GOOGLE_WORKSPACE_IMAP_HOST: str = "imap.gmail.com"
+    GOOGLE_WORKSPACE_IMAP_PORT: int = 993
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_allowed_origins(cls, value: Any) -> list[str]:
@@ -54,6 +71,20 @@ class Settings(BaseSettings):
             return [str(item).strip() for item in value if str(item).strip()]
         if not value:
             return ["http://localhost:3000"]
+        return [item.strip() for item in str(value).split(",") if item.strip()]
+
+    @field_validator("GOOGLE_WORKSPACE_SCOPES", mode="before")
+    @classmethod
+    def parse_google_scopes(cls, value: Any) -> list[str]:
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if not value:
+            return [
+                "https://mail.google.com/",
+                "openid",
+                "email",
+                "profile",
+            ]
         return [item.strip() for item in str(value).split(",") if item.strip()]
 
     @field_validator("APP_ENV")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.models.core import Mailbox
 from app.schemas.email import SendEmailLogResponse, SendEmailRequest, SendEmailResponse
 from app.services.smtp_service import SMTPManagerService, SMTPServiceError
 
@@ -9,10 +10,17 @@ router = APIRouter()
 @router.post("/send-email", response_model=SendEmailResponse)
 def dispatch_outbound_email(req: SendEmailRequest, db: Session = Depends(get_db)):
     service = SMTPManagerService(db)
+    mailbox = db.query(Mailbox).filter(Mailbox.id == req.mailbox_id).first()
     try:
         success, response = service.send_email(req)
         message_id, log_id = response.split("|", 1)
-        return SendEmailResponse(success=success, message_id=message_id, status="sent", provider="smtp", log_id=log_id)
+        return SendEmailResponse(
+            success=success,
+            message_id=message_id,
+            status="sent",
+            provider=(mailbox.provider_type if mailbox else "unknown"),
+            log_id=log_id,
+        )
     except SMTPServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
 

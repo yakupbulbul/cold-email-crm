@@ -8,6 +8,7 @@ from app.models.campaign import SendLog
 from app.models.email import Message
 from app.schemas.email import SendEmailLogResponse, SendEmailRequest
 from app.integrations.smtp.provider import MailcowSMTPProvider, SMTPDiagnosticResult
+from app.services.mail_provider_service import MailProviderRegistry, ProviderUnavailableError
 from app.services.imap_service import MessageParserService, ThreadResolverService
 
 
@@ -23,6 +24,7 @@ class SMTPManagerService:
     def __init__(self, db: Session):
         self.db = db
         self.provider = MailcowSMTPProvider()
+        self.registry = MailProviderRegistry(db)
 
     def derive_security_mode(self, mailbox: Mailbox) -> str:
         configured = (mailbox.smtp_security_mode or "").strip().lower()
@@ -40,14 +42,17 @@ class SMTPManagerService:
         mailbox = self.db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
         if not mailbox:
             raise SMTPServiceError("mailbox_not_found", "Mailbox not found.", status_code=404)
+        try:
+            provider = self.registry.resolve_mailbox_provider(mailbox)
+        except ProviderUnavailableError as exc:
+            raise SMTPServiceError(exc.category, exc.message, status_code=exc.status_code) from exc
 
-        result = self.provider.diagnose_connection(
-            host=mailbox.smtp_host,
-            port=mailbox.smtp_port,
-            username=mailbox.smtp_username,
-            password=mailbox.smtp_password_encrypted,
-            security_mode=self.derive_security_mode(mailbox),
-        )
+        self.provider = getattr(provider, "smtp", self.provider)
+        try:
+            result = provider.diagnose_smtp(mailbox)
+        except Exception as exc:
+            category, message, status_code = self._classify_provider_failure(str(exc))
+            raise SMTPServiceError(category, message, status_code=status_code) from exc
         self._persist_smtp_check(mailbox, result)
         return self._serialize_diagnostic(result)
 
@@ -57,26 +62,31 @@ class SMTPManagerService:
             raise SMTPServiceError("mailbox_not_found", "Mailbox not found.", status_code=404)
         if mailbox.status != "active":
             raise SMTPServiceError("mailbox_inactive", "Mailbox must be active before sending email.", status_code=409)
+        try:
+            provider = self.registry.resolve_mailbox_provider(mailbox)
+        except ProviderUnavailableError as exc:
+            raise SMTPServiceError(exc.category, exc.message, status_code=exc.status_code) from exc
 
-        security_mode = self.derive_security_mode(mailbox)
-
-        success, message_id_or_error = self.provider.send_email(
-            host=mailbox.smtp_host,
-            port=mailbox.smtp_port,
-            username=mailbox.smtp_username,
-            password=mailbox.smtp_password_encrypted,
-            security_mode=security_mode,
-            sender_email=mailbox.email,
-            from_header=self.build_sender_identity(mailbox),
-            to_emails=req.to,
-            subject=req.subject,
-            text_body=req.text_body,
-            html_body=req.html_body,
-            cc_emails=req.cc,
-            bcc_emails=req.bcc,
-            in_reply_to=req.in_reply_to,
-            references=req.references
-        )
+        self.provider = getattr(provider, "smtp", self.provider)
+        try:
+            success, message_id_or_error = provider.send_email(
+                mailbox,
+                sender_email=mailbox.email,
+                from_header=self.build_sender_identity(mailbox),
+                to_emails=req.to,
+                subject=req.subject,
+                text_body=req.text_body,
+                html_body=req.html_body,
+                cc_emails=req.cc,
+                bcc_emails=req.bcc,
+                in_reply_to=req.in_reply_to,
+                references=req.references,
+            )
+        except ProviderUnavailableError as exc:
+            raise SMTPServiceError(exc.category, exc.message, status_code=exc.status_code) from exc
+        except Exception as exc:
+            category, message, status_code = self._classify_provider_failure(str(exc))
+            raise SMTPServiceError(category, message, status_code=status_code) from exc
 
         safe_response = message_id_or_error if success else self._safe_provider_error(message_id_or_error)
         log = SendLog(

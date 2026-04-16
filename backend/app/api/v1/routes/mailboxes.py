@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -8,6 +10,9 @@ from app.core.database import get_db
 from app.integrations.mailcow.client import MailcowClient
 from app.models.core import Mailbox, Domain
 from app.schemas.warmup import WarmupMailboxToggleRequest
+from app.services.google_oauth_service import GoogleOAuthError, GoogleWorkspaceOAuthService
+from app.services.mail_provider_service import MailProviderRegistry, ProviderUnavailableError
+from app.services.provider_settings_service import ProviderSettingsService
 from app.services.warmup_service import WarmupService
 
 router = APIRouter()
@@ -16,15 +21,18 @@ class MailboxCreate(BaseModel):
     domain_id: str
     email: str
     display_name: str
+    provider_type: Optional[str] = None
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = None
     smtp_username: Optional[str] = None
     smtp_security_mode: Optional[str] = None
-    smtp_password: str
+    smtp_password: Optional[str] = None
     imap_host: Optional[str] = None
     imap_port: Optional[int] = None
     imap_username: Optional[str] = None
-    imap_password: str
+    imap_password: Optional[str] = None
+    imap_security_mode: Optional[str] = None
+    oauth_enabled: Optional[bool] = None
     daily_send_limit: int = 50
 
 
@@ -33,17 +41,34 @@ class MailboxUpdate(BaseModel):
     daily_send_limit: int = 50
     status: str = "active"
     smtp_security_mode: Optional[str] = None
+    provider_type: Optional[str] = None
+    oauth_enabled: Optional[bool] = None
 
 class MailboxResponse(BaseModel):
     id: str
     domain_id: str
     email: str
     display_name: str
+    provider_type: str
+    provider_status: str
+    provider_mailbox_id: Optional[str] = None
+    provider_domain_id: Optional[str] = None
+    provider_config_status: str
+    last_provider_check_at: Optional[str] = None
+    last_provider_check_status: Optional[str] = None
+    last_provider_check_message: Optional[str] = None
     smtp_host: str
     smtp_port: int
     smtp_security_mode: str
     imap_host: str
     imap_port: int
+    imap_security_mode: str
+    oauth_enabled: bool
+    oauth_provider: Optional[str] = None
+    oauth_connection_status: Optional[str] = None
+    oauth_last_checked_at: Optional[str] = None
+    oauth_last_error: Optional[str] = None
+    external_account_email: Optional[str] = None
     warmup_enabled: bool
     warmup_status: Optional[str] = None
     warmup_last_checked_at: Optional[str] = None
@@ -76,11 +101,26 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "domain_id": str(mb.domain_id),
         "email": mb.email,
         "display_name": mb.display_name,
+        "provider_type": mb.provider_type or "mailcow",
+        "provider_status": mb.provider_status or "active",
+        "provider_mailbox_id": mb.provider_mailbox_id,
+        "provider_domain_id": mb.provider_domain_id,
+        "provider_config_status": mb.provider_config_status or "configured",
+        "last_provider_check_at": mb.last_provider_check_at.isoformat() if mb.last_provider_check_at else None,
+        "last_provider_check_status": mb.last_provider_check_status,
+        "last_provider_check_message": mb.last_provider_check_message,
         "smtp_host": mb.smtp_host,
         "smtp_port": mb.smtp_port,
         "smtp_security_mode": mb.smtp_security_mode or ("ssl" if mb.smtp_port == 465 else "starttls"),
         "imap_host": mb.imap_host,
         "imap_port": mb.imap_port,
+        "imap_security_mode": mb.imap_security_mode or ("plain" if mb.imap_port == 143 else "ssl"),
+        "oauth_enabled": mb.oauth_enabled,
+        "oauth_provider": mb.oauth_provider,
+        "oauth_connection_status": mb.oauth_connection_status,
+        "oauth_last_checked_at": mb.oauth_last_checked_at.isoformat() if mb.oauth_last_checked_at else None,
+        "oauth_last_error": mb.oauth_last_error,
+        "external_account_email": mb.oauth_token.external_account_email if mb.oauth_token else None,
         "warmup_enabled": mb.warmup_enabled,
         "warmup_status": mb.warmup_status,
         "warmup_last_checked_at": mb.warmup_last_checked_at.isoformat() if mb.warmup_last_checked_at else None,
@@ -102,10 +142,28 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "smtp_last_check_message": mb.smtp_last_check_message,
         "created_at": str(mb.created_at) if mb.created_at else None,
         "updated_at": str(mb.updated_at) if mb.updated_at else None,
-    }
+}
 
 
-def resolve_mailbox_connection_defaults(req: MailboxCreate) -> dict:
+def resolve_mailbox_connection_defaults(req: MailboxCreate, provider_type: str) -> dict:
+    if provider_type == "google_workspace":
+        smtp_host = req.smtp_host or settings.GOOGLE_WORKSPACE_SMTP_HOST
+        imap_host = req.imap_host or settings.GOOGLE_WORKSPACE_IMAP_HOST
+        smtp_port = req.smtp_port or settings.GOOGLE_WORKSPACE_SMTP_PORT
+        imap_port = req.imap_port or settings.GOOGLE_WORKSPACE_IMAP_PORT
+        smtp_security_mode = normalize_smtp_security_mode(req.smtp_security_mode, smtp_port)
+        imap_security_mode = normalize_imap_security_mode(req.imap_security_mode, imap_port)
+        return {
+            "smtp_host": smtp_host,
+            "smtp_port": smtp_port,
+            "smtp_username": req.smtp_username or req.email,
+            "smtp_security_mode": smtp_security_mode,
+            "imap_host": imap_host,
+            "imap_port": imap_port,
+            "imap_username": req.imap_username or req.email,
+            "imap_security_mode": imap_security_mode,
+        }
+
     smtp_host = req.smtp_host or settings.MAILCOW_SMTP_HOST
     imap_host = req.imap_host or settings.MAILCOW_IMAP_HOST
     if not smtp_host or not imap_host:
@@ -122,6 +180,7 @@ def resolve_mailbox_connection_defaults(req: MailboxCreate) -> dict:
         "imap_host": imap_host,
         "imap_port": req.imap_port or settings.MAILCOW_IMAP_PORT,
         "imap_username": req.imap_username or req.email,
+        "imap_security_mode": normalize_imap_security_mode(req.imap_security_mode, req.imap_port or settings.MAILCOW_IMAP_PORT),
     }
 
 
@@ -130,6 +189,13 @@ def normalize_smtp_security_mode(value: Optional[str], port: int) -> str:
     if normalized in {"starttls", "ssl", "plain"}:
         return normalized
     return "ssl" if port == 465 else "starttls"
+
+
+def normalize_imap_security_mode(value: Optional[str], port: int) -> str:
+    normalized = (value or "").strip().lower()
+    if normalized in {"ssl", "starttls", "plain"}:
+        return normalized
+    return "plain" if port == 143 else "ssl"
 
 
 def validate_mailbox_email_for_domain(req: MailboxCreate, domain: Domain) -> None:
@@ -191,6 +257,10 @@ def list_mailboxes(db: Session = Depends(get_db)):
 @router.post("/")
 @router.post("")  # Handle both /mailboxes and /mailboxes/ without redirect
 def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
+    provider_type = (req.provider_type or ProviderSettingsService(db).get_or_create().default_provider or "mailcow").strip().lower()
+    registry = MailProviderRegistry(db)
+    registry.ensure_provider_allowed(provider_type)
+
     # Verify domain exists
     domain = db.query(Domain).filter(Domain.id == req.domain_id).first()
     if not domain:
@@ -202,10 +272,12 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Mailbox email already exists")
     
-    connection_defaults = resolve_mailbox_connection_defaults(req)
+    connection_defaults = resolve_mailbox_connection_defaults(req, provider_type)
+    if provider_type == "mailcow" and (not req.smtp_password or not req.imap_password):
+        raise HTTPException(status_code=422, detail="smtp_password and imap_password are required for Mailcow mailboxes.")
 
     remote_mailcow_provisioned = False
-    if settings.MAILCOW_ENABLE_MUTATIONS:
+    if provider_type == "mailcow" and settings.MAILCOW_ENABLE_MUTATIONS:
         ensure_remote_mailcow_mailbox(req=req, domain=domain)
         remote_mailcow_provisioned = True
 
@@ -213,15 +285,23 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
         domain_id=req.domain_id,
         email=req.email.strip().lower(),
         display_name=req.display_name.strip(),
+        provider_type=provider_type,
+        provider_status="active",
+        provider_domain_id=str(domain.id),
+        provider_config_status="configured",
         smtp_host=connection_defaults["smtp_host"],
         smtp_port=connection_defaults["smtp_port"],
         smtp_username=connection_defaults["smtp_username"],
-        smtp_password_encrypted=req.smtp_password,  # TODO: encrypt at rest
+        smtp_password_encrypted=req.smtp_password or "",
         smtp_security_mode=connection_defaults["smtp_security_mode"],
         imap_host=connection_defaults["imap_host"],
         imap_port=connection_defaults["imap_port"],
         imap_username=connection_defaults["imap_username"],
-        imap_password_encrypted=req.imap_password,  # TODO: encrypt at rest
+        imap_password_encrypted=req.imap_password or "",
+        imap_security_mode=connection_defaults["imap_security_mode"],
+        oauth_enabled=bool(req.oauth_enabled) if provider_type == "google_workspace" else False,
+        oauth_provider="google_workspace" if provider_type == "google_workspace" else None,
+        oauth_connection_status="not_connected" if provider_type == "google_workspace" else None,
         daily_send_limit=req.daily_send_limit,
         remote_mailcow_provisioned=remote_mailcow_provisioned,
     )
@@ -243,6 +323,19 @@ def update_mailbox(mailbox_id: str, req: MailboxUpdate, db: Session = Depends(ge
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
+    if req.provider_type:
+        registry = MailProviderRegistry(db)
+        registry.ensure_provider_allowed(req.provider_type, mailbox=mailbox)
+        mailbox.provider_type = req.provider_type.strip().lower()
+        if mailbox.provider_type == "google_workspace":
+            mailbox.oauth_enabled = bool(req.oauth_enabled) if req.oauth_enabled is not None else mailbox.oauth_enabled
+            mailbox.oauth_provider = "google_workspace"
+            if not mailbox.smtp_host:
+                mailbox.smtp_host = settings.GOOGLE_WORKSPACE_SMTP_HOST
+                mailbox.smtp_port = settings.GOOGLE_WORKSPACE_SMTP_PORT
+            if not mailbox.imap_host:
+                mailbox.imap_host = settings.GOOGLE_WORKSPACE_IMAP_HOST
+                mailbox.imap_port = settings.GOOGLE_WORKSPACE_IMAP_PORT
 
     mailbox.display_name = req.display_name.strip()
     mailbox.daily_send_limit = req.daily_send_limit
@@ -271,6 +364,84 @@ def check_mailbox_smtp(mailbox_id: str, db: Session = Depends(get_db)):
 
     service = SMTPManagerService(db)
     return service.check_mailbox_smtp(mailbox_id)
+
+
+@router.post("/{mailbox_id}/provider-check")
+def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    if not mailbox:
+        raise HTTPException(status_code=404, detail="Mailbox not found")
+    registry = MailProviderRegistry(db)
+    try:
+        provider = registry.resolve_mailbox_provider(mailbox)
+        smtp_result = provider.diagnose_smtp(mailbox)
+        imap_result = provider.diagnose_imap(mailbox)
+    except ProviderUnavailableError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
+    except GoogleOAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail={"message": str(exc), "category": "provider_check_failed"}) from exc
+
+    now = datetime.utcnow()
+    mailbox.last_provider_check_at = now
+    mailbox.smtp_last_checked_at = now
+    mailbox.oauth_last_checked_at = now
+    mailbox.last_provider_check_status = "healthy" if smtp_result.status == "healthy" and imap_result.status == "healthy" else "failed"
+    mailbox.last_provider_check_message = "Provider diagnostics completed."
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+    return {
+        "provider_type": mailbox.provider_type,
+        "status": mailbox.last_provider_check_status,
+        "smtp": {
+            "status": smtp_result.status,
+            "category": smtp_result.category,
+            "message": smtp_result.message,
+        },
+        "imap": {
+            "status": imap_result.status,
+            "category": imap_result.category,
+            "message": imap_result.message,
+        },
+    }
+
+
+@router.get("/{mailbox_id}/oauth-status")
+def get_mailbox_oauth_status(mailbox_id: str, db: Session = Depends(get_db)):
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    if not mailbox:
+        raise HTTPException(status_code=404, detail="Mailbox not found")
+    return GoogleWorkspaceOAuthService(db).safe_status(mailbox)
+
+
+@router.post("/{mailbox_id}/oauth/start")
+def start_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    if not mailbox:
+        raise HTTPException(status_code=404, detail="Mailbox not found")
+    if (mailbox.provider_type or "mailcow") != "google_workspace":
+        raise HTTPException(status_code=409, detail="OAuth is only available for Google Workspace mailboxes.")
+    try:
+        authorization_url = GoogleWorkspaceOAuthService(db).build_authorization_url(mailbox)
+    except GoogleOAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
+    return {"status": "ready", "authorization_url": authorization_url}
+
+
+@router.post("/{mailbox_id}/oauth/disconnect")
+def disconnect_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
+    mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
+    if not mailbox:
+        raise HTTPException(status_code=404, detail="Mailbox not found")
+    if (mailbox.provider_type or "mailcow") != "google_workspace":
+        raise HTTPException(status_code=409, detail="OAuth is only available for Google Workspace mailboxes.")
+    try:
+        refreshed = GoogleWorkspaceOAuthService(db).disconnect(mailbox)
+    except GoogleOAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
+    return mailbox_to_response(refreshed)
 
 
 @router.patch("/{mailbox_id}/warmup")

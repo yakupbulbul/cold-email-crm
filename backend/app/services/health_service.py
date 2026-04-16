@@ -6,6 +6,7 @@ from sqlalchemy import text
 from typing import Dict, Any
 from app.core.config import settings
 from app.integrations.mailcow import MailcowClient
+from app.services.mail_provider_service import MailProviderRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -131,11 +132,16 @@ class SystemHealthService:
             payload["http_status"] = result.http_status
         return payload
 
+    def check_provider_health(self) -> Dict[str, Any]:
+        registry = MailProviderRegistry(self.db)
+        return registry.provider_health_payload()
+
     def check_overall_health(self) -> Dict[str, Any]:
         db_stat = self.check_db_health()
         redis_stat = self.check_redis_health()
         worker_stat = self.check_worker_health()
         mailcow_stat = self.check_mailcow_health()
+        provider_stats = self.check_provider_health()
 
         is_all_healthy = all(x["status"] == "healthy" for x in [db_stat, redis_stat])
         is_any_failed = any(x["status"] == "failed" for x in [db_stat, redis_stat, worker_stat, mailcow_stat])
@@ -157,5 +163,6 @@ class SystemHealthService:
                 "redis": redis_stat,
                 "workers": worker_stat,
                 "mailcow": mailcow_stat,
+                "providers": provider_stats,
             }
         }

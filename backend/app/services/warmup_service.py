@@ -10,6 +10,7 @@ from app.models.monitoring import JobLog
 from app.models.warmup import WarmupEvent, WarmupPair, WarmupSetting
 from app.schemas.email import SendEmailRequest
 from app.services.health_service import SystemHealthService
+from app.services.mail_provider_service import MailProviderRegistry, ProviderUnavailableError
 from app.services.smtp_service import SMTPManagerService, SMTPServiceError
 
 WARMUP_INTERVAL_SECONDS = 900
@@ -42,6 +43,7 @@ class WarmupService:
     def __init__(self, db: Session):
         self.db = db
         self.smtp = SMTPManagerService(db)
+        self.providers = MailProviderRegistry(db)
 
     def get_or_create_settings(self) -> WarmupSetting:
         setting = self.db.query(WarmupSetting).order_by(WarmupSetting.created_at.asc()).first()
@@ -343,13 +345,20 @@ class WarmupService:
         if mailbox.status != "active":
             status = "blocked"
             block_reason = "Mailbox is inactive."
-        elif not mailbox.warmup_enabled:
-            status = "disabled"
-        elif mailbox.smtp_last_check_status != "healthy":
-            status = "blocked"
-            block_reason = mailbox.smtp_last_check_message or "SMTP check must pass before warm-up can run."
         else:
-            status = "ready"
+            try:
+                self.providers.resolve_mailbox_provider(mailbox)
+            except ProviderUnavailableError as exc:
+                status = "blocked"
+                block_reason = exc.message
+            else:
+                if not mailbox.warmup_enabled:
+                    status = "disabled"
+                elif mailbox.smtp_last_check_status != "healthy":
+                    status = "blocked"
+                    block_reason = mailbox.smtp_last_check_message or "SMTP check must pass before warm-up can run."
+                else:
+                    status = "ready"
 
         mailbox.warmup_status = status
         mailbox.warmup_block_reason = block_reason
@@ -362,6 +371,7 @@ class WarmupService:
             "id": str(mailbox.id),
             "email": mailbox.email,
             "display_name": mailbox.display_name,
+            "provider_type": mailbox.provider_type,
             "warmup_enabled": mailbox.warmup_enabled,
             "warmup_status": status,
             "warmup_last_checked_at": mailbox.warmup_last_checked_at.isoformat() if mailbox.warmup_last_checked_at else None,

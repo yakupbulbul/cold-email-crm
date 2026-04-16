@@ -29,6 +29,8 @@ def _serialize_mailbox_sync(mailbox: Mailbox) -> dict:
         "email": mailbox.email,
         "display_name": mailbox.display_name,
         "status": mailbox.status,
+        "provider_type": mailbox.provider_type,
+        "oauth_connection_status": mailbox.oauth_connection_status,
         "inbox_sync_enabled": mailbox.inbox_sync_enabled,
         "inbox_sync_status": mailbox.inbox_sync_status or "unknown",
         "inbox_last_synced_at": mailbox.inbox_last_synced_at.isoformat() if mailbox.inbox_last_synced_at else None,

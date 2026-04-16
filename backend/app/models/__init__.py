@@ -1,5 +1,5 @@
 from .base import Base
-from .core import Domain, Mailbox
+from .core import Domain, Mailbox, MailProviderSetting, MailboxOAuthToken
 from .warmup import WarmupPair, WarmupEvent, WarmupSetting
 from .campaign import Contact, Campaign, CampaignLead, SendLog
 from .email import Thread, Message, AiSummary
@@ -15,6 +15,8 @@ __all__ = [
     "Base",
     "Domain",
     "Mailbox",
+    "MailProviderSetting",
+    "MailboxOAuthToken",
     "WarmupPair",
     "WarmupEvent",
     "WarmupSetting",
