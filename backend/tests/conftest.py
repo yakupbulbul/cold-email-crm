@@ -20,6 +20,12 @@ os.environ.setdefault("POSTGRES_URL", TEST_DB_URL)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6380/1")
 os.environ.setdefault("APP_ENV", "test")
+os.environ["MAILCOW_ENABLE_MUTATIONS"] = "false"
+os.environ["MAILCOW_API_URL"] = ""
+os.environ["MAILCOW_API_KEY"] = ""
+os.environ["GOOGLE_WORKSPACE_CLIENT_ID"] = ""
+os.environ["GOOGLE_WORKSPACE_CLIENT_SECRET"] = ""
+os.environ["GOOGLE_WORKSPACE_REDIRECT_URI"] = ""
 
 from app.main import app
 from app.models.base import Base

@@ -1,39 +1,76 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.api.deps import get_optional_current_user
 from app.services.health_service import SystemHealthService
 from app.models.monitoring import JobLog, SystemAlert, AuditLog
+from app.models.user import User
 from sqlalchemy import func
 
 router = APIRouter()
+public_router = APIRouter()
 
-@router.get("/health")
-def get_global_health(db: Session = Depends(get_db)):
+def _allow_anonymous_or_admin(current_user: User | None = Depends(get_optional_current_user)) -> None:
+    if current_user and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
+        )
+
+
+@public_router.get("/health")
+def get_global_health(
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     svc = SystemHealthService(db)
     return svc.check_overall_health()
 
-@router.get("/health/db")
-def get_db_health(db: Session = Depends(get_db)):
+@public_router.get("/health/db")
+def get_db_health(
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     return SystemHealthService(db).check_db_health()
 
-@router.get("/health/redis")
-def get_redis_health(db: Session = Depends(get_db)):
+@public_router.get("/health/redis")
+def get_redis_health(
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     return SystemHealthService(db).check_redis_health()
 
-@router.get("/health/workers")
-def get_worker_health(db: Session = Depends(get_db)):
+@public_router.get("/health/workers")
+def get_worker_health(
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     return SystemHealthService(db).check_worker_health()
 
-@router.get("/health/smtp")
-def get_smtp_health(host: str, port: int = 465, secure: bool = True, db: Session = Depends(get_db)):
+@public_router.get("/health/smtp")
+def get_smtp_health(
+    host: str,
+    port: int = 465,
+    secure: bool = True,
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     return SystemHealthService(db).check_smtp_health(host, port, secure)
 
-@router.get("/health/imap")
-def get_imap_health(host: str, port: int = 993, db: Session = Depends(get_db)):
+@public_router.get("/health/imap")
+def get_imap_health(
+    host: str,
+    port: int = 993,
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     return SystemHealthService(db).check_imap_health(host, port)
 
-@router.get("/health/mailcow")
-def get_mailcow_health(db: Session = Depends(get_db)):
+@public_router.get("/health/mailcow")
+def get_mailcow_health(
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     return SystemHealthService(db).check_mailcow_health()
 
 @router.get("/jobs")
@@ -105,7 +142,10 @@ def get_audit_logs(limit: int = 100, db: Session = Depends(get_db)):
     return db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit).all()
 
 # Readiness
-@router.get("/readiness")
-def get_readiness_checklist(db: Session = Depends(get_db)):
+@public_router.get("/readiness")
+def get_readiness_checklist(
+    db: Session = Depends(get_db),
+    _: None = Depends(_allow_anonymous_or_admin),
+):
     from app.services.readiness_service import ReadinessService
     return ReadinessService(db).perform_readiness_checks()

@@ -22,5 +22,6 @@ api_router.include_router(settings.router, prefix="/settings", tags=["settings"]
 api_router.include_router(lists.router, prefix="/lists", tags=["lists"], dependencies=[Depends(get_current_active_user)])
 
 # Admin Protected Routes
+api_router.include_router(ops.public_router, prefix="/ops", tags=["ops"])
 api_router.include_router(ops.router, prefix="/ops", tags=["ops"], dependencies=[Depends(get_current_active_admin)])
 api_router.include_router(ops_deliverability.router, prefix="/ops/deliverability", tags=["ops_deliverability"], dependencies=[Depends(get_current_active_admin)])

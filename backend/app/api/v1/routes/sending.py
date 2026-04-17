@@ -18,7 +18,7 @@ def dispatch_outbound_email(req: SendEmailRequest, db: Session = Depends(get_db)
             success=success,
             message_id=message_id,
             status="sent",
-            provider=(mailbox.provider_type if mailbox else "unknown"),
+            provider="smtp",
             log_id=log_id,
         )
     except SMTPServiceError as exc:
