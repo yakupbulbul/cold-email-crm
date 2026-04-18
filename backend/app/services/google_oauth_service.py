@@ -63,6 +63,12 @@ class GoogleWorkspaceOAuthService:
         )
         return f"{settings.GOOGLE_WORKSPACE_AUTH_URI}?{query}"
 
+    def decode_state(self, state: str) -> dict:
+        try:
+            return jwt.decode(state, settings.SECRET_KEY, algorithms=["HS256"])
+        except Exception as exc:
+            raise GoogleOAuthError("OAuth state is invalid or expired.", category="invalid_state", status_code=400) from exc
+
     def exchange_code(self, *, code: str, state: str) -> MailboxOAuthToken:
         if not self.is_configured():
             raise GoogleOAuthError(
@@ -70,10 +76,7 @@ class GoogleWorkspaceOAuthService:
                 category="provider_misconfigured",
                 status_code=424,
             )
-        try:
-            payload = jwt.decode(state, settings.SECRET_KEY, algorithms=["HS256"])
-        except Exception as exc:
-            raise GoogleOAuthError("OAuth state is invalid or expired.", category="invalid_state", status_code=400) from exc
+        payload = self.decode_state(state)
 
         mailbox = self.db.query(Mailbox).filter(Mailbox.id == payload.get("mailbox_id")).first()
         if mailbox is None:

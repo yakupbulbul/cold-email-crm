@@ -430,6 +430,11 @@ def start_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
     return {"status": "ready", "authorization_url": authorization_url}
 
 
+@router.post("/{mailbox_id}/google-workspace/connect")
+def connect_google_workspace_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
+    return start_mailbox_oauth(mailbox_id=mailbox_id, db=db)
+
+
 @router.post("/{mailbox_id}/oauth/disconnect")
 def disconnect_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
@@ -442,6 +447,11 @@ def disconnect_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
     except GoogleOAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
     return mailbox_to_response(refreshed)
+
+
+@router.post("/{mailbox_id}/google-workspace/disconnect")
+def disconnect_google_workspace_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
+    return disconnect_mailbox_oauth(mailbox_id=mailbox_id, db=db)
 
 
 @router.patch("/{mailbox_id}/warmup")

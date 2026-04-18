@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Request, Depends, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from urllib.parse import urlencode
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.schemas.user import User as UserSchema
 from app.core.auth import create_access_token
+from app.core.config import settings
 from app.core.security import verify_password
 from app.core.database import get_db
 from app.models.user import User
@@ -34,26 +36,51 @@ def read_user_me(
     return current_user
 
 
-@router.get("/google-workspace/callback", response_class=HTMLResponse)
+def _frontend_mailboxes_url(*, mailbox_id: str | None = None, oauth_status: str | None = None, oauth_message: str | None = None) -> str:
+    frontend_base = (settings.ALLOWED_ORIGINS[0] if settings.ALLOWED_ORIGINS else f"http://localhost:{settings.FRONTEND_PORT}").rstrip("/")
+    query: dict[str, str] = {}
+    if mailbox_id:
+        query["mailbox_id"] = mailbox_id
+    if oauth_status:
+        query["oauth_status"] = oauth_status
+    if oauth_message:
+        query["oauth_message"] = oauth_message
+    suffix = f"?{urlencode(query)}" if query else ""
+    return f"{frontend_base}/mailboxes{suffix}"
+
+
+@router.get("/google-workspace/callback")
 def google_workspace_oauth_callback(
     code: str = Query(...),
     state: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    oauth_service = GoogleWorkspaceOAuthService(db)
+    mailbox_id: str | None = None
     try:
-        token = GoogleWorkspaceOAuthService(db).exchange_code(code=code, state=state)
+        payload = oauth_service.decode_state(state)
+        mailbox_id = payload.get("mailbox_id")
+    except GoogleOAuthError:
+        mailbox_id = None
+
+    try:
+        token = oauth_service.exchange_code(code=code, state=state)
     except GoogleOAuthError as exc:
-        raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
+        return RedirectResponse(
+            url=_frontend_mailboxes_url(
+                mailbox_id=mailbox_id,
+                oauth_status=exc.category,
+                oauth_message=exc.message,
+            ),
+            status_code=303,
+        )
 
     connected_email = token.external_account_email or "the selected mailbox"
-    return HTMLResponse(
-        content=f"""
-        <html>
-            <body style="font-family: sans-serif; padding: 32px; color: #0f172a;">
-                <h1 style="margin: 0 0 12px;">Google Workspace Connected</h1>
-                <p style="margin: 0 0 12px;">OAuth completed successfully for {connected_email}.</p>
-                <p style="margin: 0;">You can close this window and return to the application.</p>
-            </body>
-        </html>
-        """.strip()
+    return RedirectResponse(
+        url=_frontend_mailboxes_url(
+            mailbox_id=str(token.mailbox_id),
+            oauth_status="connected",
+            oauth_message=f"Google Workspace connected for {connected_email}.",
+        ),
+        status_code=303,
     )
