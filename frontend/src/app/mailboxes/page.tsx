@@ -1,12 +1,14 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { Plus, Mail, Edit2, ShieldCheck, Trash2, ServerCrash, Link2, Unplug } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Plus, Mail, Edit2, ShieldCheck, Trash2, ServerCrash } from 'lucide-react';
 import { useApiService } from '@/services/api';
 import { Domain, MailProviderType, Mailbox, SMTPDiagnosticResult, SettingsSummary } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
-import { AlertBanner, EmptyState, MetricCard, PageHeader, SurfaceCard } from '@/components/ui/primitives';
+import { AlertBanner, EmptyState, MetricCard, PageHeader, StatusBadge, SurfaceCard } from '@/components/ui/primitives';
 
 export default function MailboxesPage() {
+  const searchParams = useSearchParams();
   const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, checkMailboxProvider, startMailboxOAuth, disconnectMailboxOAuth, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -25,8 +27,10 @@ export default function MailboxesPage() {
   const [editingStatus, setEditingStatus] = useState('active');
   const [editingSecurityMode, setEditingSecurityMode] = useState<'starttls' | 'ssl' | 'plain'>('starttls');
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [busyMailboxId, setBusyMailboxId] = useState<string | null>(null);
   const [smtpDiagnostics, setSmtpDiagnostics] = useState<Record<string, SMTPDiagnosticResult>>({});
+  const [autoCheckedMailboxId, setAutoCheckedMailboxId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -46,10 +50,14 @@ export default function MailboxesPage() {
 
   const selectedDomain = domains.find((domain) => domain.id === selectedDomainId);
 
-  const refreshMailboxes = async () => {
+  const refreshMailboxes = useCallback(async () => {
     const refreshed = await getMailboxes();
     if (refreshed) setMailboxes(refreshed);
-  };
+  }, [getMailboxes]);
+
+  const callbackMailboxId = searchParams.get("mailbox_id");
+  const callbackOAuthStatus = searchParams.get("oauth_status");
+  const callbackOAuthMessage = searchParams.get("oauth_message");
 
   const enabledProviders = settingsSummary?.enabled_providers || [];
   const mailboxModeMessage = providerType === "mailcow"
@@ -149,26 +157,29 @@ export default function MailboxesPage() {
     cancelEditMailbox();
   };
 
-  const handleCheckMailboxProvider = async (mailboxId: string) => {
+  const handleCheckMailboxProvider = useCallback(async (mailboxId: string) => {
     setActionError(null);
+    setActionSuccess(null);
     setBusyMailboxId(mailboxId);
     try {
       const result = await checkMailboxProvider(mailboxId);
       setSmtpDiagnostics((current) => ({ ...current, [mailboxId]: { ...current[mailboxId], status: result.smtp.status, category: result.smtp.category, message: `${result.smtp.message} IMAP: ${result.imap.message}`, host: "", port: 0, security_mode: "starttls", dns_resolved: true, connected: true, tls_negotiated: true, auth_succeeded: result.smtp.status === "healthy" } }));
       await refreshMailboxes();
+      setActionSuccess("Provider diagnostics completed.");
     } catch (checkError) {
       setActionError(checkError instanceof Error ? checkError.message : 'Provider check failed.');
     } finally {
       setBusyMailboxId(null);
     }
-  };
+  }, [checkMailboxProvider, refreshMailboxes]);
 
   const handleStartOAuth = async (mailboxId: string) => {
     setActionError(null);
+    setActionSuccess(null);
     setBusyMailboxId(mailboxId);
     try {
       const result = await startMailboxOAuth(mailboxId);
-      window.open(result.authorization_url, "_blank", "noopener,noreferrer");
+      window.location.assign(result.authorization_url);
     } catch (oauthError) {
       setActionError(oauthError instanceof Error ? oauthError.message : "Google OAuth start failed.");
     } finally {
@@ -178,10 +189,12 @@ export default function MailboxesPage() {
 
   const handleDisconnectOAuth = async (mailboxId: string) => {
     setActionError(null);
+    setActionSuccess(null);
     setBusyMailboxId(mailboxId);
     try {
       const updated = await disconnectMailboxOAuth(mailboxId);
       setMailboxes((current) => current.map((mailbox) => mailbox.id === mailboxId ? updated : mailbox));
+      setActionSuccess(`Google Workspace disconnected for ${updated.email}.`);
     } catch (oauthError) {
       setActionError(oauthError instanceof Error ? oauthError.message : "Google OAuth disconnect failed.");
     } finally {
@@ -205,6 +218,31 @@ export default function MailboxesPage() {
       cancelEditMailbox();
     }
   };
+
+  useEffect(() => {
+    if (!callbackOAuthStatus) {
+      return;
+    }
+    if (callbackOAuthStatus === "connected") {
+      setActionError(null);
+      setActionSuccess(callbackOAuthMessage || "Google Workspace connected successfully.");
+      return;
+    }
+    setActionSuccess(null);
+    setActionError(callbackOAuthMessage || `Google Workspace OAuth returned ${callbackOAuthStatus.replaceAll("_", " ")}.`);
+  }, [callbackOAuthMessage, callbackOAuthStatus]);
+
+  useEffect(() => {
+    if (callbackOAuthStatus !== "connected" || !callbackMailboxId || autoCheckedMailboxId === callbackMailboxId || mailboxes.length === 0) {
+      return;
+    }
+    const mailbox = mailboxes.find((item) => item.id === callbackMailboxId);
+    if (!mailbox) {
+      return;
+    }
+    setAutoCheckedMailboxId(callbackMailboxId);
+    void handleCheckMailboxProvider(callbackMailboxId);
+  }, [autoCheckedMailboxId, callbackMailboxId, callbackOAuthStatus, handleCheckMailboxProvider, mailboxes]);
 
   return (
     <div className="space-y-6 animate-fade-in relative min-h-[50vh]">
@@ -284,6 +322,7 @@ export default function MailboxesPage() {
          </SurfaceCard>
       ) : mailboxes.length > 0 ? (
         <div className="space-y-4">
+          {actionSuccess ? <AlertBanner tone="success" title="Mailbox action completed">{actionSuccess}</AlertBanner> : null}
           {actionError ? <AlertBanner tone="danger" title="Mailbox action failed">{actionError}</AlertBanner> : null}
         <SurfaceCard className="overflow-hidden">
           <table className="w-full text-left border-collapse">
@@ -300,8 +339,17 @@ export default function MailboxesPage() {
                 const isEditing = editingMailboxId === mb.id;
                 const isBusy = busyMailboxId === mb.id;
                 const diagnostic = smtpDiagnostics[mb.id];
+                const isGoogleWorkspace = mb.provider_type === "google_workspace";
+                const oauthStatus = (mb.oauth_connection_status || "not_connected").replaceAll("_", " ");
+                const providerTone: "neutral" | "success" | "warning" | "danger" | "info" =
+                  mb.oauth_connection_status === "connected"
+                    ? "success"
+                    : mb.oauth_connection_status === "expired" || mb.oauth_connection_status === "error"
+                      ? "warning"
+                      : "neutral";
+                const isCallbackMailbox = callbackMailboxId === mb.id;
                 return (
-                <tr key={mb.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                <tr key={mb.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors group ${isCallbackMailbox ? 'bg-blue-50/40' : ''}`}>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 rounded-xl shadow-sm border border-blue-100">
@@ -312,21 +360,91 @@ export default function MailboxesPage() {
                         <p className="text-xs text-slate-500 font-medium">{mb.display_name || "SMTP/IMAP Account"}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{mb.provider_type.replaceAll("_", " ")}</p>
                         <p className="mt-1 text-[11px] text-slate-500">Visible sender: {mb.display_name?.trim() ? `${mb.display_name} <${mb.email}>` : mb.email}</p>
-                        <p className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                          mb.provider_type === "mailcow" && mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                        }`}>
-                          {mb.provider_type === "mailcow" ? (mb.remote_mailcow_provisioned ? 'Mailcow synced' : 'Local only') : (mb.oauth_connection_status || 'OAuth pending').replaceAll("_", " ")}
-                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            mb.provider_type === "mailcow" && mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          }`}>
+                            {mb.provider_type === "mailcow" ? (mb.remote_mailcow_provisioned ? 'Mailcow synced' : 'Local only') : 'OAuth mailbox'}
+                          </span>
+                          {isGoogleWorkspace ? (
+                            <StatusBadge tone={providerTone} className="text-[11px]">
+                              OAuth {oauthStatus}
+                            </StatusBadge>
+                          ) : null}
+                        </div>
                         <p className="mt-1 text-[11px] font-medium text-slate-500">SMTP {mb.smtp_security_mode.toUpperCase()} on {mb.smtp_host}:{mb.smtp_port}</p>
                         <p className="mt-1 text-[11px] font-medium text-slate-500">IMAP {(mb.imap_security_mode || 'ssl').toUpperCase()} on {mb.imap_host}:{mb.imap_port}</p>
                         <p className={`mt-1 text-[11px] font-medium ${((diagnostic?.status || mb.smtp_last_check_status) === 'healthy') ? 'text-emerald-700' : 'text-slate-500'}`}>
                           {diagnostic?.message || mb.last_provider_check_message || mb.smtp_last_check_message || 'Provider diagnostics have not been checked yet.'}
                         </p>
-                        {mb.provider_type === "google_workspace" ? (
-                          <p className="mt-1 text-[11px] font-medium text-slate-500">
-                            OAuth: {(mb.oauth_connection_status || "not_connected").replaceAll("_", " ")}
-                            {mb.external_account_email ? ` as ${mb.external_account_email}` : ""}
-                          </p>
+                        {isGoogleWorkspace ? (
+                          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Google Workspace provider</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                  {mb.external_account_email ? `Connected as ${mb.external_account_email}` : "OAuth connection required before send and inbox sync can use Google Workspace."}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {mb.oauth_connection_status === "connected" ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => void handleStartOAuth(mb.id)}
+                                      className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
+                                      data-testid={`reconnect-google-mailbox-${mb.id}`}
+                                    >
+                                      Reconnect
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isBusy}
+                                      onClick={() => void handleDisconnectOAuth(mb.id)}
+                                      className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
+                                      data-testid={`disconnect-google-mailbox-${mb.id}`}
+                                    >
+                                      Disconnect
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={isBusy}
+                                    onClick={() => void handleStartOAuth(mb.id)}
+                                    className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
+                                    data-testid={`connect-google-mailbox-${mb.id}`}
+                                  >
+                                    {mb.oauth_connection_status === "expired" || mb.oauth_connection_status === "error" ? "Reconnect Google Workspace" : "Connect Google Workspace"}
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => void handleCheckMailboxProvider(mb.id)}
+                                  className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50"
+                                  data-testid={`provider-check-google-mailbox-${mb.id}`}
+                                >
+                                  Run Provider Check
+                                </button>
+                              </div>
+                            </div>
+                            <div className="mt-3 grid gap-2 text-[11px] text-slate-500 md:grid-cols-3">
+                              <div>
+                                <span className="font-semibold text-slate-600">OAuth status:</span> {oauthStatus}
+                              </div>
+                              <div>
+                                <span className="font-semibold text-slate-600">Last provider check:</span> {mb.last_provider_check_at ? new Date(mb.last_provider_check_at).toLocaleString() : "Not run"}
+                              </div>
+                              <div>
+                                <span className="font-semibold text-slate-600">Last OAuth check:</span> {mb.oauth_last_checked_at ? new Date(mb.oauth_last_checked_at).toLocaleString() : "Never"}
+                              </div>
+                            </div>
+                            {mb.oauth_last_error ? (
+                              <p className="mt-2 text-[11px] font-medium text-rose-700">{mb.oauth_last_error}</p>
+                            ) : null}
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -408,29 +526,6 @@ export default function MailboxesPage() {
                           >
                             <ShieldCheck size={16} />
                           </button>
-                          {mb.provider_type === "google_workspace" ? (
-                            mb.oauth_connection_status === "connected" ? (
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => void handleDisconnectOAuth(mb.id)}
-                                className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-transparent hover:border-amber-100 disabled:opacity-50"
-                                title="Disconnect Google OAuth"
-                              >
-                                <Unplug size={16} />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled={isBusy}
-                                onClick={() => void handleStartOAuth(mb.id)}
-                                className="p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors border border-transparent hover:border-violet-100 disabled:opacity-50"
-                                title="Connect Google OAuth"
-                              >
-                                <Link2 size={16} />
-                              </button>
-                            )
-                          ) : null}
                           <button
                             data-testid={`edit-mailbox-${mb.id}`}
                             onClick={() => beginEditMailbox(mb)}

@@ -188,8 +188,8 @@ export function useApiService() {
         external_account_email?: string | null;
         scopes?: string[];
     }>(`/mailboxes/${id}/oauth-status`), [requestOrThrow]);
-    const startMailboxOAuth = useCallback((id: string) => requestOrThrow<{ status: string; authorization_url: string }>(`/mailboxes/${id}/oauth/start`, { method: "POST" }), [requestOrThrow]);
-    const disconnectMailboxOAuth = useCallback((id: string) => requestOrThrow<Mailbox>(`/mailboxes/${id}/oauth/disconnect`, { method: "POST" }), [requestOrThrow]);
+    const startMailboxOAuth = useCallback((id: string) => requestOrThrow<{ status: string; authorization_url: string }>(`/mailboxes/${id}/google-workspace/connect`, { method: "POST" }), [requestOrThrow]);
+    const disconnectMailboxOAuth = useCallback((id: string) => requestOrThrow<Mailbox>(`/mailboxes/${id}/google-workspace/disconnect`, { method: "POST" }), [requestOrThrow]);
     const sendEmail = useCallback((data: SendEmailPayload) => requestOrThrow<SendEmailResult>("/send-email", { method: "POST", body: data }), [requestOrThrow]);
     const getSendEmailLogs = useCallback((limit: number = 20) => request<SendEmailLog[]>(`/send-email/logs?limit=${limit}`), [request]);
 
