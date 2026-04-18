@@ -18,7 +18,7 @@ export default function TopBar({
 
   const workspaceTargets = useMemo(
     () => [
-      { label: "Dashboard", href: "/" },
+      { label: "Dashboard", href: "/dashboard" },
       { label: "Domains", href: "/domains" },
       { label: "Mailboxes", href: "/mailboxes" },
       { label: "Campaigns", href: "/campaigns" },

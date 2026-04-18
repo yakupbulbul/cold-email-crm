@@ -10,7 +10,7 @@ import TopBar from "@/components/TopBar";
 import Spinner from "@/components/ui/Spinner";
 
 const PAGE_META: Record<string, { title: string; description: string }> = {
-    "/": {
+    "/dashboard": {
         title: "Dashboard",
         description: "Track infrastructure health, audience quality, and the next operational action across the product.",
     },
@@ -65,9 +65,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-    const isAuthRoute = pathname === "/signin" || pathname === "/login";
+    const isPublicRoute = pathname === "/" || pathname === "/signin" || pathname === "/login";
     const pageMeta = useMemo(() => {
-        if (!pathname) return PAGE_META["/"];
+        if (!pathname) return PAGE_META["/dashboard"];
         if (pathname.startsWith("/ops")) {
             return PAGE_META["/ops"];
         }
@@ -80,7 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         };
     }, [pathname]);
 
-    if (isAuthRoute) {
+    if (isPublicRoute) {
         return <div className="w-full">{children}</div>;
     }
 

@@ -18,6 +18,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const PUBLIC_ROUTES = new Set(["/", "/signin", "/login"]);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -26,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isMountedRef = useRef(true);
     const router = useRouter();
     const pathname = usePathname();
-    const isAuthRoute = pathname === "/signin" || pathname === "/login";
+    const isPublicRoute = PUBLIC_ROUTES.has(pathname || "");
 
     useEffect(() => {
         return () => {
@@ -75,10 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [fetchMe]);
 
     useEffect(() => {
-        if (!isLoading && !token && !isAuthRoute) {
+        if (!isLoading && !token && !isPublicRoute) {
             router.push("/signin");
         }
-    }, [isAuthRoute, isLoading, token, router]);
+    }, [isLoading, isPublicRoute, token, router]);
 
     const login = async (newToken: string) => {
         localStorage.setItem("token", newToken);
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setToken(newToken);
         }
         await fetchMe(newToken);
-        router.replace("/");
+        router.replace("/dashboard");
     };
 
     const logout = () => {

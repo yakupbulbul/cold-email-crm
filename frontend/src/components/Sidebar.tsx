@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const NAV_GROUPS = [
   {
     title: "Overview",
-    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],
+    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
   },
   {
     title: "Infrastructure",
@@ -79,7 +79,7 @@ export default function Sidebar({
             <X size={18} />
           </button>
         </div>
-        <Link href="/" className="flex items-center gap-4" onClick={onClose}>
+        <Link href="/dashboard" className="flex items-center gap-4" onClick={onClose}>
           <div className="rounded-2xl bg-white px-4 py-3">
             <Image
               src="/crm-logo.png"
