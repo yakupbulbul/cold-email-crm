@@ -18,8 +18,17 @@ CAMPAIGN_BEAT_INTERVAL_SECONDS = 300
 
 
 def _campaign_job_for_status(db: Session, campaign_id: str, statuses: set[str]) -> JobLog | None:
+    stale_after = datetime.utcnow() - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)
     for job in db.query(JobLog).filter(JobLog.job_type == "campaign_cycle").order_by(JobLog.created_at.desc()).all():
         payload_summary = job.payload_summary or {}
+        if payload_summary.get("campaign_id") != campaign_id or job.status not in statuses:
+            continue
+        if job.status == "queued" and job.created_at and job.created_at < stale_after:
+            continue
+        if job.status == "running":
+            last_seen = job.started_at or job.created_at
+            if last_seen and last_seen < stale_after:
+                continue
         if payload_summary.get("campaign_id") == campaign_id and job.status in statuses:
             return job
     return None
@@ -34,6 +43,22 @@ def _campaign_jobs_for_campaign(db: Session, campaign_id: str) -> list[JobLog]:
     return matched
 
 
+def _campaign_job_history(jobs: list[JobLog], limit: int = 8) -> list[dict]:
+    return [
+        {
+            "job_id": job.job_id,
+            "status": job.status,
+            "created_at": job.created_at.isoformat() if job.created_at else None,
+            "started_at": job.started_at.isoformat() if job.started_at else None,
+            "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+            "error_message": job.error_message,
+            "retry_count": job.retry_count,
+            "payload_summary": job.payload_summary or {},
+        }
+        for job in jobs[:limit]
+    ]
+
+
 def _next_campaign_beat_at(now: datetime) -> datetime:
     interval_minutes = CAMPAIGN_BEAT_INTERVAL_SECONDS // 60
     next_boundary_minute = ((now.minute // interval_minutes) + 1) * interval_minutes
@@ -42,11 +67,143 @@ def _next_campaign_beat_at(now: datetime) -> datetime:
     return now.replace(minute=next_boundary_minute, second=0, microsecond=0)
 
 
+def _scheduled_lead_snapshot(db: Session, campaign: Campaign) -> dict:
+    scheduled_leads = (
+        db.query(CampaignLead)
+        .join(Contact)
+        .filter(
+            CampaignLead.campaign_id == campaign.id,
+            CampaignLead.status == "scheduled",
+        )
+        .order_by(CampaignLead.scheduled_at.asc().nullsfirst(), CampaignLead.created_at.asc())
+        .all()
+    )
+    blocked_counts: dict[str, int] = {}
+    eligible_count = 0
+    next_eligible = None
+    for lead in scheduled_leads:
+        eligibility = evaluate_contact_for_campaign(lead.contact, campaign)
+        if eligibility.eligible:
+            eligible_count += 1
+            if next_eligible is None:
+                next_eligible = {
+                    "campaign_lead_id": str(lead.id),
+                    "contact_id": str(lead.contact_id),
+                    "email": lead.contact.email,
+                    "scheduled_at": lead.scheduled_at.isoformat() if lead.scheduled_at else None,
+                    "warning_reason": eligibility.warning_reason,
+                }
+            continue
+        reason = eligibility.blocked_reason or "unknown"
+        blocked_counts[reason] = blocked_counts.get(reason, 0) + 1
+    return {
+        "scheduled_count": len(scheduled_leads),
+        "eligible_count": eligible_count,
+        "blocked_counts": blocked_counts,
+        "next_eligible_lead": next_eligible,
+    }
+
+
+def _campaign_dry_run(db: Session, campaign: Campaign) -> dict:
+    LeadListService(db).sync_campaign_leads(str(campaign.id))
+    lead_snapshot = _scheduled_lead_snapshot(db, campaign)
+
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    sent_today = db.query(SendLog).filter(
+        SendLog.campaign_id == campaign.id,
+        SendLog.created_at >= today,
+        SendLog.delivery_status == "success",
+    ).count()
+    remaining_today = max((campaign.daily_limit or 0) - sent_today, 0)
+
+    blockers: list[dict] = []
+    warnings: list[dict] = []
+
+    if campaign.status == "archived":
+        blockers.append({"code": "archived", "message": "Archived campaigns cannot send until restored."})
+    if not settings.BACKGROUND_WORKERS_ENABLED:
+        blockers.append({"code": "workers_disabled", "message": "Background workers are disabled in the current runtime mode."})
+    if not campaign.mailbox:
+        blockers.append({"code": "missing_mailbox", "message": "Campaign has no selected sending mailbox."})
+    if lead_snapshot["eligible_count"] == 0:
+        blockers.append({
+            "code": "no_eligible_leads",
+            "message": "No scheduled leads are eligible after verification, suppression, contact type, and compliance checks.",
+        })
+    if remaining_today <= 0:
+        blockers.append({"code": "daily_limit_reached", "message": "Campaign daily send limit is already reached for today."})
+
+    deliverability = None
+    try:
+        from app.services.deliverability_service import DeliverabilityService
+        deliverability = DeliverabilityService(db).campaign_readiness(str(campaign.id))
+        if deliverability.get("status") == "blocked":
+            primary = (deliverability.get("blockers") or [{}])[0]
+            blockers.append({
+                "code": "deliverability_blocked",
+                "message": primary.get("message") or "Campaign deliverability readiness is blocked.",
+            })
+        elif deliverability.get("status") in {"warning", "degraded", "unknown"}:
+            warnings.append({
+                "code": "deliverability_warning",
+                "message": f"Deliverability posture is {deliverability.get('status')}. Review warnings before scaling.",
+            })
+    except Exception as exc:
+        warnings.append({"code": "deliverability_unavailable", "message": f"Deliverability readiness could not be evaluated: {exc}"})
+
+    existing_job = _campaign_job_for_status(db, str(campaign.id), {"queued", "running"})
+    if existing_job:
+        blockers.append({
+            "code": "job_already_active",
+            "message": f"A campaign worker job is already {existing_job.status}.",
+        })
+
+    schedule_allowed_now = True
+    next_send_at = datetime.utcnow() if schedule_allowed_now and not blockers else _next_campaign_beat_at(datetime.utcnow())
+    sender_identity = None
+    if campaign.mailbox:
+        display_name = (campaign.mailbox.display_name or "").strip()
+        sender_identity = f"{display_name} <{campaign.mailbox.email}>" if display_name else campaign.mailbox.email
+
+    return {
+        "campaign_id": str(campaign.id),
+        "campaign": campaign.name,
+        "campaign_status": campaign.status,
+        "mailbox_id": str(campaign.mailbox_id) if campaign.mailbox_id else None,
+        "mailbox_email": campaign.mailbox.email if campaign.mailbox else None,
+        "sender_identity": sender_identity,
+        "eligible_leads": lead_snapshot["eligible_count"],
+        "scheduled_leads": lead_snapshot["scheduled_count"],
+        "blocked_leads": lead_snapshot["blocked_counts"],
+        "next_eligible_lead": lead_snapshot["next_eligible_lead"],
+        "sent_today": sent_today,
+        "daily_limit": campaign.daily_limit,
+        "remaining_today": remaining_today,
+        "schedule_allows_now": schedule_allowed_now,
+        "schedule_detail": "No campaign send window is configured, so the worker may send on its next pass.",
+        "next_send_at": next_send_at.isoformat() if next_send_at else None,
+        "deliverability_status": deliverability.get("status") if deliverability else "unknown",
+        "deliverability": deliverability,
+        "would_queue": not blockers,
+        "blockers": blockers,
+        "warnings": warnings,
+    }
+
+
 def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
     now = datetime.utcnow()
     jobs = _campaign_jobs_for_campaign(db, str(campaign.id))
     latest_job = jobs[0] if jobs else None
-    latest_running = next((job for job in jobs if job.status == "running"), None)
+    stale_after = now - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)
+    latest_running = next(
+        (
+            job for job in jobs
+            if job.status == "running"
+            and (job.started_at or job.created_at)
+            and (job.started_at or job.created_at) >= stale_after
+        ),
+        None,
+    )
     latest_completed = next((job for job in jobs if job.status == "completed"), None)
     latest_failed = next((job for job in jobs if job.status == "failed"), None)
     latest_send_log = (
@@ -55,13 +212,26 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
         .order_by(SendLog.created_at.desc())
         .first()
     )
-    stale_after = now - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)
 
     delivery_summary = {
         "last_delivery_attempt_at": latest_send_log.created_at.isoformat() if latest_send_log and latest_send_log.created_at else None,
         "last_delivery_status": latest_send_log.delivery_status if latest_send_log else None,
         "last_delivery_target_email": latest_send_log.target_email if latest_send_log else None,
         "last_delivery_error": latest_send_log.smtp_response if latest_send_log and latest_send_log.delivery_status == "failed" else None,
+    }
+    lead_snapshot = _scheduled_lead_snapshot(db, campaign)
+    job_history = _campaign_job_history(jobs)
+    base_summary = {
+        "last_job_queued_at": next((job.created_at.isoformat() for job in jobs if job.status == "queued" and job.created_at), None),
+        "last_job_started_at": next((job.started_at.isoformat() for job in jobs if job.started_at), None),
+        "last_job_completed_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
+        "last_job_failed_at": latest_failed.finished_at.isoformat() if latest_failed and latest_failed.finished_at else None,
+        "last_job_error": latest_failed.error_message if latest_failed else None,
+        "job_history": job_history,
+        "eligible_leads": lead_snapshot["eligible_count"],
+        "scheduled_leads": lead_snapshot["scheduled_count"],
+        "blocked_leads": lead_snapshot["blocked_counts"],
+        "next_eligible_lead": lead_snapshot["next_eligible_lead"],
     }
 
     if campaign.status == "archived":
@@ -74,6 +244,9 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
             "next_dispatch_at": None,
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
             "detail": "Archived campaigns are excluded from automatic execution until they are restored manually.",
+            "current_blocker": {"code": "archived", "message": "Archived campaigns are excluded from execution."},
+            "next_send_decision": "Restore the campaign before it can dispatch.",
+            **base_summary,
             **delivery_summary,
         }
 
@@ -108,6 +281,9 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
             "next_dispatch_at": None,
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
             "detail": "A campaign worker is actively processing this campaign now.",
+            "current_blocker": None,
+            "next_send_decision": "Worker is running now.",
+            **base_summary,
             **delivery_summary,
         }
 
@@ -121,11 +297,19 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
             "next_dispatch_at": None,
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
             "detail": "Queued for worker pickup. Sending starts when the worker consumes this job.",
+            "current_blocker": None,
+            "next_send_decision": "Worker pickup is pending.",
+            **base_summary,
             **delivery_summary,
         }
 
     if campaign.status == "active" and settings.BACKGROUND_WORKERS_ENABLED:
         next_dispatch = _next_campaign_beat_at(now)
+        current_blocker = None
+        next_send_decision = f"Next automatic campaign pass is scheduled for {next_dispatch.isoformat()}."
+        if lead_snapshot["eligible_count"] == 0:
+            current_blocker = {"code": "no_eligible_leads", "message": "No scheduled eligible leads are available for the next pass."}
+            next_send_decision = "Add or verify eligible leads before the next pass can send."
         detail = "No job is running right now. The next automatic campaign pass will be queued by beat."
         if latest_send_log and latest_send_log.delivery_status == "failed":
             detail = "No job is running right now. The last delivery attempt failed, and the next automatic campaign pass will be queued by beat."
@@ -138,8 +322,20 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
             "next_dispatch_at": next_dispatch.isoformat(),
             "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
             "detail": detail,
+            "current_blocker": current_blocker,
+            "next_send_decision": next_send_decision,
+            **base_summary,
             **delivery_summary,
         }
+
+    current_blocker = None
+    next_send_decision = "Campaign dispatch runs only after the campaign is active."
+    if not settings.BACKGROUND_WORKERS_ENABLED:
+        current_blocker = {"code": "workers_disabled", "message": "Background workers are disabled in the current runtime mode."}
+        next_send_decision = "Start the app with workers enabled before campaigns can dispatch."
+    elif lead_snapshot["eligible_count"] == 0:
+        current_blocker = {"code": "no_eligible_leads", "message": "No scheduled eligible leads are available."}
+        next_send_decision = "Attach or verify leads before starting this campaign."
 
     return {
         "state": "idle",
@@ -150,7 +346,78 @@ def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
         "next_dispatch_at": None,
         "beat_interval_seconds": CAMPAIGN_BEAT_INTERVAL_SECONDS,
         "detail": "Campaign dispatch runs only after the campaign is active.",
+        "current_blocker": current_blocker,
+        "next_send_decision": next_send_decision,
+        **base_summary,
         **delivery_summary,
+    }
+
+
+def _campaign_execution_detail(db: Session, campaign: Campaign) -> dict:
+    summary = _campaign_execution_summary(db, campaign)
+    dry_run = _campaign_dry_run(db, campaign)
+    return {
+        "campaign_id": str(campaign.id),
+        "campaign": campaign.name,
+        "summary": summary,
+        "dry_run": dry_run,
+        "job_history": summary.get("job_history", []),
+        "next_eligible_lead": summary.get("next_eligible_lead"),
+        "current_blocker": summary.get("current_blocker"),
+        "next_send_decision": summary.get("next_send_decision"),
+    }
+
+
+def _queue_campaign_pass(db: Session, campaign: Campaign, *, action: str) -> dict:
+    dry_run = _campaign_dry_run(db, campaign)
+    existing_job = _campaign_job_for_status(db, str(campaign.id), {"queued", "running"})
+    blocking_without_active_job = [blocker for blocker in dry_run["blockers"] if blocker.get("code") != "job_already_active"]
+    if blocking_without_active_job:
+        raise HTTPException(status_code=409, detail=blocking_without_active_job[0]["message"])
+
+    if existing_job:
+        return {
+            "status": existing_job.status,
+            "campaign": campaign.name,
+            "eligible_leads": dry_run["eligible_leads"],
+            "blocked_leads": dry_run["blocked_leads"],
+            "job_queued": True,
+            "job_id": existing_job.job_id,
+            "execution": _campaign_execution_detail(db, campaign),
+        }
+
+    try:
+        task = run_campaign_cycle.delay(str(campaign.id))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Campaign execution could not be queued because background workers are unavailable.",
+        ) from exc
+
+    campaign.status = "active"
+    db.add(
+        JobLog(
+            job_id=task.id,
+            job_type="campaign_cycle",
+            status="queued",
+            payload_summary={
+                "campaign_id": str(campaign.id),
+                "campaign_name": campaign.name,
+                "eligible_leads": dry_run["eligible_leads"],
+                "action": action,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(campaign)
+    return {
+        "status": "queued",
+        "campaign": campaign.name,
+        "eligible_leads": dry_run["eligible_leads"],
+        "blocked_leads": dry_run["blocked_leads"],
+        "job_queued": True,
+        "job_id": task.id,
+        "execution": _campaign_execution_detail(db, campaign),
     }
 
 
@@ -321,12 +588,6 @@ def remove_list_from_campaign(campaign_id: str, list_id: str, db: Session = Depe
 
 @router.post("/{campaign_id}/start")
 def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
-    if not settings.BACKGROUND_WORKERS_ENABLED:
-        raise HTTPException(
-            status_code=409,
-            detail="Background workers are disabled in low-RAM mode. Run make dev or make dev-full before starting campaigns.",
-        )
-
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -336,100 +597,33 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
             detail="Archived campaigns cannot be started. Restore or duplicate the campaign before sending again.",
         )
 
-    # Re-sync attached list members into scheduled campaign leads at start time.
-    # This keeps campaign execution aligned with the current verification/contact-type/
-    # consent state even when a lead became eligible after the list was attached.
-    service = LeadListService(db)
-    service.sync_campaign_leads(campaign_id)
+    return _queue_campaign_pass(db, c, action="start")
 
-    scheduled_leads = (
-        db.query(CampaignLead)
-        .join(Contact)
-        .filter(
-            CampaignLead.campaign_id == c.id,
-            CampaignLead.status == "scheduled",
-        )
-        .all()
-    )
-    blocked_counts: dict[str, int] = {}
-    eligible_leads = 0
-    for lead in scheduled_leads:
-        eligibility = evaluate_contact_for_campaign(lead.contact, c)
-        if eligibility.eligible:
-            eligible_leads += 1
-            continue
-        reason = eligibility.blocked_reason or "unknown"
-        blocked_counts[reason] = blocked_counts.get(reason, 0) + 1
-    if eligible_leads == 0:
-        raise HTTPException(
-            status_code=409,
-            detail="Campaign cannot start until it has at least one scheduled, eligible lead after verification, suppression, contact type, and compliance checks.",
-        )
 
-    from app.services.deliverability_service import DeliverabilityService
-    deliverability = DeliverabilityService(db).campaign_readiness(campaign_id)
-    if deliverability.get("status") == "blocked":
-        primary = (deliverability.get("blockers") or [{}])[0]
-        raise HTTPException(
-            status_code=409,
-            detail=primary.get("message") or "Campaign cannot start because deliverability readiness is blocked.",
-        )
+@router.get("/{campaign_id}/execution")
+def campaign_execution(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return _campaign_execution_detail(db, campaign)
 
-    existing_job = _campaign_job_for_status(db, str(c.id), {"queued", "running"})
-    if existing_job:
-        if c.status != "active":
-            c.status = "active"
-            db.commit()
-        return {
-            "status": existing_job.status,
-            "campaign": c.name,
-            "eligible_leads": eligible_leads,
-            "blocked_leads": blocked_counts,
-            "job_queued": True,
-            "job_id": existing_job.job_id,
-        }
 
-    try:
-        task = run_campaign_cycle.delay(str(c.id))
-    except Exception as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Campaign execution could not be queued because background workers are unavailable.",
-        ) from exc
+@router.post("/{campaign_id}/retry")
+def retry_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if campaign.status == "archived":
+        raise HTTPException(status_code=409, detail="Archived campaigns cannot be retried. Restore the campaign first.")
+    return _queue_campaign_pass(db, campaign, action="manual_retry")
 
-    c.status = "active"
-    job_id = task.id
-    try:
-        db.add(
-            JobLog(
-                job_id=task.id,
-                job_type="campaign_cycle",
-                status="queued",
-                payload_summary={
-                    "campaign_id": str(c.id),
-                    "campaign_name": c.name,
-                    "eligible_leads": eligible_leads,
-                },
-            )
-        )
-        db.commit()
-    except Exception as exc:
-        db.rollback()
-        c.status = "draft"
-        db.commit()
-        raise HTTPException(
-            status_code=503,
-            detail="Campaign execution could not be recorded after queueing. Try again after checking worker health.",
-        ) from exc
 
-    return {
-        "status": "queued",
-        "campaign": c.name,
-        "eligible_leads": eligible_leads,
-        "blocked_leads": blocked_counts,
-        "job_queued": True,
-        "job_id": job_id,
-    }
+@router.post("/{campaign_id}/dry-run")
+def dry_run_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return _campaign_dry_run(db, campaign)
     
 @router.post("/{campaign_id}/pause")
 def pause_campaign(campaign_id: str, db: Session = Depends(get_db)):

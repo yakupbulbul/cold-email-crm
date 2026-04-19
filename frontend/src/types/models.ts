@@ -116,11 +116,81 @@ export interface Campaign {
         next_dispatch_at?: string | null;
         beat_interval_seconds?: number;
         detail?: string | null;
+        current_blocker?: CampaignExecutionBlocker | null;
+        next_send_decision?: string | null;
+        last_job_queued_at?: string | null;
+        last_job_started_at?: string | null;
+        last_job_completed_at?: string | null;
+        last_job_failed_at?: string | null;
+        last_job_error?: string | null;
+        eligible_leads?: number;
+        scheduled_leads?: number;
+        blocked_leads?: Record<string, number>;
+        next_eligible_lead?: CampaignNextEligibleLead | null;
+        job_history?: CampaignJobHistoryItem[];
         last_delivery_attempt_at?: string | null;
         last_delivery_status?: "success" | "failed" | null;
         last_delivery_target_email?: string | null;
         last_delivery_error?: string | null;
     };
+}
+
+export interface CampaignExecutionBlocker {
+    code: string;
+    message: string;
+}
+
+export interface CampaignNextEligibleLead {
+    campaign_lead_id: string;
+    contact_id: string;
+    email: string;
+    scheduled_at?: string | null;
+    warning_reason?: string | null;
+}
+
+export interface CampaignJobHistoryItem {
+    job_id: string;
+    status: string;
+    created_at?: string | null;
+    started_at?: string | null;
+    finished_at?: string | null;
+    error_message?: string | null;
+    retry_count?: number;
+    payload_summary?: Record<string, unknown>;
+}
+
+export interface CampaignDryRunResult {
+    campaign_id: string;
+    campaign: string;
+    campaign_status: string;
+    mailbox_id?: string | null;
+    mailbox_email?: string | null;
+    sender_identity?: string | null;
+    eligible_leads: number;
+    scheduled_leads: number;
+    blocked_leads: Record<string, number>;
+    next_eligible_lead?: CampaignNextEligibleLead | null;
+    sent_today: number;
+    daily_limit: number;
+    remaining_today: number;
+    schedule_allows_now: boolean;
+    schedule_detail: string;
+    next_send_at?: string | null;
+    deliverability_status: string;
+    would_queue: boolean;
+    blockers: CampaignExecutionBlocker[];
+    warnings: CampaignExecutionBlocker[];
+}
+
+export interface CampaignExecutionDetail {
+    campaign_id: string;
+    campaign: string;
+    summary: NonNullable<Campaign["execution_summary"]>;
+    dry_run: CampaignDryRunResult;
+    job_history: CampaignJobHistoryItem[];
+    next_eligible_lead?: CampaignNextEligibleLead | null;
+    current_blocker?: CampaignExecutionBlocker | null;
+    next_send_decision?: string | null;
 }
 
 export interface CampaignActionResult {
@@ -130,6 +200,7 @@ export interface CampaignActionResult {
     blocked_leads?: Record<string, number>;
     job_queued?: boolean;
     job_id?: string | null;
+    execution?: CampaignExecutionDetail;
 }
 
 export interface CampaignPreflightResult {

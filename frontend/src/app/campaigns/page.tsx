@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Archive, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, ShieldAlert, Trash2, Users, X } from 'lucide-react';
+import { Archive, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, RefreshCw, ShieldAlert, Trash2, Users, X } from 'lucide-react';
 
 import Spinner from '@/components/ui/Spinner';
 import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from '@/components/ui/primitives';
 import { useApiService } from '@/services/api';
-import { Campaign, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
+import { Campaign, CampaignDryRunResult, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
 
 type ActionState = {
-  type: 'start' | 'pause' | 'preflight' | 'save' | 'delete' | 'archive' | 'unarchive' | 'attach-list' | 'remove-list';
+  type: 'start' | 'retry' | 'dry-run' | 'pause' | 'preflight' | 'save' | 'delete' | 'archive' | 'unarchive' | 'attach-list' | 'remove-list';
   campaignId: string;
 };
 
@@ -79,6 +79,8 @@ export default function CampaignsPage() {
     archiveCampaign,
     unarchiveCampaign,
     startCampaign,
+    retryCampaign,
+    dryRunCampaign,
     pauseCampaign,
     runPreflight,
     attachListToCampaign,
@@ -102,6 +104,7 @@ export default function CampaignsPage() {
   const [actionState, setActionState] = useState<ActionState | null>(null);
   const [actionErrors, setActionErrors] = useState<Record<string, string>>({});
   const [preflightResults, setPreflightResults] = useState<Record<string, CampaignPreflightResult>>({});
+  const [dryRunResults, setDryRunResults] = useState<Record<string, CampaignDryRunResult>>({});
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -146,6 +149,12 @@ export default function CampaignsPage() {
       return next;
     });
     setPreflightResults((current) => {
+      if (!current[campaignId]) return current;
+      const next = { ...current };
+      delete next[campaignId];
+      return next;
+    });
+    setDryRunResults((current) => {
       if (!current[campaignId]) return current;
       const next = { ...current };
       delete next[campaignId];
@@ -210,6 +219,49 @@ export default function CampaignsPage() {
       setBanner({ tone: 'success', message });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Campaign activation failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleRetry = async (campaignId: string) => {
+    setBanner(null);
+    clearCampaignMessages(campaignId);
+    setActionState({ type: 'retry', campaignId });
+    try {
+      const result = await retryCampaign(campaignId);
+      await refreshCampaigns();
+      setBanner({ tone: 'success', message: `Campaign pass queued${result.eligible_leads ? ` for ${result.eligible_leads} eligible leads` : ''}.` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign retry failed. Check the backend response and try again.';
+      setActionErrors((current) => ({
+        ...current,
+        [campaignId]: message,
+      }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleDryRun = async (campaignId: string) => {
+    setBanner(null);
+    setActionErrors((current) => {
+      if (!current[campaignId]) return current;
+      const next = { ...current };
+      delete next[campaignId];
+      return next;
+    });
+    setActionState({ type: 'dry-run', campaignId });
+    try {
+      const result = await dryRunCampaign(campaignId);
+      setDryRunResults((current) => ({ ...current, [campaignId]: result }));
+      await refreshCampaigns();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Campaign dry run failed. Check the backend response and try again.';
       setActionErrors((current) => ({
         ...current,
         [campaignId]: message,
@@ -579,8 +631,10 @@ export default function CampaignsPage() {
           {campaigns.map((campaign) => {
             const blockedMessage = actionErrors[campaign.id];
             const preflight = preflightResults[campaign.id];
+            const dryRun = dryRunResults[campaign.id];
             const canStart = campaign.status === 'draft' || campaign.status === 'paused';
             const canPause = campaign.status === 'active';
+            const canRetry = campaign.status === 'active' || campaign.status === 'paused';
             const canDelete = campaign.status === 'draft';
             const canArchive = campaign.status === 'active' || campaign.status === 'paused' || campaign.status === 'completed';
             const canUnarchive = campaign.status === 'archived';
@@ -726,9 +780,29 @@ export default function CampaignsPage() {
                     <div className="mt-1 text-sm text-slate-600">
                       {campaign.execution_summary?.detail || 'No dispatch timing available.'}
                     </div>
+                    {campaign.execution_summary?.next_send_decision ? (
+                      <div className="mt-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                        Next send decision: <span className="font-semibold">{campaign.execution_summary.next_send_decision}</span>
+                      </div>
+                    ) : null}
+                    {campaign.execution_summary?.current_blocker ? (
+                      <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        Current blocker: <span className="font-semibold">{campaign.execution_summary.current_blocker.message}</span>
+                      </div>
+                    ) : null}
                     {executionTimingLabel(campaign) ? (
                       <div className="mt-2 text-sm text-slate-600">
                         {executionTimingLabel(campaign)?.label}: <span className="font-medium text-slate-800">{executionTimingLabel(campaign)?.value}</span>
+                      </div>
+                    ) : null}
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                      <SummaryStat label="Scheduled" value={campaign.execution_summary?.scheduled_leads ?? 0} />
+                      <SummaryStat label="Eligible now" value={campaign.execution_summary?.eligible_leads ?? 0} />
+                      <SummaryStat label="Blocked leads" value={Object.values(campaign.execution_summary?.blocked_leads || {}).reduce((sum, count) => sum + count, 0)} />
+                    </div>
+                    {campaign.execution_summary?.next_eligible_lead ? (
+                      <div className="mt-2 text-sm text-slate-600">
+                        Next eligible lead: <span className="font-medium text-slate-800">{campaign.execution_summary.next_eligible_lead.email}</span>
                       </div>
                     ) : null}
                     <div className="mt-1 text-sm text-slate-600">
@@ -756,6 +830,23 @@ export default function CampaignsPage() {
                       <div className="mt-1 text-sm text-slate-600">
                         Current job: <span className="font-mono text-slate-800">{campaign.execution_summary.job_id}</span>
                       </div>
+                    ) : null}
+                    {campaign.execution_summary?.job_history?.length ? (
+                      <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                        <summary className="cursor-pointer text-sm font-semibold text-slate-700">Job history</summary>
+                        <div className="mt-3 space-y-2">
+                          {campaign.execution_summary.job_history.slice(0, 5).map((job) => (
+                            <div key={job.job_id} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-mono text-slate-800">{job.job_id}</span>
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">{job.status}</span>
+                              </div>
+                              <div className="mt-1">Queued: {formatExecutionTime(job.created_at)} · Started: {formatExecutionTime(job.started_at)} · Finished: {formatExecutionTime(job.finished_at)}</div>
+                              {job.error_message ? <div className="mt-1 text-rose-700">{job.error_message}</div> : null}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
                     ) : null}
                   </div>
 
@@ -917,6 +1008,30 @@ export default function CampaignsPage() {
                         </button>
                       </>
                     )}
+                    {campaign.status !== 'archived' ? (
+                      <button
+                        data-testid={`dry-run-campaign-${campaign.id}`}
+                        type="button"
+                        onClick={() => void handleDryRun(campaign.id)}
+                        disabled={!!actionState || isEditing}
+                        className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-700 transition-colors hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isActionPending(campaign.id, 'dry-run') ? <LoaderCircle size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
+                        Dry Run
+                      </button>
+                    ) : null}
+                    {canRetry ? (
+                      <button
+                        data-testid={`retry-campaign-${campaign.id}`}
+                        type="button"
+                        onClick={() => void handleRetry(campaign.id)}
+                        disabled={!!actionState || isEditing}
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isActionPending(campaign.id, 'retry') ? <LoaderCircle size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                        Run pass now
+                      </button>
+                    ) : null}
                     {canPause && (
                       <button
                         data-testid={`pause-campaign-${campaign.id}`}
@@ -934,6 +1049,58 @@ export default function CampaignsPage() {
                   {blockedMessage && (
                     <div data-testid={`campaign-message-${campaign.id}`} className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                       {blockedMessage}
+                    </div>
+                  )}
+
+                  {dryRun && (
+                    <div data-testid={`campaign-dry-run-${campaign.id}`} className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <span className="text-sm font-bold text-sky-900">Dry run result</span>
+                          <p className="mt-1 text-xs text-sky-800">No email was sent. This is the backend execution decision for the next campaign pass.</p>
+                        </div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${dryRun.would_queue ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                          {dryRun.would_queue ? 'Would queue' : 'Would not queue'}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                        <SummaryStat label="Eligible" value={dryRun.eligible_leads} />
+                        <SummaryStat label="Scheduled" value={dryRun.scheduled_leads} />
+                        <SummaryStat label="Remaining today" value={dryRun.remaining_today} />
+                        <SummaryStat label="Deliverability" value={dryRun.deliverability_status} />
+                      </div>
+                      <div className="mt-3 text-sm text-sky-900">
+                        Sender: <span className="font-mono">{dryRun.sender_identity || 'No sender selected'}</span>
+                      </div>
+                      <div className="mt-1 text-sm text-sky-900">
+                        Next send time: <span className="font-semibold">{formatExecutionTime(dryRun.next_send_at)}</span>
+                      </div>
+                      <div className="mt-1 text-sm text-sky-900">
+                        Schedule: <span className="font-semibold">{dryRun.schedule_detail}</span>
+                      </div>
+                      {dryRun.next_eligible_lead ? (
+                        <div className="mt-1 text-sm text-sky-900">
+                          Next eligible lead: <span className="font-semibold">{dryRun.next_eligible_lead.email}</span>
+                        </div>
+                      ) : null}
+                      {dryRun.blockers.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {dryRun.blockers.map((blocker) => (
+                            <div key={blocker.code} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-700">
+                              <span className="font-semibold">{blocker.code.replaceAll('_', ' ')}</span>: {blocker.message}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {dryRun.warnings.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {dryRun.warnings.map((warning) => (
+                            <div key={warning.code} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-amber-800">
+                              <span className="font-semibold">{warning.code.replaceAll('_', ' ')}</span>: {warning.message}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   )}
 
@@ -978,7 +1145,7 @@ function PauseGlyph() {
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: number }) {
+function SummaryStat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
       <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</div>

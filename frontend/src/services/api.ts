@@ -6,6 +6,8 @@ import {
     LeadVerificationJob,
     LeadVerificationResult,
     CampaignActionResult,
+    CampaignDryRunResult,
+    CampaignExecutionDetail,
     CampaignPreflightResult,
     CampaignListSummary,
     LeadList,
@@ -139,6 +141,9 @@ export function useApiService() {
     const archiveCampaign = useCallback((id: string) => requestOrThrow<{ status: string; id: string; campaign?: string }>(`/campaigns/${id}/archive`, { method: "POST" }), [requestOrThrow]);
     const unarchiveCampaign = useCallback((id: string) => requestOrThrow<{ status: string; id: string; campaign?: string }>(`/campaigns/${id}/unarchive`, { method: "POST" }), [requestOrThrow]);
     const startCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/start`, { method: "POST" }), [requestOrThrow]);
+    const retryCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/retry`, { method: "POST" }), [requestOrThrow]);
+    const dryRunCampaign = useCallback((id: string) => requestOrThrow<CampaignDryRunResult>(`/campaigns/${id}/dry-run`, { method: "POST" }), [requestOrThrow]);
+    const getCampaignExecution = useCallback((id: string) => request<CampaignExecutionDetail>(`/campaigns/${id}/execution`), [request]);
     const pauseCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/pause`, { method: "POST" }), [requestOrThrow]);
     const runPreflight = useCallback((id: string) => requestOrThrow<CampaignPreflightResult>(`/campaigns/${id}/preflight`, { method: "POST" }), [requestOrThrow]);
 
@@ -244,6 +249,9 @@ export function useApiService() {
         archiveCampaign,
         unarchiveCampaign,
         startCampaign,
+        retryCampaign,
+        dryRunCampaign,
+        getCampaignExecution,
         pauseCampaign,
         runPreflight,
         getLeads,
