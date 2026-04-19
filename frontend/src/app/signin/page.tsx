@@ -161,7 +161,7 @@ export default function SignInPage() {
                                     error={emailError}
                                 >
                                     <div className="relative">
-                                        <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input
                                             data-testid="email-input"
                                             type="email"
@@ -171,7 +171,7 @@ export default function SignInPage() {
                                                 setEmail(e.target.value);
                                                 if (emailError) setEmailError(null);
                                             }}
-                                            className="form-input pl-12"
+                                            className="form-input form-input-with-leading-icon"
                                             placeholder="name@company.com"
                                             autoComplete="email"
                                         />
@@ -184,7 +184,7 @@ export default function SignInPage() {
                                     error={passwordError}
                                 >
                                     <div className="relative">
-                                        <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <Lock size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input
                                             data-testid="password-input"
                                             type={showPassword ? "text" : "password"}
@@ -194,7 +194,7 @@ export default function SignInPage() {
                                                 setPassword(e.target.value);
                                                 if (passwordError) setPasswordError(null);
                                             }}
-                                            className="form-input pl-12 pr-12"
+                                            className="form-input form-input-with-leading-icon form-input-with-trailing-action"
                                             placeholder="••••••••"
                                             autoComplete="current-password"
                                         />

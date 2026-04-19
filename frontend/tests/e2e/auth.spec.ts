@@ -55,6 +55,35 @@ test("password visibility toggle works on signin", async ({ browser }) => {
   await ctx.close();
 });
 
+test("signin input text has enough spacing from icons", async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await ctx.newPage();
+  await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
+  await page.goto("/signin");
+
+  const emailPadding = await page.getByTestId("email-input").evaluate((input) => {
+    const style = window.getComputedStyle(input);
+    return {
+      left: Number.parseFloat(style.paddingLeft),
+      right: Number.parseFloat(style.paddingRight),
+    };
+  });
+  const passwordPadding = await page.getByTestId("password-input").evaluate((input) => {
+    const style = window.getComputedStyle(input);
+    return {
+      left: Number.parseFloat(style.paddingLeft),
+      right: Number.parseFloat(style.paddingRight),
+    };
+  });
+
+  expect(emailPadding.left).toBeGreaterThanOrEqual(50);
+  expect(passwordPadding.left).toBeGreaterThanOrEqual(50);
+  expect(passwordPadding.right).toBeGreaterThanOrEqual(58);
+  expect(emailPadding.right).toBeGreaterThanOrEqual(16);
+  await ctx.close();
+});
+
 test("/login redirects to the canonical /signin route", async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
