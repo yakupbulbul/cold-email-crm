@@ -37,13 +37,15 @@ test("logo/home link on login page is visible", async ({ browser }) => {
   await page.evaluate(() => window.localStorage.clear());
   await page.goto("/signin");
   await expect(page.getByRole("link", { name: /campaign manager/i }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: /access your workspace/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^sign in$/i })).toBeVisible();
   await ctx.close();
 });
 
 test("password visibility toggle works on signin", async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
+  await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
   await page.goto("/signin");
   await expect(page.getByTestId("password-input")).toHaveAttribute("type", "password");
   await page.getByTestId("password-toggle").click();

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Lock, ShieldCheck, Activity, Send, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, ShieldCheck, Activity, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import { AlertBanner, FieldGroup } from "@/components/ui/primitives";
 import { useRouter } from "next/navigation";
@@ -86,70 +86,69 @@ export default function SignInPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.10),_transparent_34%),linear-gradient(180deg,#f8fbff_0%,#eef4ff_48%,#f5f7fb_100%)] px-4 py-6 sm:px-6 lg:px-8">
-            <main className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center justify-center">
-                <section className="grid w-full overflow-hidden rounded-[2rem] border border-white/80 bg-white/90 shadow-[0_30px_80px_rgba(15,23,42,0.12)] backdrop-blur lg:grid-cols-[0.95fr,1.05fr]">
-                    <div className="relative hidden min-h-[620px] flex-col justify-between overflow-hidden bg-slate-950 p-8 text-white lg:flex xl:p-10">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.20),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(37,99,235,0.18),transparent_28%)]" />
-                        <div className="relative">
-                            <Link href="/" className="inline-flex items-center gap-3">
-                                <div className="rounded-2xl bg-white px-4 py-3">
-                                    <Image src="/crm-logo.png" alt="Campaign Manager" width={78} height={40} className="h-auto w-[78px]" priority />
-                                </div>
-                                <div>
-                                    <div className="text-sm font-semibold text-white">Campaign Manager</div>
-                                    <div className="text-xs text-slate-400">Outreach operations workspace</div>
-                                </div>
-                            </Link>
-                        </div>
-                        <div className="relative max-w-md">
-                            <div className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">
-                                Secure workspace access
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.08),_transparent_38%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_100%)] px-4 py-5 sm:px-6 lg:px-8">
+            <main className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-5xl items-center justify-center">
+                <section className="grid w-full items-center gap-8 lg:grid-cols-[0.78fr,1fr] lg:gap-10">
+                    <div className="order-2 rounded-[1.75rem] border border-slate-200 bg-white/70 p-5 text-slate-700 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur lg:order-1 lg:p-6">
+                        <Link href="/" className="inline-flex items-center gap-3">
+                            <div className="rounded-2xl bg-slate-950 px-4 py-3">
+                                <Image src="/crm-logo.png" alt="Campaign Manager" width={76} height={38} className="h-auto w-[76px]" priority />
                             </div>
-                            <h1 className="mt-5 text-4xl font-semibold leading-[1.02] tracking-[-0.055em] xl:text-5xl">
-                                Operate cold email with one clear control surface.
+                            <div>
+                                <div className="text-sm font-semibold text-slate-950">Campaign Manager</div>
+                                <div className="text-xs text-slate-500">Workspace access</div>
+                            </div>
+                        </Link>
+
+                        <div className="mt-8">
+                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                Secure operator sign-in
+                            </div>
+                            <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-[-0.04em] text-slate-950 sm:text-3xl">
+                                Access the workspace for campaigns, senders, and replies.
                             </h1>
-                            <p className="mt-5 text-sm leading-7 text-slate-300 xl:text-base">
-                                Sign in to manage domains, mailboxes, campaigns, replies, warm-up, and operational health from a single backend-backed workspace.
+                            <p className="mt-4 text-sm leading-6 text-slate-600">
+                                Sign in with your operator credentials to manage outbound infrastructure and campaign operations.
                             </p>
                         </div>
-                        <div className="relative grid gap-3">
-                            <ValuePoint icon={Send} title="Campaign control" detail="Launch, pause, and inspect real execution." />
-                            <ValuePoint icon={Activity} title="Operational visibility" detail="See readiness, blockers, and worker-backed state." />
-                            <ValuePoint icon={ShieldCheck} title="Sender safety" detail="Keep verification, suppression, and compliance visible." />
+
+                        <div className="mt-6 space-y-3">
+                            <ValuePoint icon={ShieldCheck} text="Backend-authenticated workspace access" />
+                            <ValuePoint icon={Activity} text="Operational status, warm-up, inbox, and campaign controls" />
+                            <ValuePoint icon={CheckCircle2} text="Focused entry point for authorized users" />
                         </div>
                     </div>
 
-                    <div className="flex min-h-[620px] items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
-                        <div className="w-full max-w-md">
-                            <div className="mb-7 flex items-center justify-between gap-4 lg:hidden">
-                                <Link href="/" className="flex items-center gap-3">
-                                    <div className="rounded-2xl bg-slate-950 px-4 py-3">
-                                        <Image src="/crm-logo.png" alt="Campaign Manager" width={74} height={38} className="h-auto w-[74px]" priority />
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-semibold text-slate-950">Campaign Manager</div>
-                                        <div className="text-xs text-slate-500">Workspace access</div>
-                                    </div>
-                                </Link>
-                                <Link href="/" className="text-sm font-medium text-slate-500 hover:text-slate-900">
-                                    Overview
-                                </Link>
-                            </div>
-
-                            <div className="mb-7">
-                                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                                    Sign in
+                    <div className="order-1 flex justify-center lg:order-2">
+                        <div className="w-full max-w-[29rem] rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_28px_70px_rgba(15,23,42,0.12)] sm:p-8">
+                            <div className="mb-6">
+                                <div className="mb-5 flex items-center justify-between gap-4 lg:hidden">
+                                    <Link href="/" className="flex items-center gap-3">
+                                        <div className="rounded-2xl bg-slate-950 px-4 py-3">
+                                            <Image src="/crm-logo.png" alt="Campaign Manager" width={74} height={38} className="h-auto w-[74px]" priority />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-950">Campaign Manager</div>
+                                            <div className="text-xs text-slate-500">Workspace access</div>
+                                        </div>
+                                    </Link>
+                                    <Link href="/" className="text-sm font-medium text-slate-500 hover:text-slate-900">
+                                        Overview
+                                    </Link>
                                 </div>
-                                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-4xl">
-                                    Access your workspace
+
+                                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    Workspace access
+                                </div>
+                                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-4xl">
+                                    Sign in
                                 </h2>
                                 <p className="mt-3 text-sm leading-6 text-slate-600">
-                                    Use your operator credentials to continue to the internal dashboard.
+                                    Continue to your internal dashboard.
                                 </p>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] sm:p-6">
+                            <form onSubmit={handleSubmit} className="space-y-5">
                                 {error ? (
                                     <AlertBanner tone="danger" title="Authentication failed">
                                         {error}
@@ -226,7 +225,7 @@ export default function SignInPage() {
                                 </button>
                             </form>
 
-                            <div className="mt-5 flex flex-col justify-between gap-3 text-sm text-slate-500 sm:flex-row sm:items-center">
+                            <div className="mt-6 flex flex-col justify-between gap-3 border-t border-slate-100 pt-5 text-sm text-slate-500 sm:flex-row sm:items-center">
                                 <span>Protected by backend session auth.</span>
                                 <Link href="/" className="font-medium text-slate-900 hover:text-slate-700">
                                     Product overview
@@ -242,22 +241,17 @@ export default function SignInPage() {
 
 function ValuePoint({
     icon: Icon,
-    title,
-    detail,
+    text,
 }: {
-    icon: typeof Send;
-    title: string;
-    detail: string;
+    icon: typeof ShieldCheck;
+    text: string;
 }) {
     return (
-        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/7 p-4">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sky-100">
-                <Icon size={16} />
+        <div className="flex items-start gap-3 text-sm leading-6 text-slate-600">
+            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white">
+                <Icon size={13} />
             </div>
-            <div>
-                <div className="text-sm font-semibold text-white">{title}</div>
-                <div className="mt-1 text-sm leading-5 text-slate-400">{detail}</div>
-            </div>
+            <span>{text}</span>
         </div>
     );
 }
