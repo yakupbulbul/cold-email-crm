@@ -101,22 +101,23 @@ function ReadinessTable({ title, items, kind }: { title: string; items: Delivera
 }
 
 export default function DeliverabilityDashboard() {
-  const { getDeliverabilityOverview, loading } = useApiService();
+  const { getDeliverabilityOverviewOrThrow, loading } = useApiService();
   const [overview, setOverview] = useState<DeliverabilityOverview | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOverview = async () => {
       setPageError(null);
-      const data = await getDeliverabilityOverview();
-      if (data) {
+      try {
+        const data = await getDeliverabilityOverviewOrThrow();
         setOverview(data);
-      } else {
-        setPageError("Deliverability overview could not be loaded from the backend.");
+      } catch (error) {
+        setOverview(null);
+        setPageError(error instanceof Error ? error.message : "Deliverability overview could not be loaded from the backend.");
       }
     };
     fetchOverview();
-  }, [getDeliverabilityOverview]);
+  }, [getDeliverabilityOverviewOrThrow]);
 
   const audience = overview?.summary.audience || {};
   const warmup = overview?.summary.warmup || {};

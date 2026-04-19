@@ -125,6 +125,7 @@ export function useApiService() {
     const getJobs = useCallback(() => request<JobLog[]>("/ops/jobs"), [request]);
     const getDeliverabilitySummary = useCallback(() => request<DeliverabilitySummary>("/ops/deliverability/summary"), [request]);
     const getDeliverabilityOverview = useCallback(() => request<DeliverabilityOverview>("/deliverability/overview"), [request]);
+    const getDeliverabilityOverviewOrThrow = useCallback(() => requestOrThrow<DeliverabilityOverview>("/deliverability/overview"), [requestOrThrow]);
     const getDeliverabilityDomains = useCallback(() => request<{ status: string; summary: Record<string, number>; items: DeliverabilityEntity[]; blockers: unknown[]; warnings: unknown[]; next_actions: string[] }>("/deliverability/domains"), [request]);
     const getDeliverabilityMailboxes = useCallback(() => request<{ status: string; summary: Record<string, number>; items: DeliverabilityEntity[]; blockers: unknown[]; warnings: unknown[]; next_actions: string[] }>("/deliverability/mailboxes"), [request]);
     const getCampaignDeliverability = useCallback((id: string) => request<DeliverabilityEntity & { audience?: Record<string, unknown>; eligible_leads?: number }>("/deliverability/campaigns/" + id), [request]);
@@ -231,6 +232,7 @@ export function useApiService() {
         getJobs,
         getDeliverabilitySummary,
         getDeliverabilityOverview,
+        getDeliverabilityOverviewOrThrow,
         getDeliverabilityDomains,
         getDeliverabilityMailboxes,
         getCampaignDeliverability,
