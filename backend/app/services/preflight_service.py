@@ -166,7 +166,13 @@ class PreflightService:
             "status": overall_status,
             "blocked": blocking_failures,
             "checks": [
-                {"name": c.check_name, "status": c.status, "message": c.message} 
+                {
+                    "name": c.check_name,
+                    "status": c.status,
+                    "severity": c.severity,
+                    "message": c.message,
+                    "metadata": c.metadata_blob,
+                }
                 for c in checks
             ],
             "list_summary": list_summary,

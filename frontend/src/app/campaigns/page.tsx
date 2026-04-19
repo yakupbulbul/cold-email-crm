@@ -632,6 +632,9 @@ export default function CampaignsPage() {
             const blockedMessage = actionErrors[campaign.id];
             const preflight = preflightResults[campaign.id];
             const dryRun = dryRunResults[campaign.id];
+            const preflightBlockers = preflight?.checks.filter((check) => check.status === 'fail') || [];
+            const preflightWarnings = preflight?.checks.filter((check) => check.status === 'warning') || [];
+            const preflightPassed = preflight?.checks.filter((check) => check.status !== 'fail' && check.status !== 'warning') || [];
             const canStart = campaign.status === 'draft' || campaign.status === 'paused';
             const canPause = campaign.status === 'active';
             const canRetry = campaign.status === 'active' || campaign.status === 'paused';
@@ -1113,11 +1116,26 @@ export default function CampaignsPage() {
                         </span>
                       </div>
                       <div className="mt-3 space-y-2">
-                        {preflight.checks.map((check) => (
-                          <div key={check.name} className="rounded-lg bg-white px-3 py-2 text-sm text-slate-600 border border-slate-200">
-                            <span className="font-semibold text-slate-800">{check.name}</span>: {check.message}
-                          </div>
-                        ))}
+                        {preflightBlockers.length > 0 ? (
+                          <PreflightCheckGroup title="Hard blockers" checks={preflightBlockers} tone="danger" />
+                        ) : null}
+                        {preflightWarnings.length > 0 ? (
+                          <PreflightCheckGroup title="Warnings" checks={preflightWarnings} tone="warning" />
+                        ) : null}
+                        {preflightPassed.length > 0 ? (
+                          <details className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
+                            <summary className="cursor-pointer text-sm font-semibold text-emerald-800">
+                              Passed checks ({preflightPassed.length})
+                            </summary>
+                            <div className="mt-2 space-y-2">
+                              {preflightPassed.map((check) => (
+                                <div key={check.name} className="rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm text-emerald-800">
+                                  <span className="font-semibold">{check.name}</span>: {check.message}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        ) : null}
                         {preflight.audience_summary && (
                           <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
                             Audience summary: {preflight.audience_summary.reachable_count} reachable, {preflight.audience_summary.risky_count} risky, {preflight.audience_summary.unsubscribed_count ?? 0} unsubscribed, {preflight.audience_summary.consent_unknown_count ?? 0} consent unknown.
@@ -1132,6 +1150,33 @@ export default function CampaignsPage() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function PreflightCheckGroup({
+  title,
+  checks,
+  tone,
+}: {
+  title: string;
+  checks: CampaignPreflightResult['checks'];
+  tone: 'danger' | 'warning';
+}) {
+  const styles = tone === 'danger'
+    ? 'border-red-200 bg-red-50 text-red-800'
+    : 'border-amber-200 bg-amber-50 text-amber-900';
+
+  return (
+    <div className={`rounded-lg border px-3 py-2 ${styles}`}>
+      <div className="text-sm font-semibold">{title}</div>
+      <div className="mt-2 space-y-2">
+        {checks.map((check) => (
+          <div key={check.name} className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm">
+            <span className="font-semibold">{check.name}</span>: {check.message}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

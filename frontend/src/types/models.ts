@@ -211,6 +211,8 @@ export interface CampaignPreflightResult {
         name: string;
         status: string;
         message: string;
+        severity?: string;
+        metadata?: unknown;
     }>;
 }
 
@@ -572,6 +574,7 @@ export interface DeliverabilityIssue {
     next_action?: string | null;
     source?: string | null;
     entity?: string | null;
+    priority?: number;
 }
 
 export interface DeliverabilityCheck {
@@ -622,6 +625,7 @@ export interface DeliverabilityOverview {
     generated_at: string;
     blockers: DeliverabilityIssue[];
     warnings: DeliverabilityIssue[];
+    fix_priority?: DeliverabilityIssue[];
     next_actions: string[];
     summary: {
         domains: Record<string, number>;

@@ -79,6 +79,7 @@ class DeliverabilityService:
             "generated_at": datetime.utcnow().isoformat(),
             "blockers": blockers,
             "warnings": warnings,
+            "fix_priority": self._fix_priority(blockers, warnings),
             "next_actions": self._next_actions(blockers, warnings),
             "summary": {
                 "domains": domains["summary"],
@@ -618,6 +619,7 @@ class DeliverabilityService:
             "next_action": next_action,
             "source": source,
             "entity": entity,
+            "priority": self._issue_priority(code, severity, source),
         }
 
     def _issues_from_checks(self, checks: list[dict[str, Any]], *, source: str, entity: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -657,7 +659,30 @@ class DeliverabilityService:
         return int((sum(weights.get(check["status"], 0.5) for check in scored) / len(scored)) * 100)
 
     def _top_items(self, issues: list[dict[str, Any]], limit: int = 6) -> list[dict[str, Any]]:
-        return issues[:limit]
+        return sorted(issues, key=lambda issue: issue.get("priority", 999))[:limit]
+
+    def _fix_priority(self, blockers: list[dict[str, Any]], warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return self._top_items(blockers + warnings, limit=12)
+
+    def _issue_priority(self, code: str, severity: str, source: str) -> int:
+        priority = 100
+        if severity == "critical":
+            priority -= 60
+        elif severity == "warning":
+            priority -= 25
+        if source == "campaign":
+            priority -= 15
+        if code in {"provider_available", "provider_disabled", "provider_misconfigured", "provider_health", "oauth"}:
+            priority -= 14
+        if code in {"smtp", "recent_send_posture"}:
+            priority -= 12
+        if code in {"mx", "domain_readiness"}:
+            priority -= 10
+        if code in {"spf", "dkim", "dmarc"}:
+            priority -= 5
+        if code == "bimi":
+            priority += 20
+        return max(priority, 0)
 
     def _next_actions(self, blockers: list[dict[str, Any]], warnings: list[dict[str, Any]]) -> list[str]:
         actions = []

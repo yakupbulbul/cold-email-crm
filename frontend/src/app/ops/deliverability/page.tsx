@@ -87,7 +87,28 @@ function ReadinessTable({ title, items, kind }: { title: string; items: Delivera
                     </td>
                     <td className="px-5 py-4"><StatusPill status={item.status} /></td>
                     <td className="px-5 py-4 text-sm text-slate-600">{item.provider_type?.replaceAll("_", " ") || "Domain DNS"}</td>
-                    <td className="max-w-md px-5 py-4 text-sm text-slate-600">{issue ? issue.message : "No deliverability issue detected."}</td>
+                    <td className="max-w-md px-5 py-4 text-sm text-slate-600">
+                      <div>{issue ? issue.message : "No deliverability issue detected."}</div>
+                      {item.checks.length > 0 ? (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer text-xs font-semibold text-slate-500 hover:text-slate-800">
+                            View readiness checks
+                          </summary>
+                          <div className="mt-2 space-y-1.5">
+                            {item.checks.slice(0, 6).map((check) => (
+                              <div key={check.code} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <StatusBadge tone={toneForStatus(check.status)}>{check.status}</StatusBadge>
+                                  <span className="font-semibold text-slate-800">{check.label}</span>
+                                </div>
+                                <div className="mt-1 leading-5">{check.detail}</div>
+                                {check.next_action ? <div className="mt-1 font-medium text-slate-700">Next: {check.next_action}</div> : null}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-4 text-sm text-slate-500">{formatDateTime(item.last_checked_at)}</td>
                   </tr>
                 );
@@ -123,6 +144,7 @@ export default function DeliverabilityDashboard() {
   const warmup = overview?.summary.warmup || {};
   const domains = overview?.summary.domains || {};
   const mailboxes = overview?.summary.mailboxes || {};
+  const fixPriority = overview?.fix_priority?.length ? overview.fix_priority : [...(overview?.blockers || []), ...(overview?.warnings || [])].slice(0, 8);
 
   return (
     <div className="space-y-6 pb-12">
@@ -173,17 +195,22 @@ export default function DeliverabilityDashboard() {
             <IssueList title="Warnings and next fixes" issues={overview.warnings} empty="No warning-level deliverability issues are currently known." />
           </div>
 
-          {overview.next_actions.length > 0 ? (
+          {fixPriority.length > 0 ? (
             <SurfaceCard className="p-5">
               <div className="flex items-center gap-2 text-base font-semibold text-slate-950">
                 <Sparkles size={18} className="text-sky-600" />
                 Recommended fix order
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {overview.next_actions.map((action, index) => (
-                  <div key={action} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                    <span className="mr-2 font-semibold text-slate-950">{index + 1}.</span>
-                    {action}
+                {fixPriority.map((issue, index) => (
+                  <div key={`${issue.code}-${issue.entity || index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    <div className="flex items-start gap-3">
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-950 ring-1 ring-slate-200">{index + 1}</span>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-900">{issueLabel(issue)}</div>
+                        {issue.next_action ? <div className="mt-1 text-xs leading-5 text-slate-600">Next action: {issue.next_action}</div> : null}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
