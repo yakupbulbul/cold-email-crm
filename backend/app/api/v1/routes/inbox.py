@@ -24,6 +24,15 @@ router = APIRouter()
 
 
 def _serialize_mailbox_sync(mailbox: Mailbox) -> dict:
+    block_reason = None
+    if mailbox.status != "active":
+        block_reason = "Mailbox is inactive."
+    elif not mailbox.inbox_sync_enabled:
+        block_reason = "Inbox sync is disabled for this mailbox."
+    elif (mailbox.provider_type or "mailcow") == "google_workspace" and mailbox.oauth_connection_status != "connected":
+        block_reason = "Google Workspace OAuth must be connected before inbox sync can run."
+    elif mailbox.inbox_last_error:
+        block_reason = mailbox.inbox_last_error
     return {
         "id": str(mailbox.id),
         "email": mailbox.email,
@@ -36,6 +45,9 @@ def _serialize_mailbox_sync(mailbox: Mailbox) -> dict:
         "inbox_last_synced_at": mailbox.inbox_last_synced_at.isoformat() if mailbox.inbox_last_synced_at else None,
         "inbox_last_success_at": mailbox.inbox_last_success_at.isoformat() if mailbox.inbox_last_success_at else None,
         "inbox_last_error": mailbox.inbox_last_error,
+        "inbox_block_reason": block_reason,
+        "imap_health": mailbox.inbox_sync_status or "unknown",
+        "imap_health_detail": block_reason or "Use manual sync to verify IMAP health.",
         "smtp_last_check_status": mailbox.smtp_last_check_status,
         "imap_host": mailbox.imap_host,
         "imap_port": mailbox.imap_port,
@@ -152,6 +164,17 @@ def sync_inbox(mailbox_id: UUID | None = None, db: Session = Depends(get_db)):
         "status": "completed",
         "mailboxes_processed": len(mailboxes),
         "results": results,
+    }
+
+
+@router.post("/mailboxes/{mailbox_id}/sync")
+def sync_mailbox_inbox(mailbox_id: UUID, db: Session = Depends(get_db)):
+    manager = IMAPSyncManager(db)
+    outcome = manager.sync_mailbox(mailbox_id)
+    return {
+        "status": "completed" if outcome.status == "healthy" else outcome.status,
+        "mailboxes_processed": 1,
+        "results": [outcome.__dict__],
     }
 
 

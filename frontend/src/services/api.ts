@@ -209,6 +209,7 @@ export function useApiService() {
     // ── INBOX & THREADS ──
     const getInboxStatus = useCallback(() => request<InboxStatus>("/inbox/status"), [request]);
     const syncInbox = useCallback((mailboxId?: string) => requestOrThrow<InboxSyncResult>(`/inbox/sync${mailboxId ? `?mailbox_id=${mailboxId}` : ""}`, { method: "POST" }), [requestOrThrow]);
+    const syncMailboxInbox = useCallback((mailboxId: string) => requestOrThrow<InboxSyncResult>(`/inbox/mailboxes/${mailboxId}/sync`, { method: "POST" }), [requestOrThrow]);
     const getThreads = useCallback((query: string = "") => request<Thread[]>(`/inbox/threads${query ? `?${query}` : ""}`), [request]);
     const getThread = useCallback((threadId: string) => request<Thread & { messages: Message[] }>(`/inbox/threads/${threadId}`), [request]);
     const getMessages = useCallback((threadId: string) => request<Message[]>(`/inbox/threads/${threadId}/messages`), [request]);
@@ -304,6 +305,7 @@ export function useApiService() {
         getSendEmailLogs,
         getInboxStatus,
         syncInbox,
+        syncMailboxInbox,
         getThreads,
         getThread,
         getMessages

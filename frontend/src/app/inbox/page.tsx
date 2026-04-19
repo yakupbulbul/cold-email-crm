@@ -14,7 +14,7 @@ function formatDateTime(value?: string | null) {
 }
 
 export default function InboxPage() {
-  const { getInboxStatus, getThreads, getThread, syncInbox, loading, error } = useApiService();
+  const { getInboxStatus, getThreads, getThread, syncInbox, syncMailboxInbox, loading, error } = useApiService();
   const [status, setStatus] = useState<InboxStatus | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -25,6 +25,7 @@ export default function InboxPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncingMailboxId, setSyncingMailboxId] = useState<string | null>(null);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -82,6 +83,27 @@ export default function InboxPage() {
       setSyncError(err instanceof Error ? err.message : "Inbox sync failed.");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleMailboxSync = async (mailboxId: string, mailboxEmail: string) => {
+    try {
+      setSyncingMailboxId(mailboxId);
+      setSyncError(null);
+      setSyncMessage(null);
+      const result = await syncMailboxInbox(mailboxId);
+      const imported = result.results.reduce((sum, item) => sum + item.imported_count, 0);
+      const failed = result.results.filter((item) => item.status === "failing" || item.status === "disabled" || item.status === "not_configured").length;
+      setSyncMessage(
+        failed > 0
+          ? `${mailboxEmail} sync completed with status ${result.status}. Imported ${imported} message${imported === 1 ? "" : "s"}.`
+          : `${mailboxEmail} sync completed and imported ${imported} message${imported === 1 ? "" : "s"}.`,
+      );
+      await refreshInbox();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : `Inbox sync failed for ${mailboxEmail}.`);
+    } finally {
+      setSyncingMailboxId(null);
     }
   };
 
@@ -234,9 +256,32 @@ export default function InboxPage() {
                   <p className="mt-2 text-xs text-slate-500">
                     Last sync: {formatDateTime(mailbox.inbox_last_synced_at)}
                   </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Last success: {formatDateTime(mailbox.inbox_last_success_at)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    IMAP: {mailbox.imap_health || mailbox.inbox_sync_status} · {mailbox.imap_health_detail || "No IMAP detail available."}
+                  </p>
+                  {mailbox.oauth_connection_status ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      OAuth: {mailbox.oauth_connection_status.replaceAll("_", " ")}
+                    </p>
+                  ) : null}
                   {mailbox.inbox_last_error ? (
                     <p className="mt-1 text-xs text-red-600">{mailbox.inbox_last_error}</p>
                   ) : null}
+                  {mailbox.inbox_block_reason && mailbox.inbox_block_reason !== mailbox.inbox_last_error ? (
+                    <p className="mt-1 text-xs text-amber-700">{mailbox.inbox_block_reason}</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void handleMailboxSync(mailbox.id, mailbox.email)}
+                    disabled={syncingMailboxId === mailbox.id || syncing}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {syncingMailboxId === mailbox.id ? <LoaderCircle size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                    Sync this mailbox
+                  </button>
                 </div>
               ))}
             </div>

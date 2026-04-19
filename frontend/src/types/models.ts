@@ -715,6 +715,9 @@ export interface InboxStatusMailbox {
     inbox_last_synced_at?: string | null;
     inbox_last_success_at?: string | null;
     inbox_last_error?: string | null;
+    inbox_block_reason?: string | null;
+    imap_health?: string | null;
+    imap_health_detail?: string | null;
     smtp_last_check_status?: string | null;
     imap_host?: string | null;
     imap_port?: number | null;
