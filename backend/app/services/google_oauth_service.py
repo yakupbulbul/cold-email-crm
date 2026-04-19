@@ -122,6 +122,8 @@ class GoogleWorkspaceOAuthService:
             "oauth_connection_status": status,
             "oauth_last_checked_at": mailbox.oauth_last_checked_at.isoformat() if mailbox.oauth_last_checked_at else None,
             "oauth_last_error": mailbox.oauth_last_error,
+            "oauth_last_refreshed_at": token.last_refreshed_at.isoformat() if token and token.last_refreshed_at else None,
+            "oauth_token_expires_at": token.token_expiry.isoformat() if token and token.token_expiry else None,
             "external_account_email": token.external_account_email if token else None,
             "scopes": token.scopes if token and token.scopes else [],
         }

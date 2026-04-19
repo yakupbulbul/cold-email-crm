@@ -457,7 +457,7 @@ export default function MailboxesPage() {
                                 </button>
                               </div>
                             </div>
-                            <div className="mt-3 grid gap-2 text-[11px] text-slate-500 md:grid-cols-3">
+                            <div className="mt-3 grid gap-2 text-[11px] text-slate-500 md:grid-cols-3 xl:grid-cols-5">
                               <div>
                                 <span className="font-semibold text-slate-600">OAuth status:</span> {oauthStatus}
                               </div>
@@ -467,7 +467,23 @@ export default function MailboxesPage() {
                               <div>
                                 <span className="font-semibold text-slate-600">Last OAuth check:</span> {mb.oauth_last_checked_at ? new Date(mb.oauth_last_checked_at).toLocaleString() : "Never"}
                               </div>
+                              <div>
+                                <span className="font-semibold text-slate-600">Last token refresh:</span> {mb.oauth_last_refreshed_at ? new Date(mb.oauth_last_refreshed_at).toLocaleString() : "Never"}
+                              </div>
+                              <div>
+                                <span className="font-semibold text-slate-600">Token expires:</span> {mb.oauth_token_expires_at ? new Date(mb.oauth_token_expires_at).toLocaleString() : "Unknown"}
+                              </div>
                             </div>
+                            {diagnostic ? (
+                              <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600">
+                                SMTP XOAUTH2: <span className="font-semibold">{diagnostic.status}</span>. IMAP result is included in the provider check message above.
+                              </div>
+                            ) : null}
+                            {mb.oauth_connection_status && mb.oauth_connection_status !== "connected" ? (
+                              <p className="mt-2 text-[11px] font-medium text-amber-700">
+                                Reconnect Google Workspace, then run provider check to verify SMTP XOAUTH2 and IMAP XOAUTH2.
+                              </p>
+                            ) : null}
                             {mb.oauth_last_error ? (
                               <p className="mt-2 text-[11px] font-medium text-rose-700">{mb.oauth_last_error}</p>
                             ) : null}

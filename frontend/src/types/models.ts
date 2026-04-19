@@ -63,6 +63,8 @@ export interface Mailbox {
     oauth_connection_status?: string | null;
     oauth_last_checked_at?: string | null;
     oauth_last_error?: string | null;
+    oauth_last_refreshed_at?: string | null;
+    oauth_token_expires_at?: string | null;
     external_account_email?: string | null;
     smtp_last_checked_at?: string | null;
     smtp_last_check_status?: string | null;

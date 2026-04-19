@@ -192,6 +192,15 @@ export function useApiService() {
         status: string;
         smtp: { status: string; category: string; message: string };
         imap: { status: string; category: string; message: string };
+        oauth?: {
+            oauth_connection_status?: string | null;
+            oauth_last_checked_at?: string | null;
+            oauth_last_error?: string | null;
+            oauth_last_refreshed_at?: string | null;
+            oauth_token_expires_at?: string | null;
+            external_account_email?: string | null;
+            scopes?: string[];
+        } | null;
     }>(`/mailboxes/${id}/provider-check`, { method: "POST" }), [requestOrThrow]);
     const getMailboxOAuthStatus = useCallback((id: string) => requestOrThrow<{
         oauth_enabled: boolean;
@@ -199,6 +208,8 @@ export function useApiService() {
         oauth_connection_status?: string | null;
         oauth_last_checked_at?: string | null;
         oauth_last_error?: string | null;
+        oauth_last_refreshed_at?: string | null;
+        oauth_token_expires_at?: string | null;
         external_account_email?: string | null;
         scopes?: string[];
     }>(`/mailboxes/${id}/oauth-status`), [requestOrThrow]);

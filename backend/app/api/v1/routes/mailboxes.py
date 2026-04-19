@@ -68,6 +68,8 @@ class MailboxResponse(BaseModel):
     oauth_connection_status: Optional[str] = None
     oauth_last_checked_at: Optional[str] = None
     oauth_last_error: Optional[str] = None
+    oauth_last_refreshed_at: Optional[str] = None
+    oauth_token_expires_at: Optional[str] = None
     external_account_email: Optional[str] = None
     warmup_enabled: bool
     warmup_status: Optional[str] = None
@@ -120,6 +122,8 @@ def mailbox_to_response(mb: Mailbox) -> dict:
         "oauth_connection_status": mb.oauth_connection_status,
         "oauth_last_checked_at": mb.oauth_last_checked_at.isoformat() if mb.oauth_last_checked_at else None,
         "oauth_last_error": mb.oauth_last_error,
+        "oauth_last_refreshed_at": mb.oauth_token.last_refreshed_at.isoformat() if mb.oauth_token and mb.oauth_token.last_refreshed_at else None,
+        "oauth_token_expires_at": mb.oauth_token.token_expiry.isoformat() if mb.oauth_token and mb.oauth_token.token_expiry else None,
         "external_account_email": mb.oauth_token.external_account_email if mb.oauth_token else None,
         "warmup_enabled": mb.warmup_enabled,
         "warmup_status": mb.warmup_status,
@@ -372,6 +376,22 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
     registry = MailProviderRegistry(db)
+    def mark_oauth_failure(exc: GoogleOAuthError):
+        now = datetime.utcnow()
+        status_by_category = {
+            "needs_reauth": "not_connected",
+            "oauth_refresh_failed": "expired",
+            "oauth_misconfigured": "error",
+        }
+        mailbox.oauth_connection_status = status_by_category.get(exc.category, "error")
+        mailbox.oauth_last_checked_at = now
+        mailbox.oauth_last_error = exc.message
+        mailbox.last_provider_check_at = now
+        mailbox.last_provider_check_status = "failed"
+        mailbox.last_provider_check_message = exc.message
+        db.add(mailbox)
+        db.commit()
+
     try:
         provider = registry.resolve_mailbox_provider(mailbox)
         smtp_result = provider.diagnose_smtp(mailbox)
@@ -379,6 +399,7 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
     except ProviderUnavailableError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
     except GoogleOAuthError as exc:
+        mark_oauth_failure(exc)
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail={"message": str(exc), "category": "provider_check_failed"}) from exc
@@ -387,8 +408,15 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
     mailbox.last_provider_check_at = now
     mailbox.smtp_last_checked_at = now
     mailbox.oauth_last_checked_at = now
+    if (mailbox.provider_type or "mailcow") == "google_workspace":
+        mailbox.oauth_connection_status = "connected"
+        mailbox.oauth_last_error = None
     mailbox.last_provider_check_status = "healthy" if smtp_result.status == "healthy" and imap_result.status == "healthy" else "failed"
-    mailbox.last_provider_check_message = "Provider diagnostics completed."
+    mailbox.last_provider_check_message = (
+        "Provider diagnostics completed."
+        if mailbox.last_provider_check_status == "healthy"
+        else f"Provider diagnostics failed. SMTP: {smtp_result.message} IMAP: {imap_result.message}"
+    )
     db.add(mailbox)
     db.commit()
     db.refresh(mailbox)
@@ -405,6 +433,7 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
             "category": imap_result.category,
             "message": imap_result.message,
         },
+        "oauth": GoogleWorkspaceOAuthService(db).safe_status(mailbox) if (mailbox.provider_type or "mailcow") == "google_workspace" else None,
     }
 
 
