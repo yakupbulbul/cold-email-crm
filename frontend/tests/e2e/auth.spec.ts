@@ -14,6 +14,8 @@ test("login succeeds with valid credentials and redirects to dashboard", async (
 test("protected dashboard route redirects unauthenticated user to login", async ({ browser }) => {
   const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
+  await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/signin/, { timeout: 8_000 });
   await ctx.close();
@@ -29,10 +31,25 @@ test("public landing page is accessible without authentication", async ({ browse
 });
 
 test("logo/home link on login page is visible", async ({ browser }) => {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await ctx.newPage();
+  await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
+  await page.goto("/signin");
+  await expect(page.getByRole("link", { name: /campaign manager/i }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /access your workspace/i })).toBeVisible();
+  await ctx.close();
+});
+
+test("password visibility toggle works on signin", async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
   await page.goto("/signin");
-  await expect(page).toHaveTitle(/.+/);
+  await expect(page.getByTestId("password-input")).toHaveAttribute("type", "password");
+  await page.getByTestId("password-toggle").click();
+  await expect(page.getByTestId("password-input")).toHaveAttribute("type", "text");
+  await page.getByTestId("password-toggle").click();
+  await expect(page.getByTestId("password-input")).toHaveAttribute("type", "password");
   await ctx.close();
 });
 

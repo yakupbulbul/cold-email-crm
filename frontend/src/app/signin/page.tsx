@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Lock, LogIn, ShieldCheck, Activity, Send, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Mail, Lock, ShieldCheck, Activity, Send, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import { AlertBanner, FieldGroup } from "@/components/ui/primitives";
 import { useRouter } from "next/navigation";
@@ -86,157 +86,161 @@ export default function SignInPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#edf3ff_52%,#f4f7fb_100%)] px-4 py-5 sm:px-6 sm:py-6">
-            <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col">
-                <header className="flex items-center justify-between gap-4 rounded-[1.9rem] border border-white/80 bg-white/82 px-5 py-4 shadow-[0_18px_48px_rgba(15,23,42,0.07)] backdrop-blur sm:px-6">
-                    <Link href="/" className="flex items-center gap-3">
-                        <div className="rounded-2xl bg-slate-950 px-4 py-3">
-                            <Image src="/crm-logo.png" alt="Campaign Manager" width={78} height={40} className="h-auto w-[78px]" priority />
-                        </div>
-                        <div>
-                            <div className="text-sm font-semibold text-slate-950">Campaign Manager</div>
-                            <div className="text-xs text-slate-500">Outreach operations workspace</div>
-                        </div>
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <Link href="/" className="hidden text-sm font-medium text-slate-600 hover:text-slate-900 sm:inline-flex">
-                            Back to product overview
-                        </Link>
-                        <Link href="/" className="btn-secondary px-4 py-2.5 text-sm">
-                            View landing page
-                        </Link>
-                    </div>
-                </header>
-
-                <div className="mx-auto grid w-full flex-1 items-center gap-8 py-8 lg:grid-cols-[1.08fr,0.92fr] lg:gap-10 lg:py-12">
-                <div className="hidden lg:block">
-                    <div className="max-w-xl">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
-                            Secure sign-in
-                        </div>
-                        <h1 className="mt-6 text-5xl font-semibold leading-[1.02] tracking-[-0.055em] text-slate-950">
-                            Sign in to the workspace that runs your cold email system.
-                        </h1>
-                        <p className="mt-5 max-w-lg text-base leading-7 text-[var(--muted-foreground)]">
-                            Access domains, mailboxes, campaigns, inbox replies, warm-up, and operational health from one product surface with backend-backed status instead of placeholder UI.
-                        </p>
-                        <div className="mt-10 grid gap-4 sm:grid-cols-3">
-                            <FeatureCard icon={Send} title="Campaign control" detail="Start, pause, and inspect real execution without losing clarity." />
-                            <FeatureCard icon={Activity} title="Operational visibility" detail="See what is healthy, blocked, and ready right away." />
-                            <FeatureCard icon={ShieldCheck} title="Sender safety" detail="Keep suppression, verification, and compliance visible." />
-                        </div>
-                    </div>
-                </div>
-                <div className="mx-auto w-full max-w-md">
-                    <div className="surface-card animate-fade-in overflow-hidden rounded-[2rem] p-8 sm:p-10">
-                        <div className="mb-8 flex items-start justify-between gap-4">
-                            <div>
-                                <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
-                                    Operator access
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.10),_transparent_34%),linear-gradient(180deg,#f8fbff_0%,#eef4ff_48%,#f5f7fb_100%)] px-4 py-6 sm:px-6 lg:px-8">
+            <main className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center justify-center">
+                <section className="grid w-full overflow-hidden rounded-[2rem] border border-white/80 bg-white/90 shadow-[0_30px_80px_rgba(15,23,42,0.12)] backdrop-blur lg:grid-cols-[0.95fr,1.05fr]">
+                    <div className="relative hidden min-h-[620px] flex-col justify-between overflow-hidden bg-slate-950 p-8 text-white lg:flex xl:p-10">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.20),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(37,99,235,0.18),transparent_28%)]" />
+                        <div className="relative">
+                            <Link href="/" className="inline-flex items-center gap-3">
+                                <div className="rounded-2xl bg-white px-4 py-3">
+                                    <Image src="/crm-logo.png" alt="Campaign Manager" width={78} height={40} className="h-auto w-[78px]" priority />
                                 </div>
-                                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-slate-950">Sign in</h2>
-                                <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--muted-foreground)]">
-                                    Use your workspace credentials to access infrastructure, campaigns, inbox, and delivery controls.
+                                <div>
+                                    <div className="text-sm font-semibold text-white">Campaign Manager</div>
+                                    <div className="text-xs text-slate-400">Outreach operations workspace</div>
+                                </div>
+                            </Link>
+                        </div>
+                        <div className="relative max-w-md">
+                            <div className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">
+                                Secure workspace access
+                            </div>
+                            <h1 className="mt-5 text-4xl font-semibold leading-[1.02] tracking-[-0.055em] xl:text-5xl">
+                                Operate cold email with one clear control surface.
+                            </h1>
+                            <p className="mt-5 text-sm leading-7 text-slate-300 xl:text-base">
+                                Sign in to manage domains, mailboxes, campaigns, replies, warm-up, and operational health from a single backend-backed workspace.
+                            </p>
+                        </div>
+                        <div className="relative grid gap-3">
+                            <ValuePoint icon={Send} title="Campaign control" detail="Launch, pause, and inspect real execution." />
+                            <ValuePoint icon={Activity} title="Operational visibility" detail="See readiness, blockers, and worker-backed state." />
+                            <ValuePoint icon={ShieldCheck} title="Sender safety" detail="Keep verification, suppression, and compliance visible." />
+                        </div>
+                    </div>
+
+                    <div className="flex min-h-[620px] items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
+                        <div className="w-full max-w-md">
+                            <div className="mb-7 flex items-center justify-between gap-4 lg:hidden">
+                                <Link href="/" className="flex items-center gap-3">
+                                    <div className="rounded-2xl bg-slate-950 px-4 py-3">
+                                        <Image src="/crm-logo.png" alt="Campaign Manager" width={74} height={38} className="h-auto w-[74px]" priority />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-semibold text-slate-950">Campaign Manager</div>
+                                        <div className="text-xs text-slate-500">Workspace access</div>
+                                    </div>
+                                </Link>
+                                <Link href="/" className="text-sm font-medium text-slate-500 hover:text-slate-900">
+                                    Overview
+                                </Link>
+                            </div>
+
+                            <div className="mb-7">
+                                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                    Sign in
+                                </div>
+                                <h2 className="mt-2 text-3xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-4xl">
+                                    Access your workspace
+                                </h2>
+                                <p className="mt-3 text-sm leading-6 text-slate-600">
+                                    Use your operator credentials to continue to the internal dashboard.
                                 </p>
                             </div>
-                            <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
-                                <LogIn size={20} />
-                            </div>
-                        </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            {error ? (
-                                <AlertBanner tone="danger" title="Authentication failed">
-                                    {error}
-                                </AlertBanner>
-                            ) : null}
+                            <form onSubmit={handleSubmit} className="space-y-5 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] sm:p-6">
+                                {error ? (
+                                    <AlertBanner tone="danger" title="Authentication failed">
+                                        {error}
+                                    </AlertBanner>
+                                ) : null}
 
-                            <FieldGroup
-                                label="Email address"
-                                hint="Use the operator email assigned to your workspace."
-                                error={emailError}
-                            >
-                                <div className="relative">
-                                    <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input
-                                        data-testid="email-input"
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => {
-                                            setEmail(e.target.value);
-                                            if (emailError) setEmailError(null);
-                                        }}
-                                        className="form-input pl-12"
-                                        placeholder="name@company.com"
-                                        autoComplete="email"
-                                    />
-                                </div>
-                            </FieldGroup>
+                                <FieldGroup
+                                    label="Email address"
+                                    hint="Use the operator email assigned to your workspace."
+                                    error={emailError}
+                                >
+                                    <div className="relative">
+                                        <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            data-testid="email-input"
+                                            type="email"
+                                            required
+                                            value={email}
+                                            onChange={(e) => {
+                                                setEmail(e.target.value);
+                                                if (emailError) setEmailError(null);
+                                            }}
+                                            className="form-input pl-12"
+                                            placeholder="name@company.com"
+                                            autoComplete="email"
+                                        />
+                                    </div>
+                                </FieldGroup>
 
-                            <FieldGroup
-                                label="Password"
-                                hint="Your credentials stay within the existing backend auth flow."
-                                error={passwordError}
-                            >
-                                <div className="relative">
-                                    <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                    <input
-                                        data-testid="password-input"
-                                        type={showPassword ? "text" : "password"}
-                                        required
-                                        value={password}
-                                        onChange={(e) => {
-                                            setPassword(e.target.value);
-                                            if (passwordError) setPasswordError(null);
-                                        }}
-                                        className="form-input pl-12 pr-12"
-                                        placeholder="••••••••"
-                                        autoComplete="current-password"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword((current) => !current)}
-                                        className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                                        aria-label={showPassword ? "Hide password" : "Show password"}
-                                    >
-                                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                                    </button>
-                                </div>
-                            </FieldGroup>
+                                <FieldGroup
+                                    label="Password"
+                                    hint="Your credentials stay within the existing backend auth flow."
+                                    error={passwordError}
+                                >
+                                    <div className="relative">
+                                        <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            data-testid="password-input"
+                                            type={showPassword ? "text" : "password"}
+                                            required
+                                            value={password}
+                                            onChange={(e) => {
+                                                setPassword(e.target.value);
+                                                if (passwordError) setPasswordError(null);
+                                            }}
+                                            className="form-input pl-12 pr-12"
+                                            placeholder="••••••••"
+                                            autoComplete="current-password"
+                                        />
+                                        <button
+                                            data-testid="password-toggle"
+                                            type="button"
+                                            onClick={() => setShowPassword((current) => !current)}
+                                            className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
+                                        >
+                                            {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                                        </button>
+                                    </div>
+                                </FieldGroup>
 
-                            <button
-                                data-testid="login-button"
-                                type="submit"
-                                disabled={loading}
-                                className="btn-primary mt-3 w-full rounded-2xl py-4 text-base"
-                            >
-                                {loading ? <Spinner size="sm" /> : (
-                                    <>
-                                        Sign in to workspace
-                                        <ArrowRight size={16} />
-                                    </>
-                                )}
-                            </button>
-                        </form>
+                                <button
+                                    data-testid="login-button"
+                                    type="submit"
+                                    disabled={loading}
+                                    className="btn-primary mt-2 w-full rounded-2xl py-4 text-base"
+                                >
+                                    {loading ? <Spinner size="sm" /> : (
+                                        <>
+                                            Sign in to workspace
+                                            <ArrowRight size={16} />
+                                        </>
+                                    )}
+                                </button>
+                            </form>
 
-                        <div className="mt-8 border-t border-slate-100 pt-6">
-                            <div className="text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                                Backend-backed control for senders, audiences, and campaigns
-                            </div>
-                            <div className="mt-3 text-sm text-slate-500">
-                                Need product context first? <Link href="/" className="font-medium text-slate-900 hover:text-slate-700">Review the landing page</Link>.
+                            <div className="mt-5 flex flex-col justify-between gap-3 text-sm text-slate-500 sm:flex-row sm:items-center">
+                                <span>Protected by backend session auth.</span>
+                                <Link href="/" className="font-medium text-slate-900 hover:text-slate-700">
+                                    Product overview
+                                </Link>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            </div>
+                </section>
+            </main>
         </div>
     );
 }
 
-function FeatureCard({
+function ValuePoint({
     icon: Icon,
     title,
     detail,
@@ -246,12 +250,14 @@ function FeatureCard({
     detail: string;
 }) {
     return (
-        <div className="surface-card p-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-sm">
-                <Icon size={18} />
+        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/7 p-4">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sky-100">
+                <Icon size={16} />
             </div>
-            <div className="mt-4 text-base font-semibold text-slate-950">{title}</div>
-            <div className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">{detail}</div>
+            <div>
+                <div className="text-sm font-semibold text-white">{title}</div>
+                <div className="mt-1 text-sm leading-5 text-slate-400">{detail}</div>
+            </div>
         </div>
     );
 }
