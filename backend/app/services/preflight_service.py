@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.campaign import Campaign, CampaignLead, Contact
 from app.models.monitoring import CampaignPreflightCheck
 from app.services.audience_service import summarize_contacts_for_campaign
+from app.services.deliverability_service import DeliverabilityService
 from app.services.list_service import LeadListService
 
 class PreflightService:
@@ -58,6 +59,25 @@ class PreflightService:
             status="pass" if has_dmarc else "warning",
             severity="warning",
             message=f"DMARC record {'found' if has_dmarc else 'missing'} for {domain}"
+        ))
+
+        deliverability = DeliverabilityService(self.db).campaign_readiness(str(campaign.id))
+        deliverability_status = deliverability.get("status", "unknown")
+        deliverability_blockers = deliverability.get("blockers", [])
+        checks.append(CampaignPreflightCheck(
+            campaign_id=campaign.id,
+            check_name="deliverability_readiness",
+            status="fail" if deliverability_status == "blocked" else "warning" if deliverability_status in {"warning", "degraded", "unknown"} else "pass",
+            severity="critical" if deliverability_status == "blocked" else "warning" if deliverability_status in {"warning", "degraded", "unknown"} else "info",
+            message=(
+                f"Deliverability posture is {deliverability_status}. "
+                + (
+                    f"Primary blocker: {deliverability_blockers[0]['message']}"
+                    if deliverability_blockers
+                    else "No blocking infrastructure issues found."
+                )
+            ),
+            metadata_blob=deliverability,
         ))
 
         # 3. Lead Quality Bounds

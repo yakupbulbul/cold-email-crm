@@ -366,6 +366,15 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
             detail="Campaign cannot start until it has at least one scheduled, eligible lead after verification, suppression, contact type, and compliance checks.",
         )
 
+    from app.services.deliverability_service import DeliverabilityService
+    deliverability = DeliverabilityService(db).campaign_readiness(campaign_id)
+    if deliverability.get("status") == "blocked":
+        primary = (deliverability.get("blockers") or [{}])[0]
+        raise HTTPException(
+            status_code=409,
+            detail=primary.get("message") or "Campaign cannot start because deliverability readiness is blocked.",
+        )
+
     existing_job = _campaign_job_for_status(db, str(c.id), {"queued", "running"})
     if existing_job:
         if c.status != "active":
