@@ -76,6 +76,7 @@ export interface Mailbox {
     warmup_last_checked_at?: string | null;
     warmup_last_result?: string | null;
     warmup_block_reason?: string | null;
+    warmup_recommendation?: string | null;
     inbox_sync_enabled?: boolean;
     inbox_sync_status?: string | null;
     inbox_last_synced_at?: string | null;
@@ -418,6 +419,7 @@ export interface WarmupMailboxStatus {
     warmup_last_checked_at?: string | null;
     warmup_last_result?: string | null;
     warmup_block_reason?: string | null;
+    warmup_recommendation?: string | null;
     smtp_last_check_status?: string | null;
     smtp_last_check_message?: string | null;
     status: string;
@@ -477,6 +479,7 @@ export interface WarmupStatus {
     failed_sends_today: number;
     health_percent?: number | null;
     blockers: WarmupBlocker[];
+    next_action?: string | null;
     last_run_at?: string | null;
     next_run_at?: string | null;
     mailboxes: WarmupMailboxStatus[];

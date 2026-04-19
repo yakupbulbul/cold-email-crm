@@ -111,6 +111,7 @@ class WarmupService:
             "failed_sends_today": failed_sends_today,
             "health_percent": health_percent,
             "blockers": blockers,
+            "next_action": self._next_action(setting.is_enabled, worker_status, scheduler_status, mailboxes, len(active_pairs)),
             "last_run_at": latest_completed.finished_at.isoformat() if latest_completed and latest_completed.finished_at else None,
             "next_run_at": self._next_run_at(setting.is_enabled, worker_status, scheduler_status, mailboxes),
             "mailboxes": mailboxes,
@@ -377,6 +378,7 @@ class WarmupService:
             "warmup_last_checked_at": mailbox.warmup_last_checked_at.isoformat() if mailbox.warmup_last_checked_at else None,
             "warmup_last_result": mailbox.warmup_last_result,
             "warmup_block_reason": block_reason,
+            "warmup_recommendation": self._mailbox_recommendation(mailbox, status, block_reason),
             "smtp_last_check_status": mailbox.smtp_last_check_status,
             "smtp_last_check_message": mailbox.smtp_last_check_message,
             "status": mailbox.status,
@@ -389,6 +391,43 @@ class WarmupService:
         mailbox.warmup_block_reason = block_reason
         mailbox.warmup_status = "ready" if result == "success" else mailbox.warmup_status or "blocked"
         self.db.add(mailbox)
+
+    def _mailbox_recommendation(self, mailbox: Mailbox, status: str, block_reason: str | None) -> str:
+        if mailbox.status != "active":
+            return "Activate this mailbox before warm-up can use it."
+        if block_reason:
+            return block_reason
+        if not mailbox.warmup_enabled:
+            return "Enable warm-up participation for this mailbox."
+        if status == "ready":
+            return "Ready for warm-up pairing and worker dispatch."
+        if mailbox.smtp_last_check_status != "healthy":
+            return mailbox.smtp_last_check_message or "Run and pass SMTP diagnostics before warm-up can use this mailbox."
+        return "Check provider and mailbox configuration before warm-up."
+
+    def _next_action(
+        self,
+        global_enabled: bool,
+        worker_status: dict,
+        scheduler_status: dict,
+        mailboxes: list[dict],
+        active_pair_count: int,
+    ) -> str:
+        enabled_mailboxes = [mailbox for mailbox in mailboxes if mailbox["warmup_enabled"]]
+        ready_mailboxes = [mailbox for mailbox in enabled_mailboxes if mailbox["warmup_status"] == "ready"]
+        if not global_enabled:
+            return "Start warm-up globally when you are ready to queue worker-backed warm-up passes."
+        if worker_status.get("status") != "healthy":
+            return worker_status.get("detail") or "Start the worker process before warm-up can run."
+        if not enabled_mailboxes:
+            return "Enable warm-up on at least two mailboxes."
+        if len(ready_mailboxes) < 2:
+            return "Fix SMTP/provider blockers until at least two warm-up-enabled mailboxes are ready."
+        if active_pair_count == 0:
+            return "Warm-up can create pairs on the next status refresh or run-now action."
+        if scheduler_status.get("status") != "healthy":
+            return "Use Run now for manual recovery, then fix scheduler/beat so automatic passes continue."
+        return "Warm-up is ready. Wait for the next scheduled pass or use Run now for an internal test."
 
     def _scheduler_status(self) -> dict:
         if not settings.BACKGROUND_WORKERS_ENABLED:

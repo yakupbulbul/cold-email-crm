@@ -169,6 +169,7 @@ export function useApiService() {
     const getWarmupLogs = useCallback((limit: number = 50) => request<WarmupLog[]>(`/warmup/logs?limit=${limit}`), [request]);
     const startWarmup = useCallback(() => requestOrThrow<{ status: string; detail: string; job_queued?: boolean; job_id?: string | null }>("/warmup/start", { method: "POST" }), [requestOrThrow]);
     const pauseWarmup = useCallback(() => requestOrThrow<{ status: string; detail: string }>("/warmup/pause", { method: "POST" }), [requestOrThrow]);
+    const runWarmupNow = useCallback(() => requestOrThrow<{ status: string; detail: string; job_queued?: boolean; job_id?: string | null }>("/warmup/run-now", { method: "POST" }), [requestOrThrow]);
 
     // ── DOMAINS ──
     const getDomains = useCallback(() => request<Domain[]>("/domains"), [request]);
@@ -284,6 +285,7 @@ export function useApiService() {
         getWarmupLogs,
         startWarmup,
         pauseWarmup,
+        runWarmupNow,
         getDomains,
         getDomainById,
         createDomain,

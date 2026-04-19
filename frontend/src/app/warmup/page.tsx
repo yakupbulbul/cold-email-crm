@@ -21,6 +21,7 @@ export default function WarmupPage() {
     getWarmupLogs,
     startWarmup,
     pauseWarmup,
+    runWarmupNow,
     updateMailboxWarmup,
   } = useApiService();
 
@@ -30,7 +31,7 @@ export default function WarmupPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ tone: "success" | "error"; message: string } | null>(null);
-  const [actionState, setActionState] = useState<{ type: "start" | "pause" | "toggle"; id?: string } | null>(null);
+  const [actionState, setActionState] = useState<{ type: "start" | "pause" | "run-now" | "toggle"; id?: string } | null>(null);
 
   const loadWarmup = useCallback(async () => {
     setPageLoading(true);
@@ -85,6 +86,21 @@ export default function WarmupPage() {
     }
   };
 
+  const handleRunNow = async () => {
+    setBanner(null);
+    setActionState({ type: "run-now" });
+    try {
+      const result = await runWarmupNow();
+      await loadWarmup();
+      setBanner({ tone: "success", message: result.job_id ? `${result.detail} Job: ${result.job_id}` : result.detail });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Warm-up run-now failed.";
+      setBanner({ tone: "error", message });
+    } finally {
+      setActionState(null);
+    }
+  };
+
   const handleToggleMailbox = async (mailboxId: string, warmupEnabled: boolean) => {
     setBanner(null);
     setActionState({ type: "toggle", id: mailboxId });
@@ -117,7 +133,7 @@ export default function WarmupPage() {
           <button
             type="button"
             onClick={() => void handlePause()}
-            disabled={pageLoading || activeAction === "start" || activeAction === "pause"}
+            disabled={pageLoading || activeAction === "start" || activeAction === "pause" || activeAction === "run-now"}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {activeAction === "pause" ? <Spinner size="sm" /> : <Pause size={18} />}
@@ -126,11 +142,20 @@ export default function WarmupPage() {
           <button
             type="button"
             onClick={() => void handleStart()}
-            disabled={pageLoading || activeAction === "start" || activeAction === "pause"}
+            disabled={pageLoading || activeAction === "start" || activeAction === "pause" || activeAction === "run-now"}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {activeAction === "start" ? <Spinner size="sm" /> : <Play size={18} fill="currentColor" />}
             Start Warm-up
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleRunNow()}
+            disabled={pageLoading || activeAction === "start" || activeAction === "pause" || activeAction === "run-now"}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-2.5 font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {activeAction === "run-now" ? <Spinner size="sm" /> : <Zap size={18} />}
+            Run now
           </button>
           <button
             type="button"
@@ -179,6 +204,11 @@ export default function WarmupPage() {
                 <DetailCard label="Last run" value={formatDateTime(status.last_run_at)} />
               </div>
               <div className="mt-4 space-y-2">
+                {status.next_action ? (
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                    Next warm-up action: {status.next_action}
+                  </div>
+                ) : null}
                 {blockers.length > 0 ? blockers.map((blocker) => (
                   <div key={blocker.code} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
                     {blocker.message}
@@ -214,6 +244,11 @@ export default function WarmupPage() {
                         </div>
                         {mailbox.warmup_block_reason ? (
                           <div className="mt-1 text-sm text-amber-700">{mailbox.warmup_block_reason}</div>
+                        ) : null}
+                        {mailbox.warmup_recommendation ? (
+                          <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                            Recommendation: {mailbox.warmup_recommendation}
+                          </div>
                         ) : null}
                       </div>
                       <button
