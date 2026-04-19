@@ -1,5 +1,23 @@
 export type MailProviderType = "mailcow" | "google_workspace";
 
+export interface DomainVerificationSummary {
+    remediation?: {
+        mailcow?: {
+            mailcow_host?: string;
+            action?: string;
+            detail?: string;
+        };
+        dns?: Record<string, {
+            host?: string;
+            type?: string;
+            expected_value?: string;
+            explanation?: string;
+            observed_records?: string[];
+        }>;
+    };
+    [key: string]: unknown;
+}
+
 export interface Domain {
     id: string;
     name: string;
@@ -12,7 +30,7 @@ export interface Domain {
     mx_status: string;
     dns_results?: Record<string, { status: string; detail: string; records?: string[] }>;
     missing_requirements?: string[];
-    verification_summary?: Record<string, unknown>;
+    verification_summary?: DomainVerificationSummary;
     verification_error?: string | null;
     last_checked_at?: string | null;
     mailcow_last_checked_at?: string | null;
@@ -472,6 +490,110 @@ export interface DeliverabilitySummary {
     mailbox_count?: number;
     domain_count?: number;
     [key: string]: number | undefined;
+}
+
+export type DeliverabilityStatus = "ready" | "warning" | "degraded" | "blocked" | "unknown";
+
+export interface DeliverabilityIssue {
+    code: string;
+    severity: string;
+    message: string;
+    next_action?: string | null;
+    source?: string | null;
+    entity?: string | null;
+}
+
+export interface DeliverabilityCheck {
+    code: string;
+    label: string;
+    status: "pass" | "warning" | "fail" | string;
+    severity: string;
+    detail: string;
+    next_action?: string | null;
+    checked_at?: string | null;
+    metadata?: unknown;
+}
+
+export interface DeliverabilityEntity {
+    id?: string;
+    type?: string;
+    name?: string;
+    email?: string;
+    domain?: string;
+    provider_type?: MailProviderType | string;
+    status: DeliverabilityStatus;
+    score?: number | null;
+    last_checked_at?: string | null;
+    blockers: DeliverabilityIssue[];
+    warnings: DeliverabilityIssue[];
+    next_actions: string[];
+    checks: DeliverabilityCheck[];
+    recent_sends?: {
+        success_7d: number;
+        failed_7d: number;
+        success_30d: number;
+        failed_30d: number;
+        last_status?: string | null;
+        last_error?: string | null;
+        last_sent_at?: string | null;
+    };
+    warmup?: {
+        enabled: boolean;
+        status?: string | null;
+        last_result?: string | null;
+        block_reason?: string | null;
+    };
+}
+
+export interface DeliverabilityOverview {
+    status: DeliverabilityStatus;
+    score?: number | null;
+    generated_at: string;
+    blockers: DeliverabilityIssue[];
+    warnings: DeliverabilityIssue[];
+    next_actions: string[];
+    summary: {
+        domains: Record<string, number>;
+        mailboxes: Record<string, number>;
+        audience: Record<string, unknown>;
+        warmup: Record<string, unknown>;
+        providers: Record<string, unknown>;
+        campaigns: Record<string, number>;
+    };
+    domains: DeliverabilityEntity[];
+    mailboxes: DeliverabilityEntity[];
+    audience: {
+        status: DeliverabilityStatus;
+        summary: Record<string, unknown>;
+        blockers: DeliverabilityIssue[];
+        warnings: DeliverabilityIssue[];
+        next_actions: string[];
+    };
+    warmup: {
+        status: DeliverabilityStatus;
+        summary: Record<string, unknown>;
+        blockers: DeliverabilityIssue[];
+        warnings: DeliverabilityIssue[];
+        next_actions: string[];
+    };
+    providers: Array<{
+        provider_type: MailProviderType | string;
+        enabled: boolean;
+        configured: boolean;
+        status: DeliverabilityStatus;
+        health_status?: string | null;
+        detail?: string | null;
+        reason?: string | null;
+        mailbox_count: number;
+        checked_at?: string | null;
+    }>;
+    campaigns: {
+        status: DeliverabilityStatus;
+        summary: Record<string, number>;
+        items: DeliverabilityEntity[];
+        blockers: DeliverabilityIssue[];
+        warnings: DeliverabilityIssue[];
+    };
 }
 
 export interface Thread {

@@ -3,14 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Mail, Edit2, ShieldCheck, Trash2, ServerCrash } from 'lucide-react';
 import { useApiService } from '@/services/api';
-import { Domain, MailProviderType, Mailbox, SMTPDiagnosticResult, SettingsSummary } from '@/types/models';
+import { DeliverabilityEntity, Domain, MailProviderType, Mailbox, SMTPDiagnosticResult, SettingsSummary } from '@/types/models';
 import Spinner from '@/components/ui/Spinner';
 import { AlertBanner, EmptyState, MetricCard, PageHeader, StatusBadge, SurfaceCard } from '@/components/ui/primitives';
 
 export default function MailboxesPage() {
   const searchParams = useSearchParams();
-  const { getMailboxes, getDomains, getSettingsSummary, createMailbox, updateMailbox, deleteMailbox, checkMailboxProvider, startMailboxOAuth, disconnectMailboxOAuth, loading, error } = useApiService();
+  const { getMailboxes, getDomains, getSettingsSummary, getDeliverabilityMailboxes, createMailbox, updateMailbox, deleteMailbox, checkMailboxProvider, startMailboxOAuth, disconnectMailboxOAuth, loading, error } = useApiService();
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
+  const [deliverabilityByMailbox, setDeliverabilityByMailbox] = useState<Record<string, DeliverabilityEntity>>({});
   const [domains, setDomains] = useState<Domain[]>([]);
   const [settingsSummary, setSettingsSummary] = useState<SettingsSummary | null>(null);
   const [selectedDomainId, setSelectedDomainId] = useState('');
@@ -34,8 +35,11 @@ export default function MailboxesPage() {
 
   useEffect(() => {
     const fetchPageData = async () => {
-        const [mailboxData, domainData, settingsData] = await Promise.all([getMailboxes(), getDomains(), getSettingsSummary()]);
+        const [mailboxData, domainData, settingsData, deliverabilityData] = await Promise.all([getMailboxes(), getDomains(), getSettingsSummary(), getDeliverabilityMailboxes()]);
         if (mailboxData) setMailboxes(mailboxData);
+        if (deliverabilityData?.items) {
+          setDeliverabilityByMailbox(Object.fromEntries(deliverabilityData.items.filter((item) => item.id).map((item) => [item.id as string, item])));
+        }
         if (domainData) {
           setDomains(domainData);
           setSelectedDomainId((current) => current || domainData[0]?.id || '');
@@ -46,14 +50,17 @@ export default function MailboxesPage() {
         }
     };
     fetchPageData();
-  }, [getMailboxes, getDomains, getSettingsSummary]);
+  }, [getMailboxes, getDomains, getSettingsSummary, getDeliverabilityMailboxes]);
 
   const selectedDomain = domains.find((domain) => domain.id === selectedDomainId);
 
   const refreshMailboxes = useCallback(async () => {
-    const refreshed = await getMailboxes();
+    const [refreshed, deliverability] = await Promise.all([getMailboxes(), getDeliverabilityMailboxes()]);
     if (refreshed) setMailboxes(refreshed);
-  }, [getMailboxes]);
+    if (deliverability?.items) {
+      setDeliverabilityByMailbox(Object.fromEntries(deliverability.items.filter((item) => item.id).map((item) => [item.id as string, item])));
+    }
+  }, [getMailboxes, getDeliverabilityMailboxes]);
 
   const callbackMailboxId = searchParams.get("mailbox_id");
   const callbackOAuthStatus = searchParams.get("oauth_status");
@@ -347,6 +354,16 @@ export default function MailboxesPage() {
                     : mb.oauth_connection_status === "expired" || mb.oauth_connection_status === "error"
                       ? "warning"
                       : "neutral";
+                const deliverability = deliverabilityByMailbox[mb.id];
+                const deliverabilityIssue = deliverability?.blockers?.[0] || deliverability?.warnings?.[0];
+                const deliverabilityTone: "neutral" | "success" | "warning" | "danger" | "info" =
+                  deliverability?.status === "ready"
+                    ? "success"
+                    : deliverability?.status === "blocked"
+                      ? "danger"
+                      : deliverability?.status === "degraded" || deliverability?.status === "warning"
+                        ? "warning"
+                        : "neutral";
                 const isCallbackMailbox = callbackMailboxId === mb.id;
                 return (
                 <tr key={mb.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors group ${isCallbackMailbox ? 'bg-blue-50/40' : ''}`}>
@@ -371,7 +388,17 @@ export default function MailboxesPage() {
                               OAuth {oauthStatus}
                             </StatusBadge>
                           ) : null}
+                          {deliverability ? (
+                            <StatusBadge tone={deliverabilityTone} className="text-[11px]">
+                              Deliverability {deliverability.status}
+                            </StatusBadge>
+                          ) : null}
                         </div>
+                        {deliverabilityIssue ? (
+                          <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-900">
+                            {deliverabilityIssue.message}
+                          </p>
+                        ) : null}
                         <p className="mt-1 text-[11px] font-medium text-slate-500">SMTP {mb.smtp_security_mode.toUpperCase()} on {mb.smtp_host}:{mb.smtp_port}</p>
                         <p className="mt-1 text-[11px] font-medium text-slate-500">IMAP {(mb.imap_security_mode || 'ssl').toUpperCase()} on {mb.imap_host}:{mb.imap_port}</p>
                         <p className={`mt-1 text-[11px] font-medium ${((diagnostic?.status || mb.smtp_last_check_status) === 'healthy') ? 'text-emerald-700' : 'text-slate-500'}`}>

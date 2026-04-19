@@ -7,6 +7,7 @@ import {
     LeadVerificationResult,
     CampaignActionResult,
     CampaignPreflightResult,
+    CampaignListSummary,
     LeadList,
     LeadListLeadResponse,
     SendEmailLog,
@@ -19,6 +20,8 @@ import {
     InboxStatus,
     InboxSyncResult,
     MailProviderType,
+    DeliverabilityEntity,
+    DeliverabilityOverview,
 } from "@/types/models";
 type MailboxCreatePayload = {
     domain_id: string;
@@ -121,6 +124,10 @@ export function useApiService() {
     const getAlerts = useCallback(() => request<Alert[]>("/ops/alerts"), [request]);
     const getJobs = useCallback(() => request<JobLog[]>("/ops/jobs"), [request]);
     const getDeliverabilitySummary = useCallback(() => request<DeliverabilitySummary>("/ops/deliverability/summary"), [request]);
+    const getDeliverabilityOverview = useCallback(() => request<DeliverabilityOverview>("/deliverability/overview"), [request]);
+    const getDeliverabilityDomains = useCallback(() => request<{ status: string; summary: Record<string, number>; items: DeliverabilityEntity[]; blockers: unknown[]; warnings: unknown[]; next_actions: string[] }>("/deliverability/domains"), [request]);
+    const getDeliverabilityMailboxes = useCallback(() => request<{ status: string; summary: Record<string, number>; items: DeliverabilityEntity[]; blockers: unknown[]; warnings: unknown[]; next_actions: string[] }>("/deliverability/mailboxes"), [request]);
+    const getCampaignDeliverability = useCallback((id: string) => request<DeliverabilityEntity & { audience?: Record<string, unknown>; eligible_leads?: number }>("/deliverability/campaigns/" + id), [request]);
 
     // ── CAMPAIGNS ──
     const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
@@ -223,6 +230,10 @@ export function useApiService() {
         getAlerts,
         getJobs,
         getDeliverabilitySummary,
+        getDeliverabilityOverview,
+        getDeliverabilityDomains,
+        getDeliverabilityMailboxes,
+        getCampaignDeliverability,
         getCampaigns,
         getCampaignById,
         createCampaign,

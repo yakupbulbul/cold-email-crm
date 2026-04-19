@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useApiService } from "@/services/api";
-import { Domain } from "@/types/models";
+import { DeliverabilityEntity, Domain } from "@/types/models";
 import { ServerCrash, Globe, Plus, RefreshCw, ShieldCheck, ShieldAlert, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
 const statusTone: Record<string, string> = {
     ready: "bg-green-50 text-green-700 border-green-200",
+    warning: "bg-amber-50 text-amber-700 border-amber-200",
+    degraded: "bg-amber-50 text-amber-700 border-amber-200",
     dns_partial: "bg-amber-50 text-amber-700 border-amber-200",
     mailcow_verified: "bg-blue-50 text-blue-700 border-blue-200",
     local_only: "bg-slate-100 text-slate-700 border-slate-200",
@@ -42,8 +44,9 @@ function GuidanceRow({ title, host, type, expectedValue, explanation }: { title:
 }
 
 export default function DomainsPage() {
-    const { getDomains, createDomain, deleteDomain, verifyDomain, refreshDomain, loading, error } = useApiService();
+    const { getDomains, getDeliverabilityDomains, createDomain, deleteDomain, verifyDomain, refreshDomain, loading, error } = useApiService();
     const [domains, setDomains] = useState<Domain[]>([]);
+    const [deliverabilityByDomain, setDeliverabilityByDomain] = useState<Record<string, DeliverabilityEntity>>({});
     const [domainName, setDomainName] = useState("");
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -59,11 +62,16 @@ export default function DomainsPage() {
                 setDomains(data);
             }
         });
+        void getDeliverabilityDomains().then((data) => {
+            if (isMounted && data?.items) {
+                setDeliverabilityByDomain(Object.fromEntries(data.items.filter((item) => item.id).map((item) => [item.id as string, item])));
+            }
+        });
 
         return () => {
             isMounted = false;
         };
-    }, [getDomains]);
+    }, [getDomains, getDeliverabilityDomains]);
 
     const handleCreateDomain = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -130,6 +138,10 @@ export default function DomainsPage() {
         }
 
         setDomains((current) => current.map((domain) => (domain.id === domainId ? result : domain)));
+        const deliverability = await getDeliverabilityDomains();
+        if (deliverability?.items) {
+            setDeliverabilityByDomain(Object.fromEntries(deliverability.items.filter((item) => item.id).map((item) => [item.id as string, item])));
+        }
         setActiveDetailsId(domainId);
     };
 
@@ -202,6 +214,7 @@ export default function DomainsPage() {
                                          <div className="mt-2 flex flex-wrap gap-2">
                                              <StatusBadge label="Overall" value={d.status} />
                                              <StatusBadge label="Mailcow" value={d.mailcow_status} />
+                                             {deliverabilityByDomain[d.id] ? <StatusBadge label="Deliverability" value={deliverabilityByDomain[d.id].status} /> : null}
                                          </div>
                                      </div>
                                      <button
@@ -224,6 +237,11 @@ export default function DomainsPage() {
                                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                      <div className="font-semibold text-slate-700">Readiness summary</div>
                                      <div className="mt-1">{d.mailcow_detail || "Mailcow verification has not run yet."}</div>
+                                     {deliverabilityByDomain[d.id]?.blockers?.[0] || deliverabilityByDomain[d.id]?.warnings?.[0] ? (
+                                         <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+                                             {(deliverabilityByDomain[d.id].blockers[0] || deliverabilityByDomain[d.id].warnings[0]).message}
+                                         </div>
+                                     ) : null}
                                      <div className="mt-2 text-xs text-slate-500">
                                          Last checked: {d.last_checked_at ? new Date(d.last_checked_at).toLocaleString() : "Never"}
                                      </div>
