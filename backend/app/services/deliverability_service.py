@@ -626,7 +626,7 @@ class DeliverabilityService:
         for check in checks:
             if check["status"] == "fail" and check["severity"] == "critical":
                 blockers.append(self._issue(check["code"], check["severity"], check["detail"], check.get("next_action"), source, entity))
-            elif check["status"] in {"warning", "fail"}:
+            elif check["status"] in {"warning", "fail"} and check["severity"] != "info":
                 warnings.append(self._issue(check["code"], check["severity"], check["detail"], check.get("next_action"), source, entity))
         return blockers, warnings
 
