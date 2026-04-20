@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Text, Integer, Boolean, ForeignKey, JSON
+from sqlalchemy import Column, String, DateTime, Text, Integer, Boolean, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -76,6 +76,37 @@ class Campaign(Base):
     
     mailbox = relationship("Mailbox")
     leads = relationship("CampaignLead", back_populates="campaign", cascade="all, delete-orphan")
+    sequence_steps = relationship("CampaignSequenceStep", back_populates="campaign", cascade="all, delete-orphan", order_by="CampaignSequenceStep.step_number")
+
+
+class EmailTemplate(Base):
+    __tablename__ = "email_templates"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class CampaignSequenceStep(Base):
+    __tablename__ = "campaign_sequence_steps"
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "step_number", name="uq_campaign_sequence_steps_campaign_step"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    campaign_id = Column(UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+    step_number = Column(Integer, nullable=False)
+    delay_days = Column(Integer, default=0, nullable=False)
+    subject = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
+    stop_on_reply = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    campaign = relationship("Campaign", back_populates="sequence_steps")
 
 
 class CampaignLead(Base):
@@ -86,6 +117,7 @@ class CampaignLead(Base):
     contact_id = Column(UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False)
     
     status = Column(String, default="scheduled") # "scheduled", "sent", "replied", "bounced"
+    sequence_step_index = Column(Integer, default=1, nullable=False)
     scheduled_at = Column(DateTime, nullable=True)
     sent_at = Column(DateTime, nullable=True)
     replied_at = Column(DateTime, nullable=True)

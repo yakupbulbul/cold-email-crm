@@ -1,7 +1,7 @@
 from .base import Base
 from .core import Domain, Mailbox, MailProviderSetting, MailboxOAuthToken
 from .warmup import WarmupPair, WarmupEvent, WarmupSetting
-from .campaign import Contact, Campaign, CampaignLead, SendLog
+from .campaign import Campaign, CampaignLead, CampaignSequenceStep, Contact, EmailTemplate, SendLog
 from .email import Thread, Message, AiSummary
 from .import_job import LeadImportJob, LeadImportRow
 from .verification import EmailVerificationLog
@@ -23,7 +23,9 @@ __all__ = [
     "Contact",
     "Campaign",
     "CampaignLead",
+    "CampaignSequenceStep",
     "SendLog",
+    "EmailTemplate",
     "Thread",
     "Message",
     "AiSummary",

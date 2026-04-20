@@ -51,4 +51,46 @@ class CampaignResponse(BaseModel):
     reply_rate: str | int | None = None
     lists_summary: dict[str, Any] | None = None
     execution_summary: dict[str, Any] | None = None
+    sequence_steps_count: int | None = None
     created_at: datetime
+
+
+class EmailTemplateCreate(BaseModel):
+    name: str
+    subject: str
+    body: str
+
+
+class EmailTemplateUpdate(BaseModel):
+    name: str
+    subject: str
+    body: str
+
+
+class EmailTemplateResponse(BaseModel):
+    id: UUID4
+    name: str
+    subject: str
+    body: str
+    created_at: datetime
+    updated_at: datetime | None = None
+
+
+class CampaignSequenceStepPayload(BaseModel):
+    step_number: int
+    delay_days: int = 0
+    subject: str
+    body: str
+    stop_on_reply: bool = True
+
+
+class CampaignSequenceStepResponse(BaseModel):
+    id: UUID4
+    campaign_id: UUID4
+    step_number: int
+    delay_days: int
+    subject: str
+    body: str
+    stop_on_reply: bool
+    created_at: datetime
+    updated_at: datetime | None = None

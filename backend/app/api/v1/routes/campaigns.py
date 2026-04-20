@@ -4,10 +4,17 @@ from datetime import datetime, timedelta
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.campaign import Campaign, CampaignLead, Contact, SendLog
+from app.models.campaign import Campaign, CampaignLead, CampaignSequenceStep, Contact, EmailTemplate, SendLog
 from app.models.lists import CampaignList
 from app.models.monitoring import JobLog
-from app.schemas.campaign import CampaignCreate, CampaignResponse, CampaignUpdate
+from app.schemas.campaign import (
+    CampaignCreate,
+    CampaignResponse,
+    CampaignSequenceStepPayload,
+    EmailTemplateCreate,
+    EmailTemplateUpdate,
+    CampaignUpdate,
+)
 from app.schemas.lists import CampaignListAttachPayload
 from app.services.audience_service import evaluate_contact_for_campaign
 from app.services.list_service import LeadListService
@@ -446,6 +453,7 @@ def _campaign_payload(db: Session, campaign: Campaign) -> dict:
         "reply_rate": "0%",
         "lists_summary": campaign_lists_summary,
         "execution_summary": _campaign_execution_summary(db, campaign),
+        "sequence_steps_count": len(campaign.sequence_steps or []),
     }
 
 @router.get("/")
@@ -473,7 +481,149 @@ def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
     db.add(c)
     db.commit()
     db.refresh(c)
+    db.add(
+        CampaignSequenceStep(
+            campaign_id=c.id,
+            step_number=1,
+            delay_days=0,
+            subject=c.template_subject,
+            body=c.template_body,
+            stop_on_reply=True,
+        )
+    )
+    db.commit()
+    db.refresh(c)
     return _campaign_payload(db, c)
+
+
+def _template_payload(template: EmailTemplate) -> dict:
+    return {
+        "id": str(template.id),
+        "name": template.name,
+        "subject": template.subject,
+        "body": template.body,
+        "created_at": template.created_at.isoformat() if template.created_at else None,
+        "updated_at": template.updated_at.isoformat() if template.updated_at else None,
+    }
+
+
+def _sequence_step_payload(step: CampaignSequenceStep) -> dict:
+    return {
+        "id": str(step.id),
+        "campaign_id": str(step.campaign_id),
+        "step_number": step.step_number,
+        "delay_days": step.delay_days,
+        "subject": step.subject,
+        "body": step.body,
+        "stop_on_reply": step.stop_on_reply,
+        "created_at": step.created_at.isoformat() if step.created_at else None,
+        "updated_at": step.updated_at.isoformat() if step.updated_at else None,
+    }
+
+
+@router.get("/templates")
+def list_email_templates(db: Session = Depends(get_db)):
+    templates = db.query(EmailTemplate).order_by(EmailTemplate.updated_at.desc().nullslast(), EmailTemplate.created_at.desc()).all()
+    return [_template_payload(template) for template in templates]
+
+
+@router.post("/templates")
+def create_email_template(req: EmailTemplateCreate, db: Session = Depends(get_db)):
+    if not req.name.strip() or not req.subject.strip() or not req.body.strip():
+        raise HTTPException(status_code=422, detail="Template name, subject, and body are required.")
+    template = EmailTemplate(name=req.name.strip(), subject=req.subject.strip(), body=req.body.strip())
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+    return _template_payload(template)
+
+
+@router.put("/templates/{template_id}")
+def update_email_template(template_id: str, req: EmailTemplateUpdate, db: Session = Depends(get_db)):
+    template = db.query(EmailTemplate).filter(EmailTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if not req.name.strip() or not req.subject.strip() or not req.body.strip():
+        raise HTTPException(status_code=422, detail="Template name, subject, and body are required.")
+    template.name = req.name.strip()
+    template.subject = req.subject.strip()
+    template.body = req.body.strip()
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+    return _template_payload(template)
+
+
+@router.delete("/templates/{template_id}")
+def delete_email_template(template_id: str, db: Session = Depends(get_db)):
+    template = db.query(EmailTemplate).filter(EmailTemplate.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    db.delete(template)
+    db.commit()
+    return {"status": "deleted", "id": template_id}
+
+
+@router.get("/{campaign_id}/sequence")
+def get_campaign_sequence(campaign_id: str, db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    steps = db.query(CampaignSequenceStep).filter(CampaignSequenceStep.campaign_id == campaign.id).order_by(CampaignSequenceStep.step_number.asc()).all()
+    if not steps:
+        fallback = CampaignSequenceStep(
+            campaign_id=campaign.id,
+            step_number=1,
+            delay_days=0,
+            subject=campaign.template_subject,
+            body=campaign.template_body,
+            stop_on_reply=True,
+        )
+        return [_sequence_step_payload(fallback)]
+    return [_sequence_step_payload(step) for step in steps]
+
+
+@router.put("/{campaign_id}/sequence")
+def replace_campaign_sequence(campaign_id: str, req: list[CampaignSequenceStepPayload], db: Session = Depends(get_db)):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if not req:
+        raise HTTPException(status_code=422, detail="At least one sequence step is required.")
+
+    ordered = sorted(req, key=lambda step: step.step_number)
+    seen: set[int] = set()
+    for index, step in enumerate(ordered):
+        if step.step_number < 1:
+            raise HTTPException(status_code=422, detail="Sequence step numbers must start at 1.")
+        if step.step_number in seen:
+            raise HTTPException(status_code=422, detail="Sequence step numbers must be unique.")
+        if index == 0 and step.step_number != 1:
+            raise HTTPException(status_code=422, detail="The first sequence step must be step 1.")
+        if step.delay_days < 0:
+            raise HTTPException(status_code=422, detail="Delay days cannot be negative.")
+        if not step.subject.strip() or not step.body.strip():
+            raise HTTPException(status_code=422, detail="Every sequence step needs a subject and body.")
+        seen.add(step.step_number)
+
+    db.query(CampaignSequenceStep).filter(CampaignSequenceStep.campaign_id == campaign.id).delete(synchronize_session=False)
+    for step in ordered:
+        db.add(
+            CampaignSequenceStep(
+                campaign_id=campaign.id,
+                step_number=step.step_number,
+                delay_days=0 if step.step_number == 1 else step.delay_days,
+                subject=step.subject.strip(),
+                body=step.body.strip(),
+                stop_on_reply=step.stop_on_reply,
+            )
+        )
+    campaign.template_subject = ordered[0].subject.strip()
+    campaign.template_body = ordered[0].body.strip()
+    db.add(campaign)
+    db.commit()
+    steps = db.query(CampaignSequenceStep).filter(CampaignSequenceStep.campaign_id == campaign.id).order_by(CampaignSequenceStep.step_number.asc()).all()
+    return [_sequence_step_payload(step) for step in steps]
 
 
 @router.put("/{campaign_id}")
@@ -494,6 +644,24 @@ def update_campaign(campaign_id: str, req: CampaignUpdate, db: Session = Depends
     campaign.compliance_mode = req.compliance_mode
     campaign.schedule_window = req.schedule_window
     campaign.send_window_timezone = req.send_window_timezone
+    steps = db.query(CampaignSequenceStep).filter(CampaignSequenceStep.campaign_id == campaign.id).order_by(CampaignSequenceStep.step_number.asc()).all()
+    if len(steps) <= 1:
+        if steps:
+            steps[0].subject = req.template_subject
+            steps[0].body = req.template_body
+            steps[0].delay_days = 0
+            db.add(steps[0])
+        else:
+            db.add(
+                CampaignSequenceStep(
+                    campaign_id=campaign.id,
+                    step_number=1,
+                    delay_days=0,
+                    subject=req.template_subject,
+                    body=req.template_body,
+                    stop_on_reply=True,
+                )
+            )
     db.commit()
     db.refresh(campaign)
     return _campaign_payload(db, campaign)
