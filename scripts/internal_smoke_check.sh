@@ -16,10 +16,14 @@ check_url() {
   local expected="$4"
   local code
 
-  if [ "$method" = "POST" ]; then
-    code="$(curl -sS -o /tmp/internal_smoke_body.json -w "%{http_code}" -X POST "${AUTH_HEADER[@]}" "$url")"
+  if [ "$method" = "POST" ] && [ ${#AUTH_HEADER[@]} -gt 0 ]; then
+    code="$(curl -sS -L -o /tmp/internal_smoke_body.json -w "%{http_code}" -X POST "${AUTH_HEADER[@]}" "$url")"
+  elif [ "$method" = "POST" ]; then
+    code="$(curl -sS -L -o /tmp/internal_smoke_body.json -w "%{http_code}" -X POST "$url")"
+  elif [ ${#AUTH_HEADER[@]} -gt 0 ]; then
+    code="$(curl -sS -L -o /tmp/internal_smoke_body.json -w "%{http_code}" "${AUTH_HEADER[@]}" "$url")"
   else
-    code="$(curl -sS -o /tmp/internal_smoke_body.json -w "%{http_code}" "${AUTH_HEADER[@]}" "$url")"
+    code="$(curl -sS -L -o /tmp/internal_smoke_body.json -w "%{http_code}" "$url")"
   fi
 
   if [[ "$code" =~ ^(${expected})$ ]]; then
@@ -35,7 +39,7 @@ printf "Frontend: %s\n" "$FRONTEND_URL"
 printf "Backend:  %s\n\n" "$BACKEND_URL"
 
 check_url "frontend root" "GET" "$FRONTEND_URL" "200"
-check_url "backend health" "GET" "$BACKEND_URL/health" "200"
+check_url "backend health" "GET" "$BACKEND_URL/api/v1/health/" "200"
 
 if [ -z "${AUTH_TOKEN:-}" ]; then
   printf "\nAUTH_TOKEN not set. Protected endpoint checks will expect 401/403.\n"
