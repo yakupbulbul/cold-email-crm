@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Papa from "papaparse";
-import { UploadCloud, FileType, CheckCircle } from "lucide-react";
+import { UploadCloud, FileType } from "lucide-react";
 
 interface DropzoneProps {
-    onUploadSuccess: (headers: string[], rawRows: any[], file: File) => void;
+    onUploadSuccess: (headers: string[], rawRows: Record<string, unknown>[], file: File) => void;
 }
 
 export default function CSVUploadDropzone({ onUploadSuccess }: DropzoneProps) {
@@ -22,7 +22,7 @@ export default function CSVUploadDropzone({ onUploadSuccess }: DropzoneProps) {
         setError(null);
         setParsing(true);
 
-        Papa.parse(file, {
+        Papa.parse<Record<string, unknown>>(file, {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
@@ -42,13 +42,13 @@ export default function CSVUploadDropzone({ onUploadSuccess }: DropzoneProps) {
         });
     };
 
-    const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setDragging(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             processFile(e.dataTransfer.files[0]);
         }
-    }, []);
+    };
 
     return (
         <div 

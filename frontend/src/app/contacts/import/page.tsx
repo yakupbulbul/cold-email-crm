@@ -5,6 +5,16 @@ import CSVUploadDropzone from "@/components/ui/CSVUploadDropzone";
 import { useApi } from "@/hooks/useApi";
 import { CheckCircle, AlertTriangle } from "lucide-react";
 
+type ImportValidationResult = {
+    valid_rows: number;
+    invalid_rows: number;
+    duplicate_rows: number;
+};
+
+type ImportConfirmResult = {
+    status?: string;
+};
+
 export default function LeadImportPage() {
     const { request, loading } = useApi();
     const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -22,11 +32,7 @@ export default function LeadImportPage() {
     });
 
     // Validation State
-    const [validationResult, setValidationResult] = useState<{
-        valid_rows: number;
-        invalid_rows: number;
-        duplicate_rows: number;
-    } | null>(null);
+    const [validationResult, setValidationResult] = useState<ImportValidationResult | null>(null);
 
     const handleUploadSuccess = async (csvHeaders: string[], _rawRows: unknown[], uploadedFile: File) => {
         setHeaders(csvHeaders);
@@ -65,7 +71,7 @@ export default function LeadImportPage() {
     const confirmMapping = async () => {
         if (!jobId || !mappings.email) return;
         
-        const data = await request(`/leads/import/${jobId}/map`, {
+        const data = await request<ImportValidationResult>(`/leads/import/${jobId}/map`, {
             method: "POST",
             body: { field_mappings: mappings }
         });
@@ -78,7 +84,7 @@ export default function LeadImportPage() {
 
     const executeImport = async () => {
         if (!jobId) return;
-        const data = await request(`/leads/import/${jobId}/confirm`, {
+        const data = await request<ImportConfirmResult>(`/leads/import/${jobId}/confirm`, {
             method: "POST"
         });
         if (data && data.status === "completed") {

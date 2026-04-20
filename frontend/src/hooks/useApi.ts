@@ -37,7 +37,7 @@ export function useApi() {
             if (res.status === 401) {
                 localStorage.removeItem("token");
                 window.location.href = "/signin";
-                return null;
+                throw new Error("Authentication required");
             }
 
             if (!res.ok) {

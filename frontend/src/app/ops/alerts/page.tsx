@@ -6,13 +6,23 @@ import Table, { TableRow, TableCell } from "@/components/ui/Table";
 import { Bell, ShieldAlert, CheckCircle, Info, Activity } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 
+type AlertItem = {
+    id: string;
+    severity: string;
+    title: string;
+    alert_type: string;
+    message: string;
+    created_at: string;
+    is_acknowledged: boolean;
+};
+
 export default function AlertsDashboard() {
     const { request, loading } = useApi();
-    const [alerts, setAlerts] = useState<any[]>([]);
+    const [alerts, setAlerts] = useState<AlertItem[]>([]);
 
     useEffect(() => {
         const fetchAlerts = async () => {
-            const data = await request("/ops/alerts");
+            const data = await request<AlertItem[]>("/ops/alerts");
             if (data) setAlerts(data);
         };
         fetchAlerts();

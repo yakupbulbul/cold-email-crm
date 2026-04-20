@@ -5,13 +5,24 @@ import { useApi } from "@/hooks/useApi";
 import { CheckCircle2, ShieldAlert, AlertTriangle, Cpu, HardDrive, ShieldCheck } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 
+type ReadinessCheck = {
+    category: string;
+    check: string;
+    detail: string;
+    status: string;
+};
+
+type ReadinessResponse = {
+    checklist?: ReadinessCheck[];
+};
+
 export default function ReadinessDashboard() {
     const { request, loading } = useApi();
-    const [readiness, setReadiness] = useState<any>(null);
+    const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
 
     useEffect(() => {
         const fetchReadiness = async () => {
-            const data = await request("/ops/readiness");
+            const data = await request<ReadinessResponse>("/ops/readiness");
             if (data) setReadiness(data);
         };
         fetchReadiness();
@@ -41,7 +52,7 @@ export default function ReadinessDashboard() {
                             <ShieldCheck className="text-emerald-500" /> Environment Guardrails
                         </h3>
                         <div className="space-y-4">
-                            {readiness.checklist?.map((check: any, i: number) => (
+                            {readiness.checklist?.map((check, i) => (
                                 <div key={i} className="flex items-start justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
                                     <div>
                                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{check.category}</div>

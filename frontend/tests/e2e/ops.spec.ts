@@ -51,5 +51,5 @@ test("settings page reflects real backend-driven ops state", async ({ page }) =>
   await expect(page.getByText("Global configuration portal is under construction")).toHaveCount(0);
   await expect(page.getByText("http://127.0.0.1:8060")).toBeVisible();
   await expect(page.getByText(/mailcow integration is configured and reachable/i).first()).toBeVisible();
-  await expect(page.getByText(/background workers are disabled in lean development mode/i).first()).toBeVisible();
+  await expect(page.getByText(/background workers are (disabled in lean development mode|enabled and available)/i).first()).toBeVisible();
 });

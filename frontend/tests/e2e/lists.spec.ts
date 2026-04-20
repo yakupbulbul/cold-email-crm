@@ -141,7 +141,28 @@ test("edit button opens the selected list in edit mode", async ({ page }) => {
 });
 
 test("list members can update contact type", async ({ page }) => {
-  let listLead = {
+  let listLead: {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    company: string;
+    contact_type: string | null;
+    consent_status: string;
+    unsubscribe_status: string;
+    contact_quality_tier: string;
+    email_status: string;
+    verification_score: number;
+    verification_integrity: string;
+    last_verified_at: string;
+    is_disposable: boolean;
+    is_role_based: boolean;
+    is_suppressed: boolean;
+    verification_reasons: string[];
+    list_ids: string[];
+    list_names: string[];
+    created_at: string;
+  } = {
     id: "lead-1",
     email: "one@example.com",
     first_name: "One",

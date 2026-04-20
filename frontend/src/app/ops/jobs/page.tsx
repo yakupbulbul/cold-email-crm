@@ -6,17 +6,34 @@ import Table, { TableRow, TableCell } from "@/components/ui/Table";
 import Spinner from "@/components/ui/Spinner";
 import { Network, RefreshCw, XCircle, AlertTriangle } from "lucide-react";
 
+type JobItem = {
+    id: string;
+    job_id: string;
+    job_type: string;
+    status: string;
+    retry_count: number;
+    started_at?: string | null;
+    finished_at?: string | null;
+};
+
+type QueueStats = {
+    queued?: number;
+    running?: number;
+    failed?: number;
+    dead_letter?: number;
+};
+
 export default function JobQueueDashboard() {
     const { request, loading } = useApi();
-    const [jobs, setJobs] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>({});
+    const [jobs, setJobs] = useState<JobItem[]>([]);
+    const [stats, setStats] = useState<QueueStats>({});
     const [filter, setFilter] = useState("all");
 
     useEffect(() => {
         const fetchJobs = async () => {
-            const data = await request(`/ops/jobs?status=${filter}`);
+            const data = await request<JobItem[]>(`/ops/jobs?status=${filter}`);
             if (data) setJobs(data);
-            const sq = await request("/ops/jobs/queue-stats");
+            const sq = await request<QueueStats>("/ops/jobs/queue-stats");
             if (sq) setStats(sq);
         };
         fetchJobs();
