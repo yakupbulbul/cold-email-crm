@@ -6,10 +6,10 @@ import { Archive, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, 
 import Spinner from '@/components/ui/Spinner';
 import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from '@/components/ui/primitives';
 import { useApiService } from '@/services/api';
-import { Campaign, CampaignDryRunResult, CampaignPreflightResult, LeadList, Mailbox } from '@/types/models';
+import { Campaign, CampaignDryRunResult, CampaignPreflightResult, CampaignSequenceStep, EmailTemplate, LeadList, Mailbox } from '@/types/models';
 
 type ActionState = {
-  type: 'start' | 'retry' | 'dry-run' | 'pause' | 'preflight' | 'save' | 'delete' | 'archive' | 'unarchive' | 'attach-list' | 'remove-list';
+  type: 'start' | 'retry' | 'dry-run' | 'pause' | 'preflight' | 'save' | 'delete' | 'archive' | 'unarchive' | 'attach-list' | 'remove-list' | 'sequence';
   campaignId: string;
 };
 
@@ -83,10 +83,16 @@ export default function CampaignsPage() {
     dryRunCampaign,
     pauseCampaign,
     runPreflight,
+    getCampaignTemplates,
+    createCampaignTemplate,
+    deleteCampaignTemplate,
+    getCampaignSequence,
+    updateCampaignSequence,
     attachListToCampaign,
     removeListFromCampaign,
   } = useApiService();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [lists, setLists] = useState<LeadList[]>([]);
   const [name, setName] = useState('');
@@ -109,19 +115,23 @@ export default function CampaignsPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [attachTargets, setAttachTargets] = useState<Record<string, string>>({});
+  const [templateName, setTemplateName] = useState('');
+  const [sequenceSteps, setSequenceSteps] = useState<Record<string, CampaignSequenceStep[]>>({});
+  const [sequenceErrors, setSequenceErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchPageData = async () => {
       setIsPageLoading(true);
       setPageError(null);
-      const [campaignData, mailboxData, listData] = await Promise.all([getCampaigns(), getMailboxes(), getLists()]);
-      if (!campaignData || !mailboxData || !listData) {
+      const [campaignData, mailboxData, listData, templateData] = await Promise.all([getCampaigns(), getMailboxes(), getLists(), getCampaignTemplates()]);
+      if (!campaignData || !mailboxData || !listData || !templateData) {
         setPageError('Failed to load campaigns, mailboxes, or reusable lists. Check the backend response and try again.');
         setIsPageLoading(false);
         return;
       }
       setCampaigns(campaignData);
       setLists(listData);
+      setTemplates(templateData);
       if (mailboxData) {
         setMailboxes(mailboxData);
         setMailboxId((current) => current || mailboxData[0]?.id || '');
@@ -129,7 +139,7 @@ export default function CampaignsPage() {
       setIsPageLoading(false);
     };
     void fetchPageData();
-  }, [getCampaigns, getMailboxes, getLists]);
+  }, [getCampaigns, getMailboxes, getLists, getCampaignTemplates]);
 
   const refreshCampaigns = async () => {
     const refreshed = await getCampaigns();
@@ -139,6 +149,51 @@ export default function CampaignsPage() {
   const refreshLists = async () => {
     const refreshed = await getLists();
     if (refreshed) setLists(refreshed);
+  };
+
+  const refreshTemplates = async () => {
+    const refreshed = await getCampaignTemplates();
+    if (refreshed) setTemplates(refreshed);
+  };
+
+  const applyTemplateToCreate = (templateId: string) => {
+    const template = templates.find((item) => item.id === templateId);
+    if (!template) return;
+    setSubject(template.subject);
+    setBody(template.body);
+  };
+
+  const handleCreateTemplate = async () => {
+    setSubmitError(null);
+    setBanner(null);
+    if (!templateName.trim() || !subject.trim() || !body.trim()) {
+      setSubmitError('Template name, subject, and body are required before saving a reusable template.');
+      return;
+    }
+    try {
+      await createCampaignTemplate({
+        name: templateName.trim(),
+        subject: subject.trim(),
+        body: body.trim(),
+      });
+      setTemplateName('');
+      await refreshTemplates();
+      setBanner({ tone: 'success', message: 'Template saved to the library.' });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Template create failed.');
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    setSubmitError(null);
+    setBanner(null);
+    try {
+      await deleteCampaignTemplate(templateId);
+      await refreshTemplates();
+      setBanner({ tone: 'success', message: 'Template deleted.' });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Template delete failed.');
+    }
   };
 
   const clearCampaignMessages = (campaignId: string) => {
@@ -203,6 +258,7 @@ export default function CampaignsPage() {
     setSelectedCreateListIds([]);
     await refreshCampaigns();
     await refreshLists();
+    await refreshTemplates();
     setBanner({ tone: 'success', message: `Campaign ${created.name} created.` });
   };
 
@@ -308,6 +364,101 @@ export default function CampaignsPage() {
         ...current,
         [campaignId]: message,
       }));
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const loadCampaignSequence = async (campaign: Campaign) => {
+    setSequenceErrors((current) => {
+      const next = { ...current };
+      delete next[campaign.id];
+      return next;
+    });
+    const steps = await getCampaignSequence(campaign.id);
+    setSequenceSteps((current) => ({
+      ...current,
+      [campaign.id]: steps && steps.length > 0 ? steps : [{
+        step_number: 1,
+        delay_days: 0,
+        subject: campaign.template_subject,
+        body: campaign.template_body,
+        stop_on_reply: true,
+      }],
+    }));
+  };
+
+  const updateLocalSequenceStep = (campaignId: string, index: number, patch: Partial<CampaignSequenceStep>) => {
+    setSequenceSteps((current) => ({
+      ...current,
+      [campaignId]: (current[campaignId] || []).map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step),
+    }));
+  };
+
+  const addLocalSequenceStep = (campaign: Campaign) => {
+    setSequenceSteps((current) => {
+      const steps = current[campaign.id] || [{
+        step_number: 1,
+        delay_days: 0,
+        subject: campaign.template_subject,
+        body: campaign.template_body,
+        stop_on_reply: true,
+      }];
+      return {
+        ...current,
+        [campaign.id]: [
+          ...steps,
+          {
+            step_number: steps.length + 1,
+            delay_days: 2,
+            subject: `Re: ${steps[0]?.subject || campaign.template_subject}`,
+            body: 'Hi {{first_name}},\n\nJust following up on my previous note.\n\nBest,',
+            stop_on_reply: true,
+          },
+        ],
+      };
+    });
+  };
+
+  const removeLocalSequenceStep = (campaignId: string, index: number) => {
+    setSequenceSteps((current) => {
+      const steps = (current[campaignId] || []).filter((_, stepIndex) => stepIndex !== index);
+      return {
+        ...current,
+        [campaignId]: steps.map((step, stepIndex) => ({
+          ...step,
+          step_number: stepIndex + 1,
+          delay_days: stepIndex === 0 ? 0 : step.delay_days,
+        })),
+      };
+    });
+  };
+
+  const saveCampaignSequence = async (campaignId: string) => {
+    const steps = sequenceSteps[campaignId] || [];
+    if (!steps.length) {
+      setSequenceErrors((current) => ({ ...current, [campaignId]: 'At least one sequence step is required.' }));
+      return;
+    }
+    if (steps.some((step) => !step.subject.trim() || !step.body.trim())) {
+      setSequenceErrors((current) => ({ ...current, [campaignId]: 'Every sequence step needs a subject and body.' }));
+      return;
+    }
+    setActionState({ type: 'sequence', campaignId });
+    try {
+      const normalized = steps.map((step, index) => ({
+        ...step,
+        step_number: index + 1,
+        delay_days: index === 0 ? 0 : Math.max(Number(step.delay_days) || 0, 0),
+        subject: step.subject.trim(),
+        body: step.body.trim(),
+      }));
+      const updated = await updateCampaignSequence(campaignId, normalized);
+      setSequenceSteps((current) => ({ ...current, [campaignId]: updated }));
+      await refreshCampaigns();
+      setBanner({ tone: 'success', message: 'Campaign sequence saved.' });
+    } catch (err) {
+      setSequenceErrors((current) => ({ ...current, [campaignId]: err instanceof Error ? err.message : 'Sequence save failed.' }));
     } finally {
       setActionState(null);
     }
@@ -550,6 +701,15 @@ export default function CampaignsPage() {
           <input id="campaign-subject" data-testid="campaign-subject-input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Quick introduction" className="form-input" />
         </div>
         <div>
+          <label htmlFor="campaign-template-picker" className="block text-sm font-semibold text-slate-700 mb-2">Template Library</label>
+          <select id="campaign-template-picker" defaultValue="" onChange={(event) => applyTemplateToCreate(event.target.value)} className="form-input">
+            <option value="">Use a saved template</option>
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>{template.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
           <label htmlFor="campaign-type" className="block text-sm font-semibold text-slate-700 mb-2">Campaign Type</label>
           <select id="campaign-type" value={campaignType} onChange={(event) => setCampaignType(event.target.value as 'b2b' | 'b2c')} className="form-input">
             <option value="b2b">B2B</option>
@@ -579,6 +739,31 @@ export default function CampaignsPage() {
         <div className="md:col-span-2">
           <label htmlFor="campaign-body" className="block text-sm font-semibold text-slate-700 mb-2">Template Body</label>
           <textarea id="campaign-body" data-testid="campaign-body-input" value={body} onChange={(event) => setBody(event.target.value)} rows={5} placeholder="Hi {{first_name}}, ..." className="form-input resize-y" />
+        </div>
+        <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="template-name" className="block text-sm font-semibold text-slate-700 mb-2">Save current subject/body as template</label>
+              <input id="template-name" value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Reusable intro template" className="form-input bg-white" />
+            </div>
+            <button type="button" onClick={() => void handleCreateTemplate()} className="rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 hover:bg-blue-50">
+              Save Template
+            </button>
+          </div>
+          {templates.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {templates.slice(0, 6).map((template) => (
+                <div key={template.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                  <button type="button" onClick={() => applyTemplateToCreate(template.id)} className="hover:text-blue-700">{template.name}</button>
+                  <button type="button" onClick={() => void handleDeleteTemplate(template.id)} className="text-slate-400 hover:text-red-600" aria-label={`Delete ${template.name}`}>
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 text-xs text-slate-500">No saved templates yet. Save the current subject/body to reuse it later.</div>
+          )}
         </div>
         <div className="md:col-span-2">
           <div className="mb-2 text-sm font-semibold text-slate-700">Reusable lead lists</div>
@@ -645,6 +830,7 @@ export default function CampaignsPage() {
             const attachedLists = campaign.lists_summary?.lists || [];
             const availableLists = lists.filter((list) => !attachedLists.some((attached) => attached.id === list.id));
             const effectiveMailbox = mailboxes.find((mailbox) => mailbox.id === (isEditing ? editState?.mailboxId : campaign.mailbox_id));
+            const currentSequence = sequenceSteps[campaign.id];
 
             return (
               <div key={campaign.id} data-testid={`campaign-card-${campaign.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-7 group relative overflow-hidden">
@@ -912,6 +1098,92 @@ export default function CampaignsPage() {
                       <SummaryStat label="High quality" value={campaign.lists_summary?.high_quality_count ?? 0} />
                     </div>
                   </div>
+
+                  <details className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <summary
+                      className="cursor-pointer text-sm font-bold text-slate-700"
+                      onClick={() => {
+                        if (!currentSequence) void loadCampaignSequence(campaign);
+                      }}
+                    >
+                      Sequence steps ({campaign.sequence_steps_count || currentSequence?.length || 1})
+                    </summary>
+                    <div className="mt-4 space-y-4">
+                      {(currentSequence || []).map((step, index) => (
+                        <div key={`${campaign.id}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-sm font-bold text-slate-800">Step {index + 1}</div>
+                            <div className="flex items-center gap-2">
+                              <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                                <input
+                                  type="checkbox"
+                                  checked={step.stop_on_reply}
+                                  onChange={(event) => updateLocalSequenceStep(campaign.id, index, { stop_on_reply: event.target.checked })}
+                                />
+                                Stop on reply
+                              </label>
+                              {index > 0 ? (
+                                <button type="button" onClick={() => removeLocalSequenceStep(campaign.id, index)} className="text-xs font-semibold text-red-600">
+                                  Remove
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-[140px,1fr]">
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Delay days</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={index === 0 ? 0 : step.delay_days}
+                                disabled={index === 0}
+                                onChange={(event) => updateLocalSequenceStep(campaign.id, index, { delay_days: Number(event.target.value) || 0 })}
+                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:bg-slate-100"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Subject</label>
+                              <input
+                                value={step.subject}
+                                onChange={(event) => updateLocalSequenceStep(campaign.id, index, { subject: event.target.value })}
+                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Body</label>
+                              <textarea
+                                value={step.body}
+                                rows={4}
+                                onChange={(event) => updateLocalSequenceStep(campaign.id, index, { body: event.target.value })}
+                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {!currentSequence ? (
+                        <div className="text-sm text-slate-500">Loading sequence steps...</div>
+                      ) : null}
+                      {sequenceErrors[campaign.id] ? (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                          {sequenceErrors[campaign.id]}
+                        </div>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => addLocalSequenceStep(campaign)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                          Add Follow-up
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void saveCampaignSequence(campaign.id)}
+                          disabled={!currentSequence || isActionPending(campaign.id, 'sequence')}
+                          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isActionPending(campaign.id, 'sequence') ? 'Saving...' : 'Save Sequence'}
+                        </button>
+                      </div>
+                    </div>
+                  </details>
 
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     {isEditing ? (

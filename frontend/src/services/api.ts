@@ -9,7 +9,9 @@ import {
     CampaignDryRunResult,
     CampaignExecutionDetail,
     CampaignPreflightResult,
+    CampaignSequenceStep,
     CampaignListSummary,
+    EmailTemplate,
     LeadList,
     LeadListLeadResponse,
     SendEmailLog,
@@ -94,6 +96,12 @@ type CampaignUpdatePayload = {
     send_window_timezone?: string | null;
 };
 
+type EmailTemplatePayload = {
+    name: string;
+    subject: string;
+    body: string;
+};
+
 type LeadListCreatePayload = {
     name: string;
     description?: string;
@@ -146,6 +154,12 @@ export function useApiService() {
     const getCampaignExecution = useCallback((id: string) => request<CampaignExecutionDetail>(`/campaigns/${id}/execution`), [request]);
     const pauseCampaign = useCallback((id: string) => requestOrThrow<CampaignActionResult>(`/campaigns/${id}/pause`, { method: "POST" }), [requestOrThrow]);
     const runPreflight = useCallback((id: string) => requestOrThrow<CampaignPreflightResult>(`/campaigns/${id}/preflight`, { method: "POST" }), [requestOrThrow]);
+    const getCampaignTemplates = useCallback(() => request<EmailTemplate[]>("/campaigns/templates"), [request]);
+    const createCampaignTemplate = useCallback((data: EmailTemplatePayload) => requestOrThrow<EmailTemplate>("/campaigns/templates", { method: "POST", body: data }), [requestOrThrow]);
+    const updateCampaignTemplate = useCallback((id: string, data: EmailTemplatePayload) => requestOrThrow<EmailTemplate>(`/campaigns/templates/${id}`, { method: "PUT", body: data }), [requestOrThrow]);
+    const deleteCampaignTemplate = useCallback((id: string) => requestOrThrow<{ status: string; id: string }>(`/campaigns/templates/${id}`, { method: "DELETE" }), [requestOrThrow]);
+    const getCampaignSequence = useCallback((id: string) => request<CampaignSequenceStep[]>(`/campaigns/${id}/sequence`), [request]);
+    const updateCampaignSequence = useCallback((id: string, steps: CampaignSequenceStep[]) => requestOrThrow<CampaignSequenceStep[]>(`/campaigns/${id}/sequence`, { method: "PUT", body: steps }), [requestOrThrow]);
 
     // ── LEADS / CONTACTS ──
     const getLeads = useCallback(() => request<Contact[]>("/leads"), [request]);
@@ -267,6 +281,12 @@ export function useApiService() {
         getCampaignExecution,
         pauseCampaign,
         runPreflight,
+        getCampaignTemplates,
+        createCampaignTemplate,
+        updateCampaignTemplate,
+        deleteCampaignTemplate,
+        getCampaignSequence,
+        updateCampaignSequence,
         getLeads,
         getLeadsWithFilters,
         updateLead,

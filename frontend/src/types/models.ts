@@ -110,6 +110,7 @@ export interface Campaign {
     lead_count?: number;
     reply_rate?: string | number;
     lists_summary?: CampaignListSummary;
+    sequence_steps_count?: number | null;
     execution_summary?: {
         state: "idle" | "queued" | "running" | "waiting_for_beat" | "archived";
         job_id?: string | null;
@@ -136,6 +137,27 @@ export interface Campaign {
         last_delivery_target_email?: string | null;
         last_delivery_error?: string | null;
     };
+}
+
+export interface EmailTemplate {
+    id: string;
+    name: string;
+    subject: string;
+    body: string;
+    created_at: string;
+    updated_at?: string | null;
+}
+
+export interface CampaignSequenceStep {
+    id?: string;
+    campaign_id?: string;
+    step_number: number;
+    delay_days: number;
+    subject: string;
+    body: string;
+    stop_on_reply: boolean;
+    created_at?: string;
+    updated_at?: string | null;
 }
 
 export interface CampaignExecutionBlocker {
