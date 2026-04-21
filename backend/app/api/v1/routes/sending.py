@@ -18,6 +18,7 @@ def dispatch_outbound_email(
 ):
     service = SMTPManagerService(db)
     mailbox = db.query(Mailbox).filter(Mailbox.id == req.mailbox_id).first()
+    target_summary = ", ".join(req.to)
     try:
         success, response = service.send_email(req)
         message_id, log_id = response.split("|", 1)
@@ -26,11 +27,11 @@ def dispatch_outbound_email(
             action_type="direct_send",
             source="send_email",
             result="success" if success else "failed",
-            message=f"Direct send to {req.to_email} {'succeeded' if success else 'failed'}.",
+            message=f"Direct send to {target_summary} {'succeeded' if success else 'failed'}.",
             related_entity_type="mailbox",
             related_entity_id=req.mailbox_id,
             actor=current_user,
-            metadata={"mailbox_email": mailbox.email if mailbox else None, "target_email": req.to_email, "log_id": log_id, "message_id": message_id},
+            metadata={"mailbox_email": mailbox.email if mailbox else None, "target_email": target_summary, "log_id": log_id, "message_id": message_id},
         )
         return SendEmailResponse(
             success=success,
@@ -45,11 +46,11 @@ def dispatch_outbound_email(
             action_type="direct_send",
             source="send_email",
             result="failed",
-            message=f"Direct send to {req.to_email} failed: {exc.message}",
+            message=f"Direct send to {target_summary} failed: {exc.message}",
             related_entity_type="mailbox",
             related_entity_id=req.mailbox_id,
             actor=current_user,
-            metadata={"category": exc.category, "mailbox_email": mailbox.email if mailbox else None, "target_email": req.to_email},
+            metadata={"category": exc.category, "mailbox_email": mailbox.email if mailbox else None, "target_email": target_summary},
         )
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
 
