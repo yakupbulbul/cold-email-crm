@@ -61,6 +61,7 @@ export default function TopBar({
       { label: "Inbox", href: "/inbox" },
       { label: "Suppression", href: "/suppression" },
       { label: "Operations", href: "/ops" },
+      { label: "Quality Center", href: "/quality-center" },
       { label: "Settings", href: "/settings" },
     ],
     [],

@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, ListChecks, MailPlus, X, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, ListChecks, MailPlus, X, ClipboardList, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_GROUPS = [
@@ -39,6 +39,7 @@ const NAV_GROUPS = [
       { href: "/ops/jobs", label: "Worker Queues", icon: Network },
       { href: "/ops/alerts", label: "System Alerts", icon: Bell },
       { href: "/ops/readiness", label: "Prod Readiness", icon: Cpu },
+      { href: "/quality-center", label: "Quality Center", icon: ShieldCheck },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
   },

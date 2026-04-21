@@ -29,6 +29,9 @@ import {
     CommandCenterSummary,
     DailyNote,
     NotificationSummary,
+    QualityCenterSummary,
+    QualityCheckResult,
+    QualityCheckRun,
     OperatorActionLog,
     OperatorTask,
     OperatorTaskCategory,
@@ -190,6 +193,13 @@ export function useApiService() {
     const markNotificationRead = useCallback((id: string) => requestOrThrow<{ status: string; id: string }>(`/notifications/${encodeURIComponent(id)}/read`, { method: "POST" }), [requestOrThrow]);
     const markAllNotificationsRead = useCallback(() => requestOrThrow<{ status: string; count: number }>("/notifications/read-all", { method: "POST" }), [requestOrThrow]);
 
+    // ── QUALITY CENTER ──
+    const getQualitySummary = useCallback(() => requestOrThrow<QualityCenterSummary>("/quality-center/summary"), [requestOrThrow]);
+    const getQualityRuns = useCallback((limit: number = 20) => request<QualityCheckRun[]>(`/quality-center/runs?limit=${limit}`), [request]);
+    const getQualityChecks = useCallback(() => request<QualityCheckResult[]>("/quality-center/checks"), [request]);
+    const runQualitySmoke = useCallback(() => requestOrThrow<QualityCheckRun>("/quality-center/runs/smoke", { method: "POST" }), [requestOrThrow]);
+    const runQualityReleaseReadiness = useCallback(() => requestOrThrow<QualityCheckRun>("/quality-center/runs/release-readiness", { method: "POST" }), [requestOrThrow]);
+
     // ── CAMPAIGNS ──
     const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
     const getCampaignById = useCallback((id: string) => request<Campaign>(`/campaigns/${id}`), [request]);
@@ -332,6 +342,11 @@ export function useApiService() {
         getNotificationSummary,
         markNotificationRead,
         markAllNotificationsRead,
+        getQualitySummary,
+        getQualityRuns,
+        getQualityChecks,
+        runQualitySmoke,
+        runQualityReleaseReadiness,
         getCampaigns,
         getCampaignById,
         createCampaign,

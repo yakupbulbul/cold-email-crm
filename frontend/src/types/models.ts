@@ -787,6 +787,48 @@ export interface NotificationSummary {
     items: HeaderNotification[];
 }
 
+export type QualityCheckStatus = "passed" | "warning" | "failed" | "blocked" | "skipped" | "unknown";
+
+export interface QualityCheckResult {
+    id?: string | null;
+    run_id?: string | null;
+    status: QualityCheckStatus | string;
+    category: string;
+    name: string;
+    message: string;
+    severity: string;
+    entity_type?: string | null;
+    entity_id?: string | null;
+    href?: string | null;
+    metadata?: Record<string, unknown> | null;
+    checked_at: string;
+}
+
+export interface QualityCheckRun {
+    id: string;
+    run_type: string;
+    status: QualityCheckStatus | string;
+    summary?: string | null;
+    started_at: string;
+    completed_at?: string | null;
+    created_at: string;
+    results: QualityCheckResult[];
+}
+
+export interface QualityCenterSummary {
+    overall_status: "ready" | "warning" | "blocked" | "unknown" | string;
+    generated_at: string;
+    last_smoke_run?: QualityCheckRun | null;
+    last_release_run?: QualityCheckRun | null;
+    failing_checks: QualityCheckResult[];
+    stale_checks: QualityCheckResult[];
+    recommended_next_fixes: string[];
+    recent_runs: QualityCheckRun[];
+    runtime_checks: QualityCheckResult[];
+    integrity_checks: QualityCheckResult[];
+    stats: Record<string, number>;
+}
+
 export interface Thread {
     id: string;
     subject: string;

@@ -62,6 +62,10 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
         title: "Settings",
         description: "Review backend runtime state, worker mode, and Mailcow configuration without exposing secrets.",
     },
+    "/quality-center": {
+        title: "Quality Center",
+        description: "Run internal validation, inspect system consistency, and keep operational quality visible.",
+    },
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
