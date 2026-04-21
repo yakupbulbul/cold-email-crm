@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.v1.routes import health, sending, warmup, campaigns, ai, auth, leads, suppression, ops, ops_deliverability, domains, mailboxes, inbox, settings, lists, deliverability, command_center
+from app.api.v1.routes import health, sending, warmup, campaigns, ai, auth, leads, suppression, ops, ops_deliverability, domains, mailboxes, inbox, settings, lists, deliverability, command_center, notifications
 from app.api.deps import get_current_active_user, get_current_active_admin
 
 api_router = APIRouter()
@@ -22,6 +22,7 @@ api_router.include_router(settings.router, prefix="/settings", tags=["settings"]
 api_router.include_router(lists.router, prefix="/lists", tags=["lists"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(deliverability.router, prefix="/deliverability", tags=["deliverability"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(command_center.router, prefix="/command-center", tags=["command_center"], dependencies=[Depends(get_current_active_user)])
+api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"], dependencies=[Depends(get_current_active_user)])
 
 # Admin Protected Routes
 api_router.include_router(ops.public_router, prefix="/ops", tags=["ops"])
