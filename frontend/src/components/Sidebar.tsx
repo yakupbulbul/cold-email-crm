@@ -1,8 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks, MailPlus, X, ClipboardList } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, ListChecks, MailPlus, X, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_GROUPS = [
@@ -52,7 +51,6 @@ export default function Sidebar({
   mobileOpen?: boolean;
   onClose?: () => void;
 }) {
-  const { logout, user } = useAuth();
   const pathname = usePathname();
 
   return (
@@ -99,7 +97,7 @@ export default function Sidebar({
           </div>
         </Link>
       </div>
-      <nav className="flex-1 space-y-7 overflow-y-auto px-4 py-6">
+      <nav className="flex-1 space-y-7 overflow-y-auto px-4 py-6 pb-8">
         {NAV_GROUPS.map((group) => (
           <div key={group.title}>
             <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
@@ -136,28 +134,6 @@ export default function Sidebar({
           </div>
         ))}
       </nav>
-      
-      <div className="mt-auto border-t border-slate-800 p-4 space-y-4">
-        {user && (
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 font-bold text-white text-xs">
-              {user.email[0].toUpperCase()}
-            </div>
-            <div className="flex-1 overflow-hidden">
-               <p className="truncate text-sm font-semibold text-white">{user.full_name || 'Admin'}</p>
-               <p className="truncate text-xs text-slate-400">{user.email}</p>
-            </div>
-          </div>
-        )}
-        <div className="space-y-1">
-          <button 
-            onClick={logout}
-            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-300 transition-all hover:bg-rose-900/20 hover:text-rose-200"
-          >
-            <LogOut size={18} /> Sign Out
-          </button>
-        </div>
-      </div>
     </aside>
     </>
   );
