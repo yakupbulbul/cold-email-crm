@@ -768,6 +768,25 @@ export interface CommandCenterSummary {
     stats: Record<string, number>;
 }
 
+export type HeaderNotificationSeverity = "critical" | "warning" | "info" | "success";
+
+export interface HeaderNotification {
+    id: string;
+    title: string;
+    message: string;
+    severity: HeaderNotificationSeverity | string;
+    source: string;
+    status: string;
+    created_at: string;
+    href?: string | null;
+    read_at?: string | null;
+}
+
+export interface NotificationSummary {
+    unread_count: number;
+    items: HeaderNotification[];
+}
+
 export interface Thread {
     id: string;
     subject: string;

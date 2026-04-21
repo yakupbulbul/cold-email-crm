@@ -28,6 +28,7 @@ import {
     DeliverabilityOverview,
     CommandCenterSummary,
     DailyNote,
+    NotificationSummary,
     OperatorActionLog,
     OperatorTask,
     OperatorTaskCategory,
@@ -184,6 +185,11 @@ export function useApiService() {
     const updateRunbook = useCallback((id: string, data: RunbookPayload) => requestOrThrow<Runbook>(`/command-center/runbooks/${id}`, { method: "PATCH", body: data }), [requestOrThrow]);
     const startRunbook = useCallback((id: string) => requestOrThrow<OperatorTask[]>(`/command-center/runbooks/${id}/start`, { method: "POST" }), [requestOrThrow]);
 
+    // ── HEADER NOTIFICATIONS ──
+    const getNotificationSummary = useCallback((limit: number = 20) => request<NotificationSummary>(`/notifications/summary?limit=${limit}`), [request]);
+    const markNotificationRead = useCallback((id: string) => requestOrThrow<{ status: string; id: string }>(`/notifications/${encodeURIComponent(id)}/read`, { method: "POST" }), [requestOrThrow]);
+    const markAllNotificationsRead = useCallback(() => requestOrThrow<{ status: string; count: number }>("/notifications/read-all", { method: "POST" }), [requestOrThrow]);
+
     // ── CAMPAIGNS ──
     const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
     const getCampaignById = useCallback((id: string) => request<Campaign>(`/campaigns/${id}`), [request]);
@@ -323,6 +329,9 @@ export function useApiService() {
         createRunbook,
         updateRunbook,
         startRunbook,
+        getNotificationSummary,
+        markNotificationRead,
+        markAllNotificationsRead,
         getCampaigns,
         getCampaignById,
         createCampaign,
