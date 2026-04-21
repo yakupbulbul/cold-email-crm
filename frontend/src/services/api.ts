@@ -26,6 +26,15 @@ import {
     MailProviderType,
     DeliverabilityEntity,
     DeliverabilityOverview,
+    CommandCenterSummary,
+    DailyNote,
+    OperatorActionLog,
+    OperatorTask,
+    OperatorTaskCategory,
+    OperatorTaskPriority,
+    OperatorTaskStatus,
+    Runbook,
+    RunbookStep,
 } from "@/types/models";
 type MailboxCreatePayload = {
     domain_id: string;
@@ -121,6 +130,28 @@ type LeadBulkContactTypePayload = {
     contact_type: "b2b" | "b2c" | "mixed" | null;
 };
 
+type OperatorTaskCreatePayload = {
+    title: string;
+    description?: string | null;
+    status?: OperatorTaskStatus;
+    priority?: OperatorTaskPriority;
+    category?: OperatorTaskCategory;
+    due_at?: string | null;
+    related_entity_type?: string | null;
+    related_entity_id?: string | null;
+    metadata?: Record<string, unknown>;
+};
+
+type OperatorTaskUpdatePayload = Partial<OperatorTaskCreatePayload>;
+
+type RunbookPayload = {
+    name: string;
+    description?: string | null;
+    category?: OperatorTaskCategory;
+    is_active?: boolean;
+    steps?: RunbookStep[];
+};
+
 /**
  * Service API wrapping backend endpoints. Provides typed data fetching abstractions.
  */
@@ -139,6 +170,19 @@ export function useApiService() {
     const getDeliverabilityDomains = useCallback(() => request<{ status: string; summary: Record<string, number>; items: DeliverabilityEntity[]; blockers: unknown[]; warnings: unknown[]; next_actions: string[] }>("/deliverability/domains"), [request]);
     const getDeliverabilityMailboxes = useCallback(() => request<{ status: string; summary: Record<string, number>; items: DeliverabilityEntity[]; blockers: unknown[]; warnings: unknown[]; next_actions: string[] }>("/deliverability/mailboxes"), [request]);
     const getCampaignDeliverability = useCallback((id: string) => request<DeliverabilityEntity & { audience?: Record<string, unknown>; eligible_leads?: number }>("/deliverability/campaigns/" + id), [request]);
+
+    // ── COMMAND CENTER ──
+    const getCommandCenterSummary = useCallback(() => request<CommandCenterSummary>("/command-center/summary"), [request]);
+    const getOperatorTasks = useCallback((query: string = "") => request<OperatorTask[]>(`/command-center/tasks${query ? `?${query}` : ""}`), [request]);
+    const createOperatorTask = useCallback((data: OperatorTaskCreatePayload) => requestOrThrow<OperatorTask>("/command-center/tasks", { method: "POST", body: data }), [requestOrThrow]);
+    const updateOperatorTask = useCallback((id: string, data: OperatorTaskUpdatePayload) => requestOrThrow<OperatorTask>(`/command-center/tasks/${id}`, { method: "PATCH", body: data }), [requestOrThrow]);
+    const getOperatorActions = useCallback((query: string = "") => request<OperatorActionLog[]>(`/command-center/actions${query ? `?${query}` : ""}`), [request]);
+    const getDailyNotes = useCallback((limit: number = 30) => request<DailyNote[]>(`/command-center/daily-notes?limit=${limit}`), [request]);
+    const upsertDailyNote = useCallback((note_date: string, content: string) => requestOrThrow<DailyNote>("/command-center/daily-notes", { method: "POST", body: { note_date, content } }), [requestOrThrow]);
+    const getRunbooks = useCallback(() => request<Runbook[]>("/command-center/runbooks"), [request]);
+    const createRunbook = useCallback((data: RunbookPayload) => requestOrThrow<Runbook>("/command-center/runbooks", { method: "POST", body: data }), [requestOrThrow]);
+    const updateRunbook = useCallback((id: string, data: RunbookPayload) => requestOrThrow<Runbook>(`/command-center/runbooks/${id}`, { method: "PATCH", body: data }), [requestOrThrow]);
+    const startRunbook = useCallback((id: string) => requestOrThrow<OperatorTask[]>(`/command-center/runbooks/${id}/start`, { method: "POST" }), [requestOrThrow]);
 
     // ── CAMPAIGNS ──
     const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
@@ -268,6 +312,17 @@ export function useApiService() {
         getDeliverabilityDomains,
         getDeliverabilityMailboxes,
         getCampaignDeliverability,
+        getCommandCenterSummary,
+        getOperatorTasks,
+        createOperatorTask,
+        updateOperatorTask,
+        getOperatorActions,
+        getDailyNotes,
+        upsertDailyNote,
+        getRunbooks,
+        createRunbook,
+        updateRunbook,
+        startRunbook,
         getCampaigns,
         getCampaignById,
         createCampaign,

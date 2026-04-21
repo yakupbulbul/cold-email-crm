@@ -14,6 +14,10 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
         title: "Dashboard",
         description: "Track infrastructure health, audience quality, and the next operational action across the product.",
     },
+    "/command-center": {
+        title: "Command Center",
+        description: "Plan daily operator work, record actions, and run internal checklists for campaigns, inbox, deliverability, and warm-up.",
+    },
     "/domains": {
         title: "Domains",
         description: "Manage domain readiness, Mailcow visibility, and DNS verification without leaving the app.",

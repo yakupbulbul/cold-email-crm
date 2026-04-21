@@ -698,6 +698,76 @@ export interface DeliverabilityOverview {
     };
 }
 
+export type OperatorTaskStatus = "todo" | "in_progress" | "blocked" | "done" | "dismissed";
+export type OperatorTaskPriority = "critical" | "high" | "normal" | "low";
+export type OperatorTaskCategory = "campaign" | "inbox" | "deliverability" | "warmup" | "provider" | "domain" | "mailbox" | "system" | "manual";
+export type OperatorActionResult = "success" | "failed" | "blocked" | "skipped" | "info";
+
+export interface OperatorTask {
+    id: string;
+    title: string;
+    description?: string | null;
+    status: OperatorTaskStatus;
+    priority: OperatorTaskPriority;
+    category: OperatorTaskCategory;
+    due_at?: string | null;
+    related_entity_type?: string | null;
+    related_entity_id?: string | null;
+    metadata?: Record<string, unknown>;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface OperatorActionLog {
+    id: string;
+    action_type: string;
+    source: string;
+    result: OperatorActionResult;
+    message: string;
+    related_entity_type?: string | null;
+    related_entity_id?: string | null;
+    metadata?: Record<string, unknown>;
+    created_at: string;
+}
+
+export interface DailyNote {
+    id: string;
+    note_date: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RunbookStep {
+    id?: string;
+    runbook_id?: string;
+    step_order: number;
+    title: string;
+    description?: string | null;
+    default_status: OperatorTaskStatus;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface Runbook {
+    id: string;
+    name: string;
+    description?: string | null;
+    category: OperatorTaskCategory;
+    is_active: boolean;
+    steps: RunbookStep[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CommandCenterSummary {
+    today_tasks: OperatorTask[];
+    overdue_tasks: OperatorTask[];
+    blocked_tasks: OperatorTask[];
+    recent_actions: OperatorActionLog[];
+    stats: Record<string, number>;
+}
+
 export interface Thread {
     id: string;
     subject: string;

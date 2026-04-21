@@ -1,14 +1,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks, MailPlus, X } from 'lucide-react';
+import { LayoutDashboard, Globe, Send, Inbox, Activity, Server, Users, Settings, ShieldX, TrendingUp, Network, Bell, Cpu, LogOut, ListChecks, MailPlus, X, ClipboardList } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
 const NAV_GROUPS = [
   {
     title: "Overview",
-    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/command-center", label: "Command Center", icon: ClipboardList },
+    ],
   },
   {
     title: "Infrastructure",
