@@ -93,3 +93,38 @@ class NotificationReadState(Base):
     notification_key = Column(String, nullable=False, index=True)
     read_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class QualityCheckRun(Base):
+    __tablename__ = "quality_check_runs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    run_type = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False, index=True)
+    summary = Column(Text, nullable=True)
+    triggered_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    results = relationship("QualityCheckResult", back_populates="run", cascade="all, delete-orphan", order_by="QualityCheckResult.created_at")
+
+
+class QualityCheckResult(Base):
+    __tablename__ = "quality_check_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    run_id = Column(UUID(as_uuid=True), ForeignKey("quality_check_runs.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    status = Column(String, nullable=False, index=True)
+    severity = Column(String, nullable=False, default="info", index=True)
+    message = Column(Text, nullable=False)
+    entity_type = Column(String, nullable=True, index=True)
+    entity_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    href = Column(String, nullable=True)
+    metadata_blob = Column(JSON, nullable=True)
+    checked_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    run = relationship("QualityCheckRun", back_populates="results")

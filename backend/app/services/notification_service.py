@@ -10,7 +10,7 @@ from app.models.campaign import SendLog
 from app.models.command_center import OperatorActionLog, OperatorTask
 from app.models.core import Mailbox
 from app.models.email import Message
-from app.models.monitoring import JobLog, NotificationReadState, SystemAlert
+from app.models.monitoring import JobLog, NotificationReadState, QualityCheckResult, QualityCheckRun, SystemAlert
 from app.models.user import User
 from app.services.command_center_service import ACTIVE_TASK_STATUSES
 
@@ -116,6 +116,7 @@ class NotificationService:
         items.extend(self._failed_actions(cutoff, limit))
         items.extend(self._unread_replies(limit))
         items.extend(self._provider_issues(limit))
+        items.extend(self._quality_failures(cutoff, limit))
         return sorted(items, key=lambda item: item.created_at, reverse=True)[:limit]
 
     def _system_alerts(self, limit: int) -> list[DerivedNotification]:
@@ -300,3 +301,26 @@ class NotificationService:
             )
         return notifications
 
+    def _quality_failures(self, cutoff: datetime, limit: int) -> list[DerivedNotification]:
+        rows = (
+            self.db.query(QualityCheckResult)
+            .join(QualityCheckRun, QualityCheckResult.run_id == QualityCheckRun.id)
+            .filter(QualityCheckResult.checked_at >= cutoff, QualityCheckResult.status.in_(["failed", "blocked"]))
+            .order_by(QualityCheckResult.checked_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return [
+            DerivedNotification(
+                id=f"quality:{result.id}",
+                title=f"Quality check {result.status}: {result.name}",
+                message=_safe_text(result.message, "Quality Center check needs attention."),
+                severity=_severity_from(result.status),
+                source="quality_center",
+                status=result.status,
+                created_at=result.checked_at or result.created_at,
+                href=result.href or "/quality-center",
+            )
+            for result in rows
+            if result.checked_at or result.created_at
+        ]
