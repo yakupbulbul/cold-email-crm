@@ -341,3 +341,32 @@ class CommandCenterService:
             "recent_actions": [self.serialize_action(action) for action in recent_actions],
             "stats": stats,
         }
+
+
+def record_command_action(
+    db: Session,
+    *,
+    action_type: str,
+    source: str,
+    result: str,
+    message: str,
+    related_entity_type: str | None = None,
+    related_entity_id: UUID | str | None = None,
+    actor: User | None = None,
+    metadata: dict | None = None,
+) -> None:
+    """Best-effort operational logging that must never break the primary action."""
+    try:
+        CommandCenterService(db).record_action(
+            action_type=action_type,
+            source=source,
+            result=result,
+            message=message,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            actor=actor,
+            metadata=metadata,
+            commit=True,
+        )
+    except Exception:
+        db.rollback()

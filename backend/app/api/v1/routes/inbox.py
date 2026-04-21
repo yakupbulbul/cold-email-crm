@@ -7,11 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.deps import get_current_active_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.core import Mailbox
 from app.models.email import Message, Thread
 from app.models.monitoring import JobLog, WorkerHeartbeat
+from app.models.user import User
+from app.services.command_center_service import record_command_action
 from app.services.imap_service import (
     IMAPSyncManager,
     build_inbox_message_payload,
@@ -143,15 +146,31 @@ def get_inbox_status(db: Session = Depends(get_db)):
 
 
 @router.post("/sync")
-def sync_inbox(mailbox_id: UUID | None = None, db: Session = Depends(get_db)):
+def sync_inbox(
+    mailbox_id: UUID | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     manager = IMAPSyncManager(db)
     if mailbox_id is not None:
         outcome = manager.sync_mailbox(mailbox_id)
-        return {
+        response = {
             "status": "completed" if outcome.status == "healthy" else outcome.status,
             "mailboxes_processed": 1,
             "results": [outcome.__dict__],
         }
+        record_command_action(
+            db,
+            action_type="inbox_mailbox_sync",
+            source="inbox",
+            result="success" if outcome.status == "healthy" else "failed",
+            message=f"Inbox mailbox sync completed with status {outcome.status}.",
+            related_entity_type="mailbox",
+            related_entity_id=mailbox_id,
+            actor=current_user,
+            metadata={"status": outcome.status, "message_count": getattr(outcome, "message_count", None)},
+        )
+        return response
 
     mailboxes = (
         db.query(Mailbox)
@@ -160,29 +179,65 @@ def sync_inbox(mailbox_id: UUID | None = None, db: Session = Depends(get_db)):
         .all()
     )
     results = [manager.sync_mailbox(mailbox.id).__dict__ for mailbox in mailboxes]
-    return {
+    response = {
         "status": "completed",
         "mailboxes_processed": len(mailboxes),
         "results": results,
     }
+    failed_count = len([result for result in results if result.get("status") not in {"healthy", "completed"}])
+    record_command_action(
+        db,
+        action_type="inbox_sync",
+        source="inbox",
+        result="failed" if failed_count else "success",
+        message=f"Global inbox sync processed {len(mailboxes)} mailboxes.",
+        actor=current_user,
+        metadata={"mailboxes_processed": len(mailboxes), "failed_count": failed_count},
+    )
+    return response
 
 
 @router.post("/mailboxes/{mailbox_id}/sync")
-def sync_mailbox_inbox(mailbox_id: UUID, db: Session = Depends(get_db)):
+def sync_mailbox_inbox(
+    mailbox_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     manager = IMAPSyncManager(db)
     outcome = manager.sync_mailbox(mailbox_id)
-    return {
+    response = {
         "status": "completed" if outcome.status == "healthy" else outcome.status,
         "mailboxes_processed": 1,
         "results": [outcome.__dict__],
     }
+    record_command_action(
+        db,
+        action_type="inbox_mailbox_sync",
+        source="inbox",
+        result="success" if outcome.status == "healthy" else "failed",
+        message=f"Inbox mailbox sync completed with status {outcome.status}.",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox_id,
+        actor=current_user,
+        metadata={"status": outcome.status, "message_count": getattr(outcome, "message_count", None)},
+    )
+    return response
 
 
 @router.post("/enqueue-sync")
-def enqueue_inbox_sync():
+def enqueue_inbox_sync(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     if not settings.BACKGROUND_WORKERS_ENABLED:
         raise HTTPException(status_code=409, detail="Background workers are disabled, so automatic inbox sync cannot be queued.")
     async_result = sync_all_inboxes.delay()
+    record_command_action(
+        db,
+        action_type="inbox_sync_queued",
+        source="inbox",
+        result="success",
+        message="Inbox sync job queued.",
+        actor=current_user,
+        metadata={"job_id": async_result.id},
+    )
     return {"status": "queued", "job_id": async_result.id}
 
 

@@ -5,11 +5,14 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 
+from app.api.deps import get_current_active_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.integrations.mailcow.client import MailcowClient
 from app.models.core import Mailbox, Domain
+from app.models.user import User
 from app.schemas.warmup import WarmupMailboxToggleRequest
+from app.services.command_center_service import record_command_action
 from app.services.google_oauth_service import GoogleOAuthError, GoogleWorkspaceOAuthService
 from app.services.mail_provider_service import MailProviderRegistry, ProviderUnavailableError
 from app.services.provider_settings_service import ProviderSettingsService
@@ -260,7 +263,7 @@ def list_mailboxes(db: Session = Depends(get_db)):
 
 @router.post("/")
 @router.post("")  # Handle both /mailboxes and /mailboxes/ without redirect
-def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
+def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     provider_type = (req.provider_type or ProviderSettingsService(db).get_or_create().default_provider or "mailcow").strip().lower()
     registry = MailProviderRegistry(db)
     registry.ensure_provider_allowed(provider_type)
@@ -312,6 +315,17 @@ def create_mailbox(req: MailboxCreate, db: Session = Depends(get_db)):
     db.add(mailbox)
     db.commit()
     db.refresh(mailbox)
+    record_command_action(
+        db,
+        action_type="mailbox_created",
+        source="mailboxes",
+        result="success",
+        message=f"Mailbox created: {mailbox.email}",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox.id,
+        actor=current_user,
+        metadata={"provider_type": mailbox.provider_type, "domain_id": str(mailbox.domain_id)},
+    )
     return mailbox_to_response(mailbox)
 
 @router.get("/{mailbox_id}")
@@ -323,7 +337,7 @@ def get_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{mailbox_id}")
-def update_mailbox(mailbox_id: str, req: MailboxUpdate, db: Session = Depends(get_db)):
+def update_mailbox(mailbox_id: str, req: MailboxUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
@@ -348,30 +362,64 @@ def update_mailbox(mailbox_id: str, req: MailboxUpdate, db: Session = Depends(ge
     db.add(mailbox)
     db.commit()
     db.refresh(mailbox)
+    record_command_action(
+        db,
+        action_type="mailbox_updated",
+        source="mailboxes",
+        result="success",
+        message=f"Mailbox updated: {mailbox.email}",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox.id,
+        actor=current_user,
+        metadata={"provider_type": mailbox.provider_type, "status": mailbox.status},
+    )
     return mailbox_to_response(mailbox)
 
 
 @router.delete("/{mailbox_id}")
-def delete_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
+def delete_mailbox(mailbox_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
 
+    mailbox_email = mailbox.email
     db.delete(mailbox)
     db.commit()
+    record_command_action(
+        db,
+        action_type="mailbox_deleted",
+        source="mailboxes",
+        result="success",
+        message=f"Mailbox deleted: {mailbox_email}",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox_id,
+        actor=current_user,
+    )
     return {"status": "deleted", "id": mailbox_id}
 
 
 @router.post("/{mailbox_id}/smtp-check")
-def check_mailbox_smtp(mailbox_id: str, db: Session = Depends(get_db)):
+def check_mailbox_smtp(mailbox_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     from app.services.smtp_service import SMTPManagerService
 
     service = SMTPManagerService(db)
-    return service.check_mailbox_smtp(mailbox_id)
+    result = service.check_mailbox_smtp(mailbox_id)
+    record_command_action(
+        db,
+        action_type="mailbox_smtp_check",
+        source="mailboxes",
+        result="success" if result.get("status") == "healthy" else "failed",
+        message=result.get("message") or "Mailbox SMTP check completed.",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox_id,
+        actor=current_user,
+        metadata={"status": result.get("status"), "category": result.get("category")},
+    )
+    return result
 
 
 @router.post("/{mailbox_id}/provider-check")
-def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
+def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
@@ -397,11 +445,44 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
         smtp_result = provider.diagnose_smtp(mailbox)
         imap_result = provider.diagnose_imap(mailbox)
     except ProviderUnavailableError as exc:
+        record_command_action(
+            db,
+            action_type="mailbox_provider_check",
+            source="mailboxes",
+            result="failed",
+            message=exc.message,
+            related_entity_type="mailbox",
+            related_entity_id=mailbox_id,
+            actor=current_user,
+            metadata={"category": exc.category, "provider_type": mailbox.provider_type},
+        )
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
     except GoogleOAuthError as exc:
         mark_oauth_failure(exc)
+        record_command_action(
+            db,
+            action_type="mailbox_provider_check",
+            source="mailboxes",
+            result="failed",
+            message=exc.message,
+            related_entity_type="mailbox",
+            related_entity_id=mailbox_id,
+            actor=current_user,
+            metadata={"category": exc.category, "provider_type": mailbox.provider_type},
+        )
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
     except Exception as exc:
+        record_command_action(
+            db,
+            action_type="mailbox_provider_check",
+            source="mailboxes",
+            result="failed",
+            message=str(exc),
+            related_entity_type="mailbox",
+            related_entity_id=mailbox_id,
+            actor=current_user,
+            metadata={"category": "provider_check_failed", "provider_type": mailbox.provider_type},
+        )
         raise HTTPException(status_code=502, detail={"message": str(exc), "category": "provider_check_failed"}) from exc
 
     now = datetime.utcnow()
@@ -420,7 +501,7 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
     db.add(mailbox)
     db.commit()
     db.refresh(mailbox)
-    return {
+    response = {
         "provider_type": mailbox.provider_type,
         "status": mailbox.last_provider_check_status,
         "smtp": {
@@ -435,6 +516,18 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db)):
         },
         "oauth": GoogleWorkspaceOAuthService(db).safe_status(mailbox) if (mailbox.provider_type or "mailcow") == "google_workspace" else None,
     }
+    record_command_action(
+        db,
+        action_type="mailbox_provider_check",
+        source="mailboxes",
+        result="success" if mailbox.last_provider_check_status == "healthy" else "failed",
+        message=mailbox.last_provider_check_message or "Provider diagnostics completed.",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox.id,
+        actor=current_user,
+        metadata={"provider_type": mailbox.provider_type, "status": mailbox.last_provider_check_status},
+    )
+    return response
 
 
 @router.get("/{mailbox_id}/oauth-status")
@@ -446,7 +539,7 @@ def get_mailbox_oauth_status(mailbox_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{mailbox_id}/oauth/start")
-def start_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
+def start_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
@@ -456,16 +549,31 @@ def start_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
         authorization_url = GoogleWorkspaceOAuthService(db).build_authorization_url(mailbox)
     except GoogleOAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
+    record_command_action(
+        db,
+        action_type="google_oauth_started",
+        source="mailboxes",
+        result="success",
+        message=f"Google Workspace OAuth connection started for {mailbox.email}.",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox.id,
+        actor=current_user,
+        metadata={"provider_type": mailbox.provider_type},
+    )
     return {"status": "ready", "authorization_url": authorization_url}
 
 
 @router.post("/{mailbox_id}/google-workspace/connect")
-def connect_google_workspace_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
-    return start_mailbox_oauth(mailbox_id=mailbox_id, db=db)
+def connect_google_workspace_mailbox(
+    mailbox_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    return start_mailbox_oauth(mailbox_id=mailbox_id, db=db, current_user=current_user)
 
 
 @router.post("/{mailbox_id}/oauth/disconnect")
-def disconnect_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
+def disconnect_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     mailbox = db.query(Mailbox).filter(Mailbox.id == mailbox_id).first()
     if not mailbox:
         raise HTTPException(status_code=404, detail="Mailbox not found")
@@ -475,19 +583,50 @@ def disconnect_mailbox_oauth(mailbox_id: str, db: Session = Depends(get_db)):
         refreshed = GoogleWorkspaceOAuthService(db).disconnect(mailbox)
     except GoogleOAuthError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"message": exc.message, "category": exc.category}) from exc
+    record_command_action(
+        db,
+        action_type="google_oauth_disconnected",
+        source="mailboxes",
+        result="success",
+        message=f"Google Workspace OAuth disconnected for {refreshed.email}.",
+        related_entity_type="mailbox",
+        related_entity_id=refreshed.id,
+        actor=current_user,
+        metadata={"provider_type": refreshed.provider_type},
+    )
     return mailbox_to_response(refreshed)
 
 
 @router.post("/{mailbox_id}/google-workspace/disconnect")
-def disconnect_google_workspace_mailbox(mailbox_id: str, db: Session = Depends(get_db)):
-    return disconnect_mailbox_oauth(mailbox_id=mailbox_id, db=db)
+def disconnect_google_workspace_mailbox(
+    mailbox_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    return disconnect_mailbox_oauth(mailbox_id=mailbox_id, db=db, current_user=current_user)
 
 
 @router.patch("/{mailbox_id}/warmup")
-def update_mailbox_warmup(mailbox_id: str, req: WarmupMailboxToggleRequest, db: Session = Depends(get_db)):
+def update_mailbox_warmup(
+    mailbox_id: str,
+    req: WarmupMailboxToggleRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     service = WarmupService(db)
     try:
         mailbox = service.set_mailbox_participation(mailbox_id, req.warmup_enabled)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    record_command_action(
+        db,
+        action_type="mailbox_warmup_toggled",
+        source="mailboxes",
+        result="success",
+        message=f"Warm-up {'enabled' if req.warmup_enabled else 'disabled'} for {mailbox.email}.",
+        related_entity_type="mailbox",
+        related_entity_id=mailbox.id,
+        actor=current_user,
+        metadata={"warmup_enabled": req.warmup_enabled},
+    )
     return mailbox_to_response(mailbox)

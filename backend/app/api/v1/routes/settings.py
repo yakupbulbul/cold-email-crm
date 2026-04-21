@@ -8,6 +8,7 @@ from app.api.deps import get_current_active_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
+from app.services.command_center_service import record_command_action
 from app.services.health_service import SystemHealthService
 from app.services.mail_provider_service import MailProviderRegistry
 from app.services.provider_settings_service import ProviderSettingsService
@@ -224,5 +225,19 @@ def update_provider_settings(
         google_workspace_enabled=req.google_workspace_enabled,
         default_provider=req.default_provider,
         allow_existing_disabled_provider_mailboxes=req.allow_existing_disabled_provider_mailboxes,
+    )
+    record_command_action(
+        db,
+        action_type="provider_settings_updated",
+        source="settings",
+        result="success",
+        message="Provider settings updated.",
+        actor=current_user,
+        metadata={
+            "mailcow_enabled": req.mailcow_enabled,
+            "google_workspace_enabled": req.google_workspace_enabled,
+            "default_provider": req.default_provider,
+            "allow_existing_disabled_provider_mailboxes": req.allow_existing_disabled_provider_mailboxes,
+        },
     )
     return get_settings_summary(db=db, current_user=current_user)

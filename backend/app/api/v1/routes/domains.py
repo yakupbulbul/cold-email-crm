@@ -4,8 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator
 
+from app.api.deps import get_current_active_user
 from app.core.database import get_db
 from app.models.core import Domain
+from app.models.user import User
+from app.services.command_center_service import record_command_action
 from app.services.domain_verification_service import DomainVerificationService
 
 router = APIRouter()
@@ -61,7 +64,7 @@ def list_domains(db: Session = Depends(get_db)):
 
 @router.post("/")
 @router.post("")  # Handle both /domains and /domains/ without redirect
-def create_domain(req: DomainCreate, db: Session = Depends(get_db)):
+def create_domain(req: DomainCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     existing = db.query(Domain).filter(Domain.name == req.name).first()
     if existing:
         raise HTTPException(status_code=400, detail="Domain already exists")
@@ -85,6 +88,17 @@ def create_domain(req: DomainCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(domain)
     verified = DomainVerificationService(db).verify_domain(domain)
+    record_command_action(
+        db,
+        action_type="domain_created",
+        source="domains",
+        result="success",
+        message=f"Domain created and verified: {verified.name}",
+        related_entity_type="domain",
+        related_entity_id=verified.id,
+        actor=current_user,
+        metadata={"status": verified.status, "missing_requirements": verified.missing_requirements},
+    )
     return serialize_domain(verified)
 
 @router.get("/{domain_id}")
@@ -94,24 +108,57 @@ def get_domain(domain_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{domain_id}")
-def delete_domain(domain_id: str, db: Session = Depends(get_db)):
+def delete_domain(domain_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     domain = get_domain_or_404(domain_id, db)
+    domain_name = domain.name
     db.delete(domain)
     db.commit()
+    record_command_action(
+        db,
+        action_type="domain_deleted",
+        source="domains",
+        result="success",
+        message=f"Domain deleted: {domain_name}",
+        related_entity_type="domain",
+        related_entity_id=domain_id,
+        actor=current_user,
+    )
     return {"status": "success", "id": domain_id}
 
 
 @router.post("/{domain_id}/verify")
-def verify_domain(domain_id: str, db: Session = Depends(get_db)):
+def verify_domain(domain_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     domain = get_domain_or_404(domain_id, db)
     verified = DomainVerificationService(db).verify_domain(domain)
+    record_command_action(
+        db,
+        action_type="domain_verified",
+        source="domains",
+        result="success" if verified.status == "verified" else "blocked",
+        message=f"Domain verification completed: {verified.name}",
+        related_entity_type="domain",
+        related_entity_id=verified.id,
+        actor=current_user,
+        metadata={"status": verified.status, "missing_requirements": verified.missing_requirements},
+    )
     return serialize_domain(verified)
 
 
 @router.post("/{domain_id}/refresh")
-def refresh_domain(domain_id: str, db: Session = Depends(get_db)):
+def refresh_domain(domain_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     domain = get_domain_or_404(domain_id, db)
     verified = DomainVerificationService(db).verify_domain(domain)
+    record_command_action(
+        db,
+        action_type="domain_refreshed",
+        source="domains",
+        result="success" if verified.status == "verified" else "blocked",
+        message=f"Domain readiness refreshed: {verified.name}",
+        related_entity_type="domain",
+        related_entity_id=verified.id,
+        actor=current_user,
+        metadata={"status": verified.status, "missing_requirements": verified.missing_requirements},
+    )
     return serialize_domain(verified)
 
 

@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_active_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.monitoring import JobLog
+from app.models.user import User
 from app.schemas.warmup import WarmupGlobalActionResponse
+from app.services.command_center_service import record_command_action
 from app.services.warmup_service import WarmupService
 from app.workers.warmup_worker import run_warmup_cycle
 
@@ -29,7 +32,7 @@ def _queue_job_log(db: Session, *, payload_summary: dict, force_send: bool = Fal
 
 
 @router.post("/start", response_model=WarmupGlobalActionResponse)
-def start_warmup(db: Session = Depends(get_db)):
+def start_warmup(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     if not settings.BACKGROUND_WORKERS_ENABLED:
         raise HTTPException(
             status_code=409,
@@ -56,18 +59,36 @@ def start_warmup(db: Session = Depends(get_db)):
     elif status["blockers"]:
         detail = status["blockers"][0]["message"]
 
-    return {
+    response = {
         "status": "enabled",
         "detail": detail,
         "job_queued": bool(job_id),
         "job_id": job_id,
     }
+    record_command_action(
+        db,
+        action_type="warmup_started",
+        source="warmup",
+        result="success" if job_id or status["eligible_mailboxes_count"] >= 2 else "blocked",
+        message=detail,
+        actor=current_user,
+        metadata={"job_id": job_id, "eligible_mailboxes_count": status["eligible_mailboxes_count"], "active_pairs_count": status["active_pairs_count"]},
+    )
+    return response
 
 
 @router.post("/pause", response_model=WarmupGlobalActionResponse)
-def pause_warmup(db: Session = Depends(get_db)):
+def pause_warmup(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     service = WarmupService(db)
     service.set_global_enabled(False)
+    record_command_action(
+        db,
+        action_type="warmup_paused",
+        source="warmup",
+        result="success",
+        message="Warm-up paused globally.",
+        actor=current_user,
+    )
     return {
         "status": "paused",
         "detail": "Warm-up paused globally. Active pairs remain configured but will not be processed until warm-up is started again.",
@@ -77,7 +98,7 @@ def pause_warmup(db: Session = Depends(get_db)):
 
 
 @router.post("/run-now", response_model=WarmupGlobalActionResponse)
-def run_warmup_now(db: Session = Depends(get_db)):
+def run_warmup_now(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     if not settings.BACKGROUND_WORKERS_ENABLED:
         raise HTTPException(
             status_code=409,
@@ -110,12 +131,22 @@ def run_warmup_now(db: Session = Depends(get_db)):
     if not job_id:
         raise HTTPException(status_code=503, detail="Warm-up pass could not be queued. Check worker and broker connectivity.")
 
-    return {
+    response = {
         "status": "queued",
         "detail": "Manual warm-up pass queued. It will use the normal worker send path and respect mailbox/provider readiness.",
         "job_queued": True,
         "job_id": job_id,
     }
+    record_command_action(
+        db,
+        action_type="warmup_run_now",
+        source="warmup",
+        result="success",
+        message=response["detail"],
+        actor=current_user,
+        metadata={"job_id": job_id, "eligible_mailboxes_count": status["eligible_mailboxes_count"], "active_pairs_count": status["active_pairs_count"]},
+    )
+    return response
 
 
 @router.post("/stop", response_model=WarmupGlobalActionResponse)

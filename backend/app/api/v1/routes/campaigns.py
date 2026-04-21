@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
+from app.api.deps import get_current_active_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.campaign import Campaign, CampaignLead, CampaignSequenceStep, Contact, EmailTemplate, SendLog
 from app.models.lists import CampaignList
 from app.models.monitoring import JobLog
+from app.models.user import User
 from app.schemas.campaign import (
     CampaignCreate,
     CampaignResponse,
@@ -17,6 +19,7 @@ from app.schemas.campaign import (
 )
 from app.schemas.lists import CampaignListAttachPayload
 from app.services.audience_service import evaluate_contact_for_campaign
+from app.services.command_center_service import record_command_action
 from app.services.list_service import LeadListService
 from app.workers.campaign_worker import run_campaign_cycle
 
@@ -463,7 +466,11 @@ def list_campaigns(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=CampaignResponse)
 @router.post("")  # Handle both /campaigns and /campaigns/ without redirect
-def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
+def create_campaign(
+    req: CampaignCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     c = Campaign(
         name=req.name,
         mailbox_id=req.mailbox_id,
@@ -493,6 +500,17 @@ def create_campaign(req: CampaignCreate, db: Session = Depends(get_db)):
     )
     db.commit()
     db.refresh(c)
+    record_command_action(
+        db,
+        action_type="campaign_created",
+        source="campaigns",
+        result="success",
+        message=f"Campaign created: {c.name}",
+        related_entity_type="campaign",
+        related_entity_id=c.id,
+        actor=current_user,
+        metadata={"status": c.status, "mailbox_id": str(c.mailbox_id) if c.mailbox_id else None},
+    )
     return _campaign_payload(db, c)
 
 
@@ -528,18 +546,28 @@ def list_email_templates(db: Session = Depends(get_db)):
 
 
 @router.post("/templates")
-def create_email_template(req: EmailTemplateCreate, db: Session = Depends(get_db)):
+def create_email_template(req: EmailTemplateCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     if not req.name.strip() or not req.subject.strip() or not req.body.strip():
         raise HTTPException(status_code=422, detail="Template name, subject, and body are required.")
     template = EmailTemplate(name=req.name.strip(), subject=req.subject.strip(), body=req.body.strip())
     db.add(template)
     db.commit()
     db.refresh(template)
+    record_command_action(
+        db,
+        action_type="template_created",
+        source="campaigns",
+        result="success",
+        message=f"Email template created: {template.name}",
+        related_entity_type="template",
+        related_entity_id=template.id,
+        actor=current_user,
+    )
     return _template_payload(template)
 
 
 @router.put("/templates/{template_id}")
-def update_email_template(template_id: str, req: EmailTemplateUpdate, db: Session = Depends(get_db)):
+def update_email_template(template_id: str, req: EmailTemplateUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     template = db.query(EmailTemplate).filter(EmailTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
@@ -551,16 +579,36 @@ def update_email_template(template_id: str, req: EmailTemplateUpdate, db: Sessio
     db.add(template)
     db.commit()
     db.refresh(template)
+    record_command_action(
+        db,
+        action_type="template_updated",
+        source="campaigns",
+        result="success",
+        message=f"Email template updated: {template.name}",
+        related_entity_type="template",
+        related_entity_id=template.id,
+        actor=current_user,
+    )
     return _template_payload(template)
 
 
 @router.delete("/templates/{template_id}")
-def delete_email_template(template_id: str, db: Session = Depends(get_db)):
+def delete_email_template(template_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     template = db.query(EmailTemplate).filter(EmailTemplate.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     db.delete(template)
     db.commit()
+    record_command_action(
+        db,
+        action_type="template_deleted",
+        source="campaigns",
+        result="success",
+        message=f"Email template deleted: {template.name}",
+        related_entity_type="template",
+        related_entity_id=template_id,
+        actor=current_user,
+    )
     return {"status": "deleted", "id": template_id}
 
 
@@ -584,7 +632,12 @@ def get_campaign_sequence(campaign_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{campaign_id}/sequence")
-def replace_campaign_sequence(campaign_id: str, req: list[CampaignSequenceStepPayload], db: Session = Depends(get_db)):
+def replace_campaign_sequence(
+    campaign_id: str,
+    req: list[CampaignSequenceStepPayload],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -623,11 +676,27 @@ def replace_campaign_sequence(campaign_id: str, req: list[CampaignSequenceStepPa
     db.add(campaign)
     db.commit()
     steps = db.query(CampaignSequenceStep).filter(CampaignSequenceStep.campaign_id == campaign.id).order_by(CampaignSequenceStep.step_number.asc()).all()
+    record_command_action(
+        db,
+        action_type="campaign_sequence_updated",
+        source="campaigns",
+        result="success",
+        message=f"Campaign sequence updated: {campaign.name}",
+        related_entity_type="campaign",
+        related_entity_id=campaign.id,
+        actor=current_user,
+        metadata={"steps_count": len(steps)},
+    )
     return [_sequence_step_payload(step) for step in steps]
 
 
 @router.put("/{campaign_id}")
-def update_campaign(campaign_id: str, req: CampaignUpdate, db: Session = Depends(get_db)):
+def update_campaign(
+    campaign_id: str,
+    req: CampaignUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -664,11 +733,22 @@ def update_campaign(campaign_id: str, req: CampaignUpdate, db: Session = Depends
             )
     db.commit()
     db.refresh(campaign)
+    record_command_action(
+        db,
+        action_type="campaign_updated",
+        source="campaigns",
+        result="success",
+        message=f"Campaign updated: {campaign.name}",
+        related_entity_type="campaign",
+        related_entity_id=campaign.id,
+        actor=current_user,
+        metadata={"status": campaign.status},
+    )
     return _campaign_payload(db, campaign)
 
 
 @router.delete("/{campaign_id}")
-def delete_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def delete_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -687,11 +767,21 @@ def delete_campaign(campaign_id: str, db: Session = Depends(get_db)):
             db.delete(job)
     db.delete(campaign)
     db.commit()
+    record_command_action(
+        db,
+        action_type="campaign_deleted",
+        source="campaigns",
+        result="success",
+        message=f"Draft campaign deleted: {campaign.name}",
+        related_entity_type="campaign",
+        related_entity_id=campaign_id,
+        actor=current_user,
+    )
     return {"status": "deleted", "id": str(campaign.id)}
 
 
 @router.post("/{campaign_id}/archive")
-def archive_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def archive_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -701,11 +791,21 @@ def archive_campaign(campaign_id: str, db: Session = Depends(get_db)):
 
     campaign.status = "archived"
     db.commit()
+    record_command_action(
+        db,
+        action_type="campaign_archived",
+        source="campaigns",
+        result="success",
+        message=f"Campaign archived: {campaign.name}",
+        related_entity_type="campaign",
+        related_entity_id=campaign.id,
+        actor=current_user,
+    )
     return {"status": "archived", "id": str(campaign.id), "campaign": campaign.name}
 
 
 @router.post("/{campaign_id}/unarchive")
-def unarchive_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def unarchive_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -718,11 +818,26 @@ def unarchive_campaign(campaign_id: str, db: Session = Depends(get_db)):
 
     campaign.status = "paused"
     db.commit()
+    record_command_action(
+        db,
+        action_type="campaign_unarchived",
+        source="campaigns",
+        result="success",
+        message=f"Campaign restored from archive: {campaign.name}",
+        related_entity_type="campaign",
+        related_entity_id=campaign.id,
+        actor=current_user,
+    )
     return {"status": "paused", "id": str(campaign.id), "campaign": campaign.name}
 
 
 @router.post("/{campaign_id}/lists")
-def attach_list_to_campaign(campaign_id: str, req: CampaignListAttachPayload, db: Session = Depends(get_db)):
+def attach_list_to_campaign(
+    campaign_id: str,
+    req: CampaignListAttachPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -732,6 +847,17 @@ def attach_list_to_campaign(campaign_id: str, req: CampaignListAttachPayload, db
     if not existing:
         db.add(CampaignList(campaign_id=campaign.id, list_id=lead_list.id))
         db.commit()
+        record_command_action(
+            db,
+            action_type="campaign_list_attached",
+            source="campaigns",
+            result="success",
+            message=f"List attached to campaign: {lead_list.name} -> {campaign.name}",
+            related_entity_type="campaign",
+            related_entity_id=campaign.id,
+            actor=current_user,
+            metadata={"list_id": str(lead_list.id), "list_name": lead_list.name},
+        )
     return service.sync_campaign_leads(campaign_id)
 
 
@@ -745,17 +871,33 @@ def get_campaign_lists(campaign_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{campaign_id}/lists/{list_id}")
-def remove_list_from_campaign(campaign_id: str, list_id: str, db: Session = Depends(get_db)):
+def remove_list_from_campaign(
+    campaign_id: str,
+    list_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     attached = db.query(CampaignList).filter(CampaignList.campaign_id == campaign_id, CampaignList.list_id == list_id).first()
     if not attached:
         raise HTTPException(status_code=404, detail="List is not attached to this campaign")
     db.delete(attached)
     db.commit()
+    record_command_action(
+        db,
+        action_type="campaign_list_removed",
+        source="campaigns",
+        result="success",
+        message="List removed from campaign.",
+        related_entity_type="campaign",
+        related_entity_id=campaign_id,
+        actor=current_user,
+        metadata={"list_id": list_id},
+    )
     service = LeadListService(db)
     return service.sync_campaign_leads(campaign_id)
 
 @router.post("/{campaign_id}/start")
-def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def start_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -764,8 +906,19 @@ def start_campaign(campaign_id: str, db: Session = Depends(get_db)):
             status_code=409,
             detail="Archived campaigns cannot be started. Restore or duplicate the campaign before sending again.",
         )
-
-    return _queue_campaign_pass(db, c, action="start")
+    result = _queue_campaign_pass(db, c, action="start")
+    record_command_action(
+        db,
+        action_type="campaign_started",
+        source="campaigns",
+        result="success",
+        message=f"Campaign start queued: {c.name}",
+        related_entity_type="campaign",
+        related_entity_id=c.id,
+        actor=current_user,
+        metadata={"job_id": result.get("job_id"), "eligible_leads": result.get("eligible_leads")},
+    )
+    return result
 
 
 @router.get("/{campaign_id}/execution")
@@ -777,24 +930,48 @@ def campaign_execution(campaign_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{campaign_id}/retry")
-def retry_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def retry_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
     if campaign.status == "archived":
         raise HTTPException(status_code=409, detail="Archived campaigns cannot be retried. Restore the campaign first.")
-    return _queue_campaign_pass(db, campaign, action="manual_retry")
+    result = _queue_campaign_pass(db, campaign, action="manual_retry")
+    record_command_action(
+        db,
+        action_type="campaign_retry",
+        source="campaigns",
+        result="success",
+        message=f"Campaign retry queued: {campaign.name}",
+        related_entity_type="campaign",
+        related_entity_id=campaign.id,
+        actor=current_user,
+        metadata={"job_id": result.get("job_id"), "eligible_leads": result.get("eligible_leads")},
+    )
+    return result
 
 
 @router.post("/{campaign_id}/dry-run")
-def dry_run_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def dry_run_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
-    return _campaign_dry_run(db, campaign)
+    result = _campaign_dry_run(db, campaign)
+    record_command_action(
+        db,
+        action_type="campaign_dry_run",
+        source="campaigns",
+        result="blocked" if result.get("blockers") else "success",
+        message=f"Campaign dry run completed: {campaign.name}",
+        related_entity_type="campaign",
+        related_entity_id=campaign.id,
+        actor=current_user,
+        metadata={"would_queue": result.get("would_queue"), "eligible_leads": result.get("eligible_leads"), "blockers": result.get("blockers")},
+    )
+    return result
     
 @router.post("/{campaign_id}/pause")
-def pause_campaign(campaign_id: str, db: Session = Depends(get_db)):
+def pause_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")
@@ -803,6 +980,16 @@ def pause_campaign(campaign_id: str, db: Session = Depends(get_db)):
         
     c.status = "paused"
     db.commit()
+    record_command_action(
+        db,
+        action_type="campaign_paused",
+        source="campaigns",
+        result="success",
+        message=f"Campaign paused: {c.name}",
+        related_entity_type="campaign",
+        related_entity_id=c.id,
+        actor=current_user,
+    )
     return {"status": "paused"}
 
 @router.get("/{campaign_id}/lead-quality")
@@ -832,10 +1019,21 @@ def get_preflight_history(campaign_id: str, db: Session = Depends(get_db)):
     return checks
 
 @router.post("/{campaign_id}/preflight")
-def campaign_preflight_evaluation(campaign_id: str, db: Session = Depends(get_db)):
+def campaign_preflight_evaluation(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     from app.services.preflight_service import PreflightService
     svc = PreflightService(db)
     result = svc.run_preflight(campaign_id)
+    record_command_action(
+        db,
+        action_type="campaign_preflight",
+        source="campaigns",
+        result="blocked" if result.get("status") == "blocked" else "success",
+        message="Campaign preflight evaluated.",
+        related_entity_type="campaign",
+        related_entity_id=campaign_id,
+        actor=current_user,
+        metadata={"status": result.get("status"), "blockers": result.get("blockers")},
+    )
     return result
     # Replaced by robust Domain Resolvers
 
