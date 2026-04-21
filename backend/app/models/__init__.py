@@ -8,6 +8,7 @@ from .verification import EmailVerificationLog
 from .suppression import SuppressionList
 from .lists import LeadList, LeadListMember, CampaignList
 from .monitoring import WorkerHeartbeat, JobLog, CampaignPreflightCheck, DeliverabilityEvent, AuditLog, SystemAlert
+from .command_center import OperatorTask, OperatorActionLog, DailyNote, Runbook, RunbookStep
 from .user import User
 
 # Expose all models for Alembic environment mapping
@@ -42,5 +43,10 @@ __all__ = [
     "DeliverabilityEvent",
     "AuditLog",
     "SystemAlert",
+    "OperatorTask",
+    "OperatorActionLog",
+    "DailyNote",
+    "Runbook",
+    "RunbookStep",
     "User"
 ]
