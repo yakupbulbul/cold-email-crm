@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from email.utils import formataddr
 
 from sqlalchemy.orm import Session
@@ -103,7 +103,7 @@ class SMTPManagerService:
 
         if not success:
             category, message, status_code = self._classify_provider_failure(message_id_or_error)
-            mailbox.smtp_last_checked_at = datetime.utcnow()
+            mailbox.smtp_last_checked_at = datetime.now(timezone.utc)
             mailbox.smtp_last_check_status = "failed"
             mailbox.smtp_last_check_category = category
             mailbox.smtp_last_check_message = message
@@ -111,7 +111,7 @@ class SMTPManagerService:
             self.db.commit()
             raise SMTPServiceError(category, message, status_code=status_code, log_id=str(log.id))
 
-        mailbox.smtp_last_checked_at = datetime.utcnow()
+        mailbox.smtp_last_checked_at = datetime.now(timezone.utc)
         mailbox.smtp_last_check_status = "healthy"
         mailbox.smtp_last_check_category = "ok"
         mailbox.smtp_last_check_message = "SMTP delivery succeeded."
@@ -170,7 +170,7 @@ class SMTPManagerService:
         return ("smtp_send_failed", "SMTP send failed before the message was accepted.", 502)
 
     def _persist_smtp_check(self, mailbox: Mailbox, result: SMTPDiagnosticResult) -> None:
-        mailbox.smtp_last_checked_at = datetime.utcnow()
+        mailbox.smtp_last_checked_at = datetime.now(timezone.utc)
         mailbox.smtp_last_check_status = result.status
         mailbox.smtp_last_check_category = result.category
         mailbox.smtp_last_check_message = result.message
@@ -209,7 +209,7 @@ class SMTPManagerService:
             campaign_id=req.campaign_id,
         )
         thread.subject = req.subject or thread.subject
-        thread.last_message_at = datetime.utcnow()
+        thread.last_message_at = datetime.now(timezone.utc)
         if req.to:
             participant_email = req.to[0].strip().lower()
             thread.contact_email = participant_email
@@ -246,7 +246,7 @@ class SMTPManagerService:
                 references_header=" ".join(MessageParserService.normalize_references(req.references)) or None,
                 is_read=True,
                 status="synced",
-                sent_at=datetime.utcnow(),
+                sent_at=datetime.now(timezone.utc),
             )
             self.db.add(thread)
             self.db.add(outbound_message)

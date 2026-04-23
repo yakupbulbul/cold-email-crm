@@ -124,7 +124,7 @@ def acknowledge_alert(alert_id: str, db: Session = Depends(get_db)):
     if alert:
         alert.is_acknowledged = True
         import datetime
-        alert.acknowledged_at = datetime.datetime.utcnow()
+        alert.acknowledged_at = datetime.datetime.now(timezone.utc)
         db.commit()
     return {"status": "acknowledged"}
 

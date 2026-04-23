@@ -13,7 +13,7 @@ import os
 import sys
 import uuid
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Guard: never run in production automatically
 if os.environ.get("ENV") == "production" and not os.environ.get("ALLOW_SEED_IN_PROD"):
@@ -83,8 +83,8 @@ def seed(session):
 
     # ── Worker Heartbeats ────────────────────────────────────────────────
     workers = [
-        WorkerHeartbeat(worker_name="seed-celery-1", worker_type="celery", status="healthy", last_seen_at=datetime.utcnow()),
-        WorkerHeartbeat(worker_name="seed-celery-2", worker_type="celery", status="healthy", last_seen_at=datetime.utcnow()),
+        WorkerHeartbeat(worker_name="seed-celery-1", worker_type="celery", status="healthy", last_seen_at=datetime.now(timezone.utc)),
+        WorkerHeartbeat(worker_name="seed-celery-2", worker_type="celery", status="healthy", last_seen_at=datetime.now(timezone.utc)),
     ]
     session.add_all(workers)
     print("  ✔  2 worker heartbeats seeded")
@@ -119,13 +119,13 @@ def seed(session):
     events = []
     # Seed some events for the last 30 days
     for _ in range(50):
-        events.append(DeliverabilityEvent(event_type="sent", occurred_at=datetime.utcnow()))
+        events.append(DeliverabilityEvent(event_type="sent", occurred_at=datetime.now(timezone.utc)))
     for _ in range(12):
-        events.append(DeliverabilityEvent(event_type="replied", occurred_at=datetime.utcnow()))
+        events.append(DeliverabilityEvent(event_type="replied", occurred_at=datetime.now(timezone.utc)))
     for _ in range(5):
-        events.append(DeliverabilityEvent(event_type="bounced", occurred_at=datetime.utcnow()))
+        events.append(DeliverabilityEvent(event_type="bounced", occurred_at=datetime.now(timezone.utc)))
     for _ in range(8):
-        events.append(DeliverabilityEvent(event_type="suppressed", occurred_at=datetime.utcnow()))
+        events.append(DeliverabilityEvent(event_type="suppressed", occurred_at=datetime.now(timezone.utc)))
         
     session.add_all(events)
     print(f"  ✔  {len(events)} deliverability events seeded")

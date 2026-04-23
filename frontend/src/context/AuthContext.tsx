@@ -56,8 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUser(null);
                 }
             }
-        } catch (error) {
-            console.error("Failed to fetch user:", error);
+        } catch {
+            // network error during auth check — token will be cleared if invalid
         } finally {
             if (isMountedRef.current) {
                 setIsLoading(false);

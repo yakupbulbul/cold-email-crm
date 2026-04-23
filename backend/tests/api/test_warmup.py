@@ -1,5 +1,5 @@
 """test_warmup.py — Warm-up operational API tests."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -96,7 +96,7 @@ def test_warmup_status_reports_blockers_and_mailbox_truth(client: TestClient, au
             worker_name="dev-worker",
             worker_type="celery",
             status="healthy",
-            last_seen_at=datetime.utcnow(),
+            last_seen_at=datetime.now(timezone.utc),
         )
     )
     db.commit()
@@ -135,7 +135,7 @@ def test_warmup_pair_generation_is_bidirectional_for_ready_mailboxes(client: Tes
             worker_name="dev-worker",
             worker_type="celery",
             status="healthy",
-            last_seen_at=datetime.utcnow(),
+            last_seen_at=datetime.now(timezone.utc),
         )
     )
     db.commit()
@@ -204,7 +204,7 @@ def test_warmup_pause_disables_active_pairs(client: TestClient, auth_headers: di
             worker_name="dev-worker",
             worker_type="celery",
             status="healthy",
-            last_seen_at=datetime.utcnow(),
+            last_seen_at=datetime.now(timezone.utc),
         )
     )
     db.commit()
@@ -226,7 +226,7 @@ def test_warmup_status_reports_recent_scheduler_truth(client: TestClient, auth_h
             worker_name="dev-worker",
             worker_type="celery",
             status="healthy",
-            last_seen_at=datetime.utcnow(),
+            last_seen_at=datetime.now(timezone.utc),
         )
     )
     db.add(
@@ -234,8 +234,8 @@ def test_warmup_status_reports_recent_scheduler_truth(client: TestClient, auth_h
             job_id="warmup-job-fresh",
             job_type="warmup_cycle",
             status="completed",
-            created_at=datetime.utcnow() - timedelta(minutes=5),
-            finished_at=datetime.utcnow() - timedelta(minutes=4),
+            created_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+            finished_at=datetime.now(timezone.utc) - timedelta(minutes=4),
         )
     )
     db.commit()

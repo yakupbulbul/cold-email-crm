@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import func, or_
@@ -108,7 +108,7 @@ class QualityCenterService:
         recent_runs = self._recent_runs(limit=8)
         return {
             "overall_status": _overall_status(all_current),
-            "generated_at": datetime.utcnow(),
+            "generated_at": datetime.now(timezone.utc),
             "last_smoke_run": self._serialize_run(self._last_run("smoke"), include_results=True),
             "last_release_run": self._serialize_run(self._last_run("release_readiness"), include_results=True),
             "failing_checks": [self._serialize_result(result) for result in failing[:12]],
@@ -201,7 +201,7 @@ class QualityCenterService:
 
     def integrity_checks(self) -> list[QualityResult]:
         results: list[QualityResult] = []
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         campaigns_missing_mailbox = (
             self.db.query(Campaign)
@@ -334,7 +334,7 @@ class QualityCenterService:
         results: list[QualityResult] = []
         recent_failed_actions = (
             self.db.query(OperatorActionLog)
-            .filter(OperatorActionLog.created_at >= datetime.utcnow() - timedelta(days=2), OperatorActionLog.result.in_(["failed", "blocked"]))
+            .filter(OperatorActionLog.created_at >= datetime.now(timezone.utc) - timedelta(days=2), OperatorActionLog.result.in_(["failed", "blocked"]))
             .count()
         )
         if recent_failed_actions:
@@ -343,14 +343,14 @@ class QualityCenterService:
             results.append(QualityResult(status="passed", category="release", name="Recent operational failures", message="No failed or blocked operational actions were logged in the last 48 hours.", href="/command-center"))
 
         migration_run = self._last_run("release_readiness")
-        if migration_run and migration_run.completed_at and migration_run.completed_at >= datetime.utcnow() - timedelta(days=7):
+        if migration_run and migration_run.completed_at and migration_run.completed_at >= datetime.now(timezone.utc) - timedelta(days=7):
             results.append(QualityResult(status="passed", category="release", name="Release readiness freshness", message="A release readiness run was completed within the last 7 days.", href="/quality-center"))
         else:
             results.append(QualityResult(status="warning", category="release", name="Release readiness freshness", message="No recent release readiness run exists yet.", severity="warning", href="/quality-center"))
         return results
 
     def _persist_run(self, run_type: str, results: list[QualityResult], *, actor: User | None = None) -> dict:
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         run_status = _aggregate_status(results)
         run = QualityCheckRun(
             run_type=run_type,
@@ -358,7 +358,7 @@ class QualityCenterService:
             summary=self._summary_message(run_type, results),
             triggered_by_user_id=actor.id if actor else None,
             started_at=started_at,
-            completed_at=datetime.utcnow(),
+            completed_at=datetime.now(timezone.utc),
         )
         self.db.add(run)
         self.db.flush()
@@ -413,9 +413,9 @@ class QualityCenterService:
         stale: list[QualityResult] = []
         last_smoke = self._last_run("smoke")
         last_release = self._last_run("release_readiness")
-        if not last_smoke or not last_smoke.completed_at or last_smoke.completed_at < datetime.utcnow() - timedelta(days=2):
+        if not last_smoke or not last_smoke.completed_at or last_smoke.completed_at < datetime.now(timezone.utc) - timedelta(days=2):
             stale.append(QualityResult(status="warning", category="quality", name="Smoke check freshness", message="No smoke check has completed in the last 48 hours.", severity="warning", href="/quality-center"))
-        if not last_release or not last_release.completed_at or last_release.completed_at < datetime.utcnow() - timedelta(days=7):
+        if not last_release or not last_release.completed_at or last_release.completed_at < datetime.now(timezone.utc) - timedelta(days=7):
             stale.append(QualityResult(status="warning", category="quality", name="Release readiness freshness", message="No release readiness check has completed in the last 7 days.", severity="warning", href="/quality-center"))
         return stale
 
@@ -470,7 +470,7 @@ class QualityCenterService:
                 "metadata": result.metadata_blob or {},
                 "checked_at": result.checked_at.isoformat(),
             }
-        checked_at = result.checked_at or datetime.utcnow()
+        checked_at = result.checked_at or datetime.now(timezone.utc)
         return {
             "id": None,
             "run_id": None,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -287,6 +287,6 @@ class MailProviderRegistry:
                 "status": health.get("status", "unknown"),
                 "detail": health.get("detail"),
                 "reason": health.get("reason"),
-                "checked_at": datetime.utcnow().isoformat(),
+                "checked_at": datetime.now(timezone.utc).isoformat(),
             }
         return payload

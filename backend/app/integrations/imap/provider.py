@@ -30,6 +30,13 @@ class IMAPProviderError(Exception):
         self.message = message
 
 
+def _uid_gt(uid: str, since: str) -> bool:
+    try:
+        return int(uid) > int(since)
+    except ValueError:
+        return uid > since
+
+
 class MailcowIMAPProvider:
     uid_pattern = re.compile(r"UID (\d+)")
 
@@ -80,7 +87,7 @@ class MailcowIMAPProvider:
                 raise IMAPProviderError("search_failed", "IMAP inbox search failed.")
 
             all_uids = [uid.decode() for uid in data[0].split() if uid]
-            candidate_uids = [uid for uid in all_uids if int(uid) > int(since_uid)] if since_uid else all_uids[-limit:]
+            candidate_uids = [uid for uid in all_uids if _uid_gt(uid, since_uid)] if since_uid else all_uids[-limit:]
 
             fetched: list[IMAPFetchedMessage] = []
             for uid in candidate_uids:
@@ -187,7 +194,7 @@ class GoogleWorkspaceIMAPProvider:
                 raise IMAPProviderError("search_failed", "IMAP inbox search failed.")
 
             all_uids = [uid.decode() for uid in data[0].split() if uid]
-            candidate_uids = [uid for uid in all_uids if int(uid) > int(since_uid)] if since_uid else all_uids[-limit:]
+            candidate_uids = [uid for uid in all_uids if _uid_gt(uid, since_uid)] if since_uid else all_uids[-limit:]
 
             fetched: list[IMAPFetchedMessage] = []
             for uid in candidate_uids:

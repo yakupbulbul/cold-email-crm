@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 import dns.resolver
 from sqlalchemy import func
@@ -159,7 +159,7 @@ class EmailVerificationService:
 
     def _verify_contact(self, contact: Contact) -> LeadVerificationResult:
         checks = self.basic_checks.validate(contact.email)
-        checked_at = datetime.utcnow()
+        checked_at = datetime.now(timezone.utc)
         reasons: list[str] = []
 
         syntax_valid = checks.syntax_valid

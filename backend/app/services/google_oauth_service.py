@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import httpx
@@ -44,7 +44,7 @@ class GoogleWorkspaceOAuthService:
             {
                 "mailbox_id": str(mailbox.id),
                 "provider": self.provider_name,
-                "exp": datetime.utcnow() + timedelta(minutes=15),
+                "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
             },
             settings.SECRET_KEY,
             algorithm="HS256",
@@ -104,7 +104,7 @@ class GoogleWorkspaceOAuthService:
         token.last_error = None
         token.external_account_email = None
         mailbox.oauth_connection_status = "not_connected"
-        mailbox.oauth_last_checked_at = datetime.utcnow()
+        mailbox.oauth_last_checked_at = datetime.now(timezone.utc)
         mailbox.oauth_last_error = None
         self.db.add(token)
         self.db.add(mailbox)
@@ -136,7 +136,7 @@ class GoogleWorkspaceOAuthService:
                 category="needs_reauth",
                 status_code=409,
             )
-        if token.token_expiry and token.token_expiry > datetime.utcnow() + timedelta(minutes=2):
+        if token.token_expiry and token.token_expiry > datetime.now(timezone.utc) + timedelta(minutes=2):
             access_token = decrypt_value(token.access_token_encrypted)
             if access_token:
                 return access_token
@@ -211,17 +211,17 @@ class GoogleWorkspaceOAuthService:
         token.access_token_encrypted = encrypt_value(access_token) if access_token else token.access_token_encrypted
         if refresh_token or not preserve_refresh_token:
             token.refresh_token_encrypted = encrypt_value(refresh_token) if refresh_token else token.refresh_token_encrypted
-        token.token_expiry = datetime.utcnow() + timedelta(seconds=expires_in)
+        token.token_expiry = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
         token.scopes = (payload.get("scope") or "").split() if isinstance(payload.get("scope"), str) else payload.get("scope")
         token.token_type = payload.get("token_type")
         token.connection_status = "connected"
-        token.last_refreshed_at = datetime.utcnow()
+        token.last_refreshed_at = datetime.now(timezone.utc)
         token.last_error = None
 
         mailbox.oauth_enabled = True
         mailbox.oauth_provider = self.provider_name
         mailbox.oauth_connection_status = "connected"
-        mailbox.oauth_last_checked_at = datetime.utcnow()
+        mailbox.oauth_last_checked_at = datetime.now(timezone.utc)
         mailbox.oauth_last_error = None
 
         if "id_token" in payload:

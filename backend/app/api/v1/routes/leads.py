@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 from uuid import UUID
 
@@ -245,7 +245,7 @@ def verify_leads_bulk(req: VerifyBulkRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="At least one lead_id is required")
 
     job = JobLog(
-        job_id=f"lead-verify-{datetime.utcnow().timestamp()}",
+        job_id=f"lead-verify-{datetime.now(timezone.utc).timestamp()}",
         job_type="lead_verification_bulk",
         status="queued",
         payload_summary={"lead_ids": lead_ids, "requested_count": len(lead_ids), "processed_count": 0, "results": []},
@@ -262,11 +262,11 @@ def verify_leads_bulk(req: VerifyBulkRequest, db: Session = Depends(get_db)):
     else:
         service = EmailVerificationService(db)
         job.status = "running"
-        job.started_at = datetime.utcnow()
+        job.started_at = datetime.now(timezone.utc)
         db.commit()
         results = [verification_result_payload(result) for result in service.verify_leads(lead_ids)]
         job.status = "completed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         job.payload_summary = {
             "lead_ids": lead_ids,
             "requested_count": len(lead_ids),

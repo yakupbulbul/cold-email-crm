@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -18,7 +18,7 @@ class DomainVerificationService:
         self.mailcow_client = MailcowClient()
 
     def verify_domain(self, domain: Domain) -> Domain:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         mailcow_result = self.mailcow_client.lookup_domain(domain.name)
         dns_results = self._check_dns(domain.name)
         dns_statuses = {record_type: result["status"] for record_type, result in dns_results.items()}

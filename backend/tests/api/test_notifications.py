@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.models.campaign import SendLog
 from app.models.command_center import OperatorActionLog, OperatorTask
@@ -20,14 +20,14 @@ def test_notification_summary_returns_real_operational_items(client, auth_header
         job_type="campaign_send",
         status="failed",
         error_message="Worker timed out before delivery.",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     send = SendLog(
         target_email="recipient@example.com",
         subject="Test",
         delivery_status="failed",
         smtp_response="SMTP server timed out.",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     task = OperatorTask(
         title="Fix provider issue",
@@ -35,14 +35,14 @@ def test_notification_summary_returns_real_operational_items(client, auth_header
         status="blocked",
         priority="high",
         category="provider",
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(timezone.utc),
     )
     action = OperatorActionLog(
         action_type="provider_check",
         source="provider",
         result="failed",
         message="Provider check failed without exposing secrets.",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.add_all([alert, job, send, task, action])
     db.commit()
@@ -67,7 +67,7 @@ def test_notification_read_state_persists(client, auth_headers, db):
         source="deliverability",
         is_active=True,
         is_acknowledged=False,
-        created_at=datetime.utcnow() - timedelta(minutes=2),
+        created_at=datetime.now(timezone.utc) - timedelta(minutes=2),
     )
     db.add(alert)
     db.commit()

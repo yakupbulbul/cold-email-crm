@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
@@ -82,7 +82,7 @@ class NotificationService:
         return {row.notification_key: row.read_at for row in rows}
 
     def _mark_keys_read(self, *, user: User, keys: list[str]) -> None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         unique_keys = sorted({key for key in keys if key})
         if not unique_keys:
             return
@@ -107,7 +107,7 @@ class NotificationService:
         }
 
     def _collect_notifications(self, *, limit: int) -> list[DerivedNotification]:
-        cutoff = datetime.utcnow() - timedelta(days=14)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=14)
         items: list[DerivedNotification] = []
         items.extend(self._system_alerts(limit))
         items.extend(self._failed_jobs(cutoff, limit))
@@ -189,7 +189,7 @@ class NotificationService:
         ]
 
     def _blocked_tasks(self, limit: int) -> list[DerivedNotification]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         rows = (
             self.db.query(OperatorTask)
             .filter(or_(OperatorTask.status == "blocked", OperatorTask.status.in_(ACTIVE_TASK_STATUSES) & (OperatorTask.due_at < now)))

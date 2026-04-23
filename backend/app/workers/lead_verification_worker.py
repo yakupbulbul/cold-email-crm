@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.database import SessionLocal
 from app.models.monitoring import JobLog
@@ -18,7 +18,7 @@ def run_lead_verification_bulk(self, lead_ids: list[str]):
             db.refresh(job)
 
         job.status = "running"
-        job.started_at = datetime.utcnow()
+        job.started_at = datetime.now(timezone.utc)
         job.payload_summary = {
             "lead_ids": lead_ids,
             "requested_count": len(lead_ids),
@@ -41,7 +41,7 @@ def run_lead_verification_bulk(self, lead_ids: list[str]):
             db.commit()
 
         job.status = "completed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         job.payload_summary = {
             **(job.payload_summary or {}),
             "processed_count": len(results),
@@ -53,7 +53,7 @@ def run_lead_verification_bulk(self, lead_ids: list[str]):
         if job:
             job.status = "failed"
             job.error_message = str(exc)
-            job.finished_at = datetime.utcnow()
+            job.finished_at = datetime.now(timezone.utc)
             db.commit()
         raise
     finally:
