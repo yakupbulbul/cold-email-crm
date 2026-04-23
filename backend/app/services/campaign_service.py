@@ -40,7 +40,7 @@ class CampaignService:
         # failures do not strand list-backed leads in a permanent failed state.
         LeadListService(self.db).sync_campaign_leads(str(campaign.id))
 
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
 
         sent_today = self.db.query(SendLog).filter(
             SendLog.campaign_id == campaign.id,
@@ -54,7 +54,7 @@ class CampaignService:
         pending_leads = self.db.query(CampaignLead).join(Contact).filter(
             CampaignLead.campaign_id == campaign.id,
             CampaignLead.status == "scheduled",
-            or_(CampaignLead.scheduled_at == None, CampaignLead.scheduled_at <= datetime.now(timezone.utc)),
+            or_(CampaignLead.scheduled_at == None, CampaignLead.scheduled_at <= datetime.now(timezone.utc).replace(tzinfo=None)),
         ).limit(campaign.daily_limit - sent_today).all()
         pending_leads = [
             lead
@@ -93,7 +93,7 @@ class CampaignService:
                 success, response = self.smtp.send_email(req)
                 message_id, log_id = response.split("|", 1)
                 lead.status = "sent" if success else "failed"
-                lead.sent_at = datetime.now(timezone.utc) if success else None
+                lead.sent_at = datetime.now(timezone.utc).replace(tzinfo=None) if success else None
                 log = self.db.query(SendLog).filter(SendLog.id == UUID(log_id)).first()
                 if log:
                     log.campaign_id = campaign.id
@@ -142,11 +142,11 @@ class CampaignService:
         steps = self._sequence_steps(campaign)
         current_step_number = lead.sequence_step_index or 1
         next_step = next((step for step in steps if step.step_number > current_step_number), None)
-        lead.sent_at = datetime.now(timezone.utc)
+        lead.sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if next_step:
             lead.sequence_step_index = next_step.step_number
             lead.status = "scheduled"
-            lead.scheduled_at = datetime.now(timezone.utc) + timedelta(days=max(next_step.delay_days, 0))
+            lead.scheduled_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=max(next_step.delay_days, 0))
         else:
             lead.status = "sent"
             lead.scheduled_at = None

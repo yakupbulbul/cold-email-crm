@@ -23,13 +23,13 @@ def record_pipeline_heartbeat(self):
                 worker_name=worker_name,
                 worker_type="pipeline",
                 status="healthy",
-                last_seen_at=datetime.now(timezone.utc),
+                last_seen_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 metadata_blob={"source": "beat-scheduled-heartbeat"},
             )
             db.add(heartbeat)
         else:
             heartbeat.status = "healthy"
-            heartbeat.last_seen_at = datetime.now(timezone.utc)
+            heartbeat.last_seen_at = datetime.now(timezone.utc).replace(tzinfo=None)
             heartbeat.metadata_blob = {"source": "beat-scheduled-heartbeat"}
         db.commit()
     finally:

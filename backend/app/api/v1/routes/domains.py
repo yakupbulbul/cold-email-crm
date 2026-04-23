@@ -178,5 +178,5 @@ def get_domain_status(domain_id: str, db: Session = Depends(get_db)):
         },
         "missing_requirements": domain.missing_requirements or [],
         "last_checked_at": domain.last_checked_at.isoformat() if domain.last_checked_at else None,
-        "updated_at": domain.updated_at.isoformat() if domain.updated_at else datetime.now(timezone.utc).isoformat(),
+        "updated_at": domain.updated_at.isoformat() if domain.updated_at else datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
     }

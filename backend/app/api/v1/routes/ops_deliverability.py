@@ -14,7 +14,7 @@ def get_summary(db: Session = Depends(get_db)):
 
 @router.get("/trends")
 def get_trends(db: Session = Depends(get_db)):
-    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
     # Generic grouping by date
     events = db.query(
         func.date(DeliverabilityEvent.occurred_at).label("date"),

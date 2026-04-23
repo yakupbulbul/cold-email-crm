@@ -76,7 +76,7 @@ class DeliverabilityService:
         return {
             "status": status,
             "score": self._score_from_status(status),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "blockers": blockers,
             "warnings": warnings,
             "fix_priority": self._fix_priority(blockers, warnings),
@@ -281,7 +281,7 @@ class DeliverabilityService:
             "warnings": warnings,
             "next_actions": self._next_actions(blockers, warnings),
             "checks": checks,
-            "last_checked_at": datetime.now(timezone.utc).isoformat(),
+            "last_checked_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
 
     def campaigns_summary(self) -> dict[str, Any]:
@@ -332,7 +332,7 @@ class DeliverabilityService:
     def warmup_summary(self) -> dict[str, Any]:
         setting = self.db.query(WarmupSetting).order_by(WarmupSetting.created_at.asc()).first()
         enabled = bool(setting and setting.is_enabled)
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
         success = self.db.query(func.count(WarmupEvent.id)).filter(WarmupEvent.event_type == "send", WarmupEvent.created_at >= today, WarmupEvent.status == "success").scalar() or 0
         failed = self.db.query(func.count(WarmupEvent.id)).filter(WarmupEvent.event_type == "send", WarmupEvent.created_at >= today, WarmupEvent.status == "failed").scalar() or 0
         active_pairs = self.db.query(func.count(WarmupPair.id)).filter(WarmupPair.is_active == True).scalar() or 0
@@ -406,7 +406,7 @@ class DeliverabilityService:
                     "detail": health.get("detail"),
                     "reason": health.get("reason"),
                     "mailbox_count": mailbox_count,
-                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                    "checked_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 }
             )
         return {
@@ -418,7 +418,7 @@ class DeliverabilityService:
         }
 
     def legacy_summary(self) -> dict[str, int]:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
         events = (
             self.db.query(DeliverabilityEvent.event_type, func.count(DeliverabilityEvent.id))
             .filter(DeliverabilityEvent.occurred_at >= cutoff)
@@ -554,7 +554,7 @@ class DeliverabilityService:
         return self._check("recent_send_posture", "Recent send posture", "pass", "info", "Recent sends are within acceptable failure bounds.", None, counts)
 
     def _recent_send_counts(self, mailbox_id: Any) -> dict[str, int | str | None]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         cutoff_7 = now - timedelta(days=7)
         cutoff_30 = now - timedelta(days=30)
         success_7 = self.db.query(func.count(SendLog.id)).filter(SendLog.mailbox_id == mailbox_id, SendLog.created_at >= cutoff_7, SendLog.delivery_status == "success").scalar() or 0

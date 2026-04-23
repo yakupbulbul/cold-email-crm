@@ -425,7 +425,7 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db), curre
         raise HTTPException(status_code=404, detail="Mailbox not found")
     registry = MailProviderRegistry(db)
     def mark_oauth_failure(exc: GoogleOAuthError):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         status_by_category = {
             "needs_reauth": "not_connected",
             "oauth_refresh_failed": "expired",
@@ -485,7 +485,7 @@ def check_mailbox_provider(mailbox_id: str, db: Session = Depends(get_db), curre
         )
         raise HTTPException(status_code=502, detail={"message": str(exc), "category": "provider_check_failed"}) from exc
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     mailbox.last_provider_check_at = now
     mailbox.smtp_last_checked_at = now
     mailbox.oauth_last_checked_at = now

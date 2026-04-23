@@ -134,10 +134,10 @@ def get_settings_summary(
             },
         }
 
-    provider_settings.mailcow_last_checked_at = datetime.now(timezone.utc)
+    provider_settings.mailcow_last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
     provider_settings.mailcow_last_check_status = provider_health["mailcow"]["status"]
     provider_settings.mailcow_last_check_message = provider_health["mailcow"].get("detail")
-    provider_settings.google_workspace_last_checked_at = datetime.now(timezone.utc)
+    provider_settings.google_workspace_last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
     provider_settings.google_workspace_last_check_status = provider_health["google_workspace"]["status"]
     provider_settings.google_workspace_last_check_message = provider_health["google_workspace"].get("detail")
     db.add(provider_settings)

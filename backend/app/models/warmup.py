@@ -18,8 +18,8 @@ class WarmupPair(Base):
     next_scheduled_at = Column(DateTime, nullable=True)
     last_result = Column(String, nullable=True)
     last_error = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     sender = relationship("Mailbox", foreign_keys=[sender_mailbox_id])
@@ -47,7 +47,7 @@ class WarmupEvent(Base):
     
     sent_at = Column(DateTime, nullable=True)
     replied_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     mailbox = relationship("Mailbox", foreign_keys=[mailbox_id])
     recipient_mailbox = relationship("Mailbox", foreign_keys=[recipient_mailbox_id])
@@ -59,5 +59,5 @@ class WarmupSetting(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     is_enabled = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

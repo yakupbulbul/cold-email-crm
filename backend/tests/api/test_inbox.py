@@ -38,7 +38,7 @@ def test_list_threads_returns_latest_snippet_and_unread(client, auth_headers, db
         subject="Interested in a demo",
         participants=["buyer@example.com", mailbox.email],
         contact_email="buyer@example.com",
-        last_message_at=datetime.now(timezone.utc),
+        last_message_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(thread)
     db.flush()
@@ -54,7 +54,7 @@ def test_list_threads_returns_latest_snippet_and_unread(client, auth_headers, db
                 subject="Intro",
                 text_body="Happy to help.",
                 is_read=True,
-                sent_at=datetime.now(timezone.utc) - timedelta(hours=2),
+                sent_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=2),
             ),
             Message(
                 thread_id=thread.id,
@@ -65,7 +65,7 @@ def test_list_threads_returns_latest_snippet_and_unread(client, auth_headers, db
                 subject="Interested in a demo",
                 text_body="Can you show me the platform this week?",
                 is_read=False,
-                received_at=datetime.now(timezone.utc) - timedelta(hours=1),
+                received_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1),
             ),
         ]
     )
@@ -96,7 +96,7 @@ def test_get_thread_detail_returns_messages_and_linkage(client, auth_headers, db
         contact_email="contact@example.com",
         contact_id=contact.id,
         linkage_status="linked",
-        last_message_at=datetime.now(timezone.utc),
+        last_message_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(thread)
     db.flush()
@@ -111,7 +111,7 @@ def test_get_thread_detail_returns_messages_and_linkage(client, auth_headers, db
         subject="First touch",
         text_body="Checking in.",
         is_read=True,
-        sent_at=datetime.now(timezone.utc) - timedelta(days=1),
+        sent_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1),
     )
     second_message = Message(
         id=uuid.uuid4(),
@@ -123,7 +123,7 @@ def test_get_thread_detail_returns_messages_and_linkage(client, auth_headers, db
         subject="Re: First touch",
         text_body="Let's talk tomorrow.",
         is_read=False,
-        received_at=datetime.now(timezone.utc),
+        received_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add_all([first_message, second_message])
     db.commit()
@@ -181,7 +181,7 @@ def test_manual_sync_uses_send_log_headers_to_thread_replies(client, auth_header
         type(
             "Fetched",
             (),
-            {"uid": "10", "raw_bytes": raw_email, "is_read": False, "received_at": datetime.now(timezone.utc)},
+            {"uid": "10", "raw_bytes": raw_email, "is_read": False, "received_at": datetime.now(timezone.utc).replace(tzinfo=None)},
         )()
     ]
     monkeypatch.setattr(

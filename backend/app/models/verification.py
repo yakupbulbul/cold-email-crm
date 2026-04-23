@@ -32,6 +32,6 @@ class EmailVerificationLog(Base):
     final_status = Column(String, default="pending") 
     # Statuses: valid, risky, invalid, duplicate, disposable, role_based, no_mx, blocked, suppressed
     
-    checked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    checked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     
     contact = relationship("Contact")

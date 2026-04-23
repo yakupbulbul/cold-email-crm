@@ -287,6 +287,6 @@ class MailProviderRegistry:
                 "status": health.get("status", "unknown"),
                 "detail": health.get("detail"),
                 "reason": health.get("reason"),
-                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "checked_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             }
         return payload

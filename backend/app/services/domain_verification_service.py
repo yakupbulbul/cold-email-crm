@@ -18,7 +18,7 @@ class DomainVerificationService:
         self.mailcow_client = MailcowClient()
 
     def verify_domain(self, domain: Domain) -> Domain:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         mailcow_result = self.mailcow_client.lookup_domain(domain.name)
         dns_results = self._check_dns(domain.name)
         dns_statuses = {record_type: result["status"] for record_type, result in dns_results.items()}

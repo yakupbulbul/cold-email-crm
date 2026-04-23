@@ -28,7 +28,7 @@ CAMPAIGN_BEAT_INTERVAL_SECONDS = 300
 
 
 def _campaign_job_for_status(db: Session, campaign_id: str, statuses: set[str]) -> JobLog | None:
-    stale_after = datetime.now(timezone.utc) - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)
+    stale_after = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)
     for job in db.query(JobLog).filter(JobLog.job_type == "campaign_cycle").order_by(JobLog.created_at.desc()).all():
         payload_summary = job.payload_summary or {}
         if payload_summary.get("campaign_id") != campaign_id or job.status not in statuses:
@@ -118,7 +118,7 @@ def _campaign_dry_run(db: Session, campaign: Campaign) -> dict:
     LeadListService(db).sync_campaign_leads(str(campaign.id))
     lead_snapshot = _scheduled_lead_snapshot(db, campaign)
 
-    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
     sent_today = db.query(SendLog).filter(
         SendLog.campaign_id == campaign.id,
         SendLog.created_at >= today,
@@ -169,7 +169,7 @@ def _campaign_dry_run(db: Session, campaign: Campaign) -> dict:
         })
 
     schedule_allowed_now = True
-    next_send_at = datetime.now(timezone.utc) if schedule_allowed_now and not blockers else _next_campaign_beat_at(datetime.now(timezone.utc))
+    next_send_at = datetime.now(timezone.utc).replace(tzinfo=None) if schedule_allowed_now and not blockers else _next_campaign_beat_at(datetime.now(timezone.utc).replace(tzinfo=None))
     sender_identity = None
     if campaign.mailbox:
         display_name = (campaign.mailbox.display_name or "").strip()
@@ -201,7 +201,7 @@ def _campaign_dry_run(db: Session, campaign: Campaign) -> dict:
 
 
 def _campaign_execution_summary(db: Session, campaign: Campaign) -> dict:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     jobs = _campaign_jobs_for_campaign(db, str(campaign.id))
     latest_job = jobs[0] if jobs else None
     stale_after = now - timedelta(seconds=CAMPAIGN_BEAT_INTERVAL_SECONDS * 2)

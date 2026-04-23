@@ -197,7 +197,7 @@ class ThreadResolverService:
             contact_email=(contact_email or "").lower() or None,
             linkage_status=linkage_status,
             participants=[participant for participant in participants if participant],
-            last_message_at=datetime.now(timezone.utc),
+            last_message_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(thread)
         db.flush()
@@ -354,7 +354,7 @@ class IMAPSyncManager:
             fetched_messages = provider.sync_inbox(mailbox)
         except ProviderUnavailableError as exc:
             mailbox.inbox_sync_status = "disabled"
-            mailbox.inbox_last_synced_at = datetime.now(timezone.utc)
+            mailbox.inbox_last_synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
             mailbox.inbox_last_error = exc.message
             self.db.add(mailbox)
             self.db.commit()
@@ -367,7 +367,7 @@ class IMAPSyncManager:
             )
         except IMAPProviderError as exc:
             mailbox.inbox_sync_status = "failing"
-            mailbox.inbox_last_synced_at = datetime.now(timezone.utc)
+            mailbox.inbox_last_synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
             mailbox.inbox_last_error = exc.message
             self.db.add(mailbox)
             self.db.commit()
@@ -408,7 +408,7 @@ class IMAPSyncManager:
             for address in parsed.get("to_emails", []):
                 participants.add(address.lower())
             thread.participants = sorted(address for address in participants if address)
-            message_timestamp = fetched.received_at or parsed.get("sent_at") or datetime.now(timezone.utc)
+            message_timestamp = fetched.received_at or parsed.get("sent_at") or datetime.now(timezone.utc).replace(tzinfo=None)
             thread.last_message_at = message_timestamp
 
             msg = Message(
@@ -443,7 +443,7 @@ class IMAPSyncManager:
                     self.db.add(contact)
 
         mailbox.inbox_last_seen_uid = last_seen_uid
-        mailbox.inbox_last_synced_at = datetime.now(timezone.utc)
+        mailbox.inbox_last_synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
         mailbox.inbox_sync_status = "healthy"
         mailbox.inbox_last_error = None
         mailbox.inbox_last_success_at = mailbox.inbox_last_synced_at

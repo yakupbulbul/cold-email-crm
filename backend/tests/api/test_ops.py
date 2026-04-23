@@ -145,7 +145,7 @@ def test_worker_health_uses_db_heartbeat_fallback(client: TestClient, auth_heade
             worker_name="celery@test-host",
             worker_type="pipeline",
             status="healthy",
-            last_seen_at=datetime.now(timezone.utc),
+            last_seen_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
     )
     db.commit()
