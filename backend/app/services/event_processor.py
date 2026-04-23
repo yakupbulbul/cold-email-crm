@@ -68,6 +68,26 @@ class EventProcessorService:
         self.db.commit()
         logger.warning(f"CRITICAL: Spam Complaint processed for {contact.email}. Globally Suppressed.")
 
+    def process_unsubscribe(self, event_id: str):
+        """Suppresses a contact that requested to unsubscribe via reply keyword."""
+        event = self.db.query(DeliverabilityEvent).filter(DeliverabilityEvent.id == event_id).first()
+        if not event or not event.contact_id:
+            return
+        contact = self.db.query(Contact).filter(Contact.id == event.contact_id).first()
+        if not contact:
+            return
+        contact.is_suppressed = True
+        existing_sup = self.db.query(SuppressionList).filter(SuppressionList.email == contact.email).first()
+        if not existing_sup:
+            self.db.add(SuppressionList(
+                email=contact.email,
+                reason="unsubscribe",
+                source="auto_unsubscribe_processor",
+                notes="Automated suppression triggered by unsubscribe reply keyword.",
+            ))
+        self.db.commit()
+        logger.info(f"Contact {contact.email} suppressed due to unsubscribe request (Event: {event_id})")
+
     def process_reply(self, event_id: str, reply_text: str):
         """Classifies incoming IMAP replies mapping them to Campaign structures"""
         event = self.db.query(DeliverabilityEvent).filter(DeliverabilityEvent.id == event_id).first()
@@ -84,7 +104,7 @@ class EventProcessorService:
         # Very basic MVP classification
         if any(word in l_text for word in ["unsubscribe", "remove me", "stop", "opt out"]):
             classification = "unsubscribe"
-            self.process_complaint(event_id) # Route unsubscribes gracefully to suppressions
+            self.process_unsubscribe(event_id)
         elif any(word in l_text for word in ["not interested", "no thanks"]):
             classification = "not_interested"
             

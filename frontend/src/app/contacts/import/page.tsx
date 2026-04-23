@@ -63,8 +63,8 @@ export default function LeadImportPage() {
             const data = await res.json();
             setJobId(data.job_id);
             setStep(2);
-        } catch (err) {
-            console.error("Upload failed", err);
+        } catch {
+            // upload error is surfaced via missing job state
         }
     };
 

@@ -1,7 +1,7 @@
 """test_ops.py — Ops/Telemetry endpoint tests."""
 from fastapi.testclient import TestClient
 from types import SimpleNamespace
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models.monitoring import WorkerHeartbeat
 
@@ -145,7 +145,7 @@ def test_worker_health_uses_db_heartbeat_fallback(client: TestClient, auth_heade
             worker_name="celery@test-host",
             worker_type="pipeline",
             status="healthy",
-            last_seen_at=datetime.utcnow(),
+            last_seen_at=datetime.now(timezone.utc),
         )
     )
     db.commit()

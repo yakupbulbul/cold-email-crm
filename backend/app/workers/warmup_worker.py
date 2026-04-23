@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.database import SessionLocal
 from app.models.monitoring import JobLog
@@ -19,7 +19,7 @@ def run_warmup_cycle(self, force_send: bool = False):
             db.commit()
             db.refresh(job)
         job.status = "running"
-        job.started_at = datetime.utcnow()
+        job.started_at = datetime.now(timezone.utc)
         db.commit()
 
         logger.info("Starting Warm-up Engine cycle")
@@ -30,7 +30,7 @@ def run_warmup_cycle(self, force_send: bool = False):
             **result,
         }
         job.status = "completed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         db.commit()
     except Exception as e:
         logger.error(f"Warm-up Worker Error: {e}")
@@ -38,7 +38,7 @@ def run_warmup_cycle(self, force_send: bool = False):
         if job:
             job.status = "failed"
             job.error_message = str(e)
-            job.finished_at = datetime.utcnow()
+            job.finished_at = datetime.now(timezone.utc)
             db.commit()
     finally:
         db.close()

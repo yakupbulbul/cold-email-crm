@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -32,6 +32,6 @@ class EmailVerificationLog(Base):
     final_status = Column(String, default="pending") 
     # Statuses: valid, risky, invalid, duplicate, disposable, role_based, no_mx, blocked, suppressed
     
-    checked_at = Column(DateTime, default=datetime.utcnow)
+    checked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     contact = relationship("Contact")

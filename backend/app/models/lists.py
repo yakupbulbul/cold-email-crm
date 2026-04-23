@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -16,8 +16,8 @@ class LeadList(Base):
     description = Column(String, nullable=True)
     type = Column(String, nullable=False, default="static")
     filter_definition = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     members = relationship("LeadListMember", back_populates="lead_list", cascade="all, delete-orphan")
     campaigns = relationship("CampaignList", back_populates="lead_list", cascade="all, delete-orphan")
@@ -32,7 +32,7 @@ class LeadListMember(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     list_id = Column(UUID(as_uuid=True), ForeignKey("lead_lists.id", ondelete="CASCADE"), nullable=False, index=True)
     lead_id = Column(UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     lead_list = relationship("LeadList", back_populates="members")
     lead = relationship("Contact")
@@ -47,7 +47,7 @@ class CampaignList(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     campaign_id = Column(UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
     list_id = Column(UUID(as_uuid=True), ForeignKey("lead_lists.id", ondelete="CASCADE"), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     campaign = relationship("Campaign")
     lead_list = relationship("LeadList", back_populates="campaigns")

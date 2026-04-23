@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -70,7 +70,7 @@ def _worker_status(db: Session) -> dict:
             "detail": "Background workers are disabled." if not settings.BACKGROUND_WORKERS_ENABLED else "No worker heartbeat recorded yet.",
             "last_seen_at": None,
         }
-    stale = latest_heartbeat.last_seen_at < datetime.utcnow() - timedelta(minutes=2)
+    stale = latest_heartbeat.last_seen_at < datetime.now(timezone.utc) - timedelta(minutes=2)
     return {
         "status": "healthy" if not stale else "stale",
         "detail": "Background workers are running." if not stale else "Worker heartbeat is stale.",
@@ -92,7 +92,7 @@ def _scheduler_status(db: Session) -> dict:
             "last_seen_at": None,
             "next_run_at": None,
         }
-    stale_cutoff = datetime.utcnow() - timedelta(minutes=3)
+    stale_cutoff = datetime.now(timezone.utc) - timedelta(minutes=3)
     status = "healthy" if latest_sync_job.created_at >= stale_cutoff else "stale"
     next_run_at = latest_sync_job.created_at + timedelta(minutes=1)
     return {
@@ -109,7 +109,7 @@ def get_inbox_status(db: Session = Depends(get_db)):
     threads_count = db.query(Thread).count()
     successful_sends_today = db.query(Message).filter(
         Message.direction == "inbound",
-        Message.created_at >= datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0),
+        Message.created_at >= datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0),
     ).count()
     latest_thread = db.query(Thread).order_by(Thread.last_message_at.desc()).first()
     blockers = infer_inbox_blockers(

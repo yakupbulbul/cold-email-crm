@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.database import SessionLocal
 from app.models.monitoring import WorkerHeartbeat
@@ -23,13 +23,13 @@ def record_pipeline_heartbeat(self):
                 worker_name=worker_name,
                 worker_type="pipeline",
                 status="healthy",
-                last_seen_at=datetime.utcnow(),
+                last_seen_at=datetime.now(timezone.utc),
                 metadata_blob={"source": "beat-scheduled-heartbeat"},
             )
             db.add(heartbeat)
         else:
             heartbeat.status = "healthy"
-            heartbeat.last_seen_at = datetime.utcnow()
+            heartbeat.last_seen_at = datetime.now(timezone.utc)
             heartbeat.metadata_blob = {"source": "beat-scheduled-heartbeat"}
         db.commit()
     finally:
