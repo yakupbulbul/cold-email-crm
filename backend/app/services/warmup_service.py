@@ -20,7 +20,7 @@ SCHEDULER_STALE_AFTER_SECONDS = WARMUP_INTERVAL_SECONDS * 2
 class WarmupPlanner:
     @staticmethod
     def get_daily_limit(mailbox: Mailbox) -> int:
-        days_active = (datetime.now(timezone.utc) - mailbox.created_at).days
+        days_active = (datetime.now(timezone.utc).replace(tzinfo=None) - mailbox.created_at).days
         if days_active <= 3:
             return 5
         if days_active <= 7:
@@ -31,7 +31,7 @@ class WarmupPlanner:
 
     @staticmethod
     def next_run_at(now: datetime | None = None) -> datetime:
-        current = now or datetime.now(timezone.utc)
+        current = now or datetime.now(timezone.utc).replace(tzinfo=None)
         interval_minutes = max(WARMUP_INTERVAL_SECONDS // 60, 1)
         next_boundary_minute = ((current.minute // interval_minutes) + 1) * interval_minutes
         if next_boundary_minute >= 60:
@@ -242,7 +242,7 @@ class WarmupService:
         return {"processed": processed, "status": "completed"}
 
     def _attempt_send(self, pair: WarmupPair) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         daily_limit = WarmupPlanner.get_daily_limit(pair.sender)
         sent_today = self._sender_success_count_today(pair.sender_mailbox_id)
 
@@ -290,7 +290,7 @@ class WarmupService:
         try:
             self.smtp.send_email(req)
             event.status = "success"
-            event.sent_at = datetime.now(timezone.utc)
+            event.sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
             event.result_detail = "Warm-up email sent successfully."
             pair.last_sent_at = event.sent_at
             pair.last_result = "success"
@@ -313,7 +313,7 @@ class WarmupService:
         self.db.commit()
 
     def _record_skipped_event(self, pair: WarmupPair, detail: str) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         event = WarmupEvent(
             mailbox_id=pair.sender_mailbox_id,
             pair_id=pair.id,
@@ -363,7 +363,7 @@ class WarmupService:
 
         mailbox.warmup_status = status
         mailbox.warmup_block_reason = block_reason
-        mailbox.warmup_last_checked_at = datetime.now(timezone.utc)
+        mailbox.warmup_last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
         if mailbox.warmup_last_result is None:
             mailbox.warmup_last_result = "never_run"
         self.db.add(mailbox)
@@ -386,7 +386,7 @@ class WarmupService:
         }
 
     def _update_mailbox_warmup_outcome(self, mailbox: Mailbox, result: str, block_reason: str | None) -> None:
-        mailbox.warmup_last_checked_at = datetime.now(timezone.utc)
+        mailbox.warmup_last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
         mailbox.warmup_last_result = result
         mailbox.warmup_block_reason = block_reason
         mailbox.warmup_status = "ready" if result == "success" else mailbox.warmup_status or "blocked"
@@ -458,7 +458,7 @@ class WarmupService:
                 "last_seen_at": None,
             }
 
-        age = (datetime.now(timezone.utc) - last_seen).total_seconds()
+        age = (datetime.now(timezone.utc).replace(tzinfo=None) - last_seen).total_seconds()
         if age > SCHEDULER_STALE_AFTER_SECONDS:
             return {
                 "status": "stale",
@@ -512,7 +512,7 @@ class WarmupService:
         return WarmupPlanner.next_run_at().isoformat()
 
     def _today_send_counts(self) -> tuple[int, int]:
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
         success = (
             self.db.query(func.count(WarmupEvent.id))
             .filter(
@@ -536,7 +536,7 @@ class WarmupService:
         return success, failed
 
     def _sender_success_count_today(self, sender_mailbox_id) -> int:
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
         return (
             self.db.query(func.count(WarmupEvent.id))
             .filter(
@@ -550,7 +550,7 @@ class WarmupService:
         )
 
     def _pair_daily_sent_count(self, sender_mailbox_id, recipient_mailbox_id) -> int:
-        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(tzinfo=None).replace(hour=0, minute=0, second=0, microsecond=0)
         return (
             self.db.query(func.count(WarmupEvent.id))
             .filter(

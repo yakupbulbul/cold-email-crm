@@ -159,7 +159,7 @@ class EmailVerificationService:
 
     def _verify_contact(self, contact: Contact) -> LeadVerificationResult:
         checks = self.basic_checks.validate(contact.email)
-        checked_at = datetime.now(timezone.utc)
+        checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
         reasons: list[str] = []
 
         syntax_valid = checks.syntax_valid

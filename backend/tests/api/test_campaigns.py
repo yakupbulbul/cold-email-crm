@@ -303,7 +303,7 @@ def test_list_campaigns_ignores_stale_queued_job_in_execution_summary(client: Te
     db.commit()
     db.refresh(campaign)
 
-    stale_time = datetime.now(timezone.utc) - timedelta(days=2)
+    stale_time = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
     db.add(
         JobLog(
             job_id="stale-queued-job",
@@ -319,9 +319,9 @@ def test_list_campaigns_ignores_stale_queued_job_in_execution_summary(client: Te
             job_type="campaign_cycle",
             status="completed",
             payload_summary={"campaign_id": str(campaign.id)},
-            created_at=datetime.now(timezone.utc) - timedelta(minutes=1),
-            started_at=datetime.now(timezone.utc) - timedelta(minutes=1),
-            finished_at=datetime.now(timezone.utc) - timedelta(seconds=30),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=1),
+            started_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=1),
+            finished_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=30),
         )
     )
     db.commit()

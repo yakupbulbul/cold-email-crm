@@ -27,8 +27,8 @@ class Domain(Base):
     mailcow_last_checked_at = Column(DateTime, nullable=True)
     dns_last_checked_at = Column(DateTime, nullable=True)
     
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     mailboxes = relationship("Mailbox", back_populates="domain", cascade="all, delete-orphan")
 
@@ -89,8 +89,8 @@ class Mailbox(Base):
     smtp_last_check_category = Column(String, nullable=True)
     smtp_last_check_message = Column(String, nullable=True)
     
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     domain = relationship("Domain", back_populates="mailboxes")
     oauth_token = relationship("MailboxOAuthToken", back_populates="mailbox", uselist=False, cascade="all, delete-orphan")
@@ -113,8 +113,8 @@ class MailProviderSetting(Base):
     google_workspace_last_checked_at = Column(DateTime, nullable=True)
     google_workspace_last_check_status = Column(String, nullable=True)
     google_workspace_last_check_message = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class MailboxOAuthToken(Base):
@@ -132,7 +132,7 @@ class MailboxOAuthToken(Base):
     connection_status = Column(String, default="not_connected", nullable=False)
     last_refreshed_at = Column(DateTime, nullable=True)
     last_error = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     mailbox = relationship("Mailbox", back_populates="oauth_token")

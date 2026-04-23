@@ -11,9 +11,9 @@ class WorkerHeartbeat(Base):
     worker_name = Column(String, index=True, nullable=False)
     worker_type = Column(String, nullable=False)
     status = Column(String, nullable=False) # healthy, degraded, failed
-    last_seen_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_seen_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     metadata_blob = Column(JSON, nullable=True) # avoiding reserved keyword
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class JobLog(Base):
     __tablename__ = "job_logs"
@@ -27,7 +27,7 @@ class JobLog(Base):
     retry_count = Column(Integer, default=0)
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class CampaignPreflightCheck(Base):
     __tablename__ = "campaign_preflight_checks"
@@ -38,7 +38,7 @@ class CampaignPreflightCheck(Base):
     severity = Column(String, nullable=False)
     message = Column(Text, nullable=True)
     metadata_blob = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class DeliverabilityEvent(Base):
     __tablename__ = "deliverability_events"
@@ -51,8 +51,8 @@ class DeliverabilityEvent(Base):
     provider_message_id = Column(String, nullable=True)
     smtp_response = Column(Text, nullable=True)
     metadata_blob = Column(JSON, nullable=True)
-    occurred_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    occurred_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -64,7 +64,7 @@ class AuditLog(Base):
     metadata_blob = Column(JSON, nullable=True)
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class SystemAlert(Base):
     __tablename__ = "system_alerts"
@@ -78,8 +78,8 @@ class SystemAlert(Base):
     is_acknowledged = Column(Boolean, default=False)
     acknowledged_by = Column(UUID(as_uuid=True), nullable=True)
     acknowledged_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class NotificationReadState(Base):
@@ -91,8 +91,8 @@ class NotificationReadState(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     notification_key = Column(String, nullable=False, index=True)
-    read_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    read_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
 
 class QualityCheckRun(Base):
@@ -103,9 +103,9 @@ class QualityCheckRun(Base):
     status = Column(String, nullable=False, index=True)
     summary = Column(Text, nullable=True)
     triggered_by_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     completed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     results = relationship("QualityCheckResult", back_populates="run", cascade="all, delete-orphan", order_by="QualityCheckResult.created_at")
 
@@ -124,7 +124,7 @@ class QualityCheckResult(Base):
     entity_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     href = Column(String, nullable=True)
     metadata_blob = Column(JSON, nullable=True)
-    checked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    checked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     run = relationship("QualityCheckRun", back_populates="results")

@@ -17,7 +17,7 @@ def sync_all_inboxes():
         job_id=str(uuid.uuid4()),
         job_type="imap_sync",
         status="running",
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(job)
     db.commit()
@@ -39,7 +39,7 @@ def sync_all_inboxes():
             except Exception as exc:
                 logger.warning(f"Skipping IMAP sync for {mb.email}: {exc}")
         job.status = "completed"
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
         job.payload_summary = {"mailboxes_processed": len(mailboxes)}
         db.add(job)
         db.commit()
@@ -47,7 +47,7 @@ def sync_all_inboxes():
         logger.error(f"IMAP Sync Worker Error: {e}")
         job.status = "failed"
         job.error_message = str(e)
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.add(job)
         db.commit()
     finally:

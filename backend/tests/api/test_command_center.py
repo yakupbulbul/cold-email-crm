@@ -12,7 +12,7 @@ def test_command_center_task_note_runbook_flow(client, auth_headers):
             "description": "Run dry-run before sending.",
             "priority": "high",
             "category": "campaign",
-            "due_at": (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
+            "due_at": (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=2)).isoformat(),
         },
     )
     assert task_resp.status_code == 200

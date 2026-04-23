@@ -43,7 +43,7 @@ class ProviderSettingsService:
             row.default_provider = default_provider
         if allow_existing_disabled_provider_mailboxes is not None:
             row.allow_existing_disabled_provider_mailboxes = allow_existing_disabled_provider_mailboxes
-        row.updated_at = datetime.now(timezone.utc)
+        row.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.add(row)
         self.db.commit()
         self.db.refresh(row)

@@ -19,7 +19,7 @@ def run_campaign_cycle(self, campaign_id: str | None = None):
             db.commit()
             db.refresh(job)
         job.status = "running"
-        job.started_at = datetime.now(timezone.utc)
+        job.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
 
         logger.info("Starting Campaign Dispatch Engine cycle")
@@ -30,7 +30,7 @@ def run_campaign_cycle(self, campaign_id: str | None = None):
         else:
             service.process_active_campaigns()
         job.status = "completed"
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
     except Exception as e:
         logger.error(f"Campaign Worker Error: {e}")
@@ -38,7 +38,7 @@ def run_campaign_cycle(self, campaign_id: str | None = None):
         if job:
             job.status = "failed"
             job.error_message = str(e)
-            job.finished_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
             db.commit()
     finally:
         db.close()

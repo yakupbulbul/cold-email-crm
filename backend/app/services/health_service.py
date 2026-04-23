@@ -63,7 +63,7 @@ class SystemHealthService:
         except Exception as exc:
             logger.warning(f"Celery worker ping failed, falling back to DB heartbeats: {exc}")
 
-        threshold = datetime.now(timezone.utc) - timedelta(minutes=5)
+        threshold = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=5)
         active_workers = self.db.query(WorkerHeartbeat).filter(WorkerHeartbeat.last_seen_at >= threshold).count()
         total_workers = self.db.query(WorkerHeartbeat).count()
 
