@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["frontend/preview-proxy.js"],
+      "cwd": "/Users/yakupbulbul/Documents/codex/cold-mail",
+      "port": 3020,
+      "env": {
+        "PORT": "3020"
+      }
+    }
+  ]
+}
