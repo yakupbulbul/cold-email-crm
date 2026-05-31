@@ -11,7 +11,6 @@ import {
   MailPlus,
   Network,
   Send,
-  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -92,17 +91,17 @@ export default function LandingPage() {
         </header>
 
         <main className="space-y-8 py-8 sm:space-y-12 sm:py-12">
-          <section className="grid gap-8 rounded-[2rem] border border-white/70 bg-[var(--surface)]/88 p-6 shadow-[0_28px_70px_rgba(45,31,20,0.08)] backdrop-blur sm:p-8 lg:grid-cols-[1.15fr,0.85fr] lg:items-center lg:p-10">
+          <section className="rounded-[2rem] border border-white/70 bg-[var(--surface)]/88 p-6 shadow-[0_28px_70px_rgba(45,31,20,0.08)] backdrop-blur sm:p-8 lg:p-10">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-[#b8d4b6] bg-[#d4e4d3] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#2d6a4f]">
                 <Sparkles size={14} />
-                Unified outreach operations
+                Outreach operations
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-[-0.06em] text-[var(--foreground)] sm:text-5xl lg:text-[3.7rem] lg:leading-[0.95]">
-                Run cold email infrastructure, campaigns, inbox, and warm-up from one product.
+                Cold email campaigns, inbox, and warm-up — one workspace.
               </h1>
               <p className="mt-5 max-w-xl text-base leading-7 text-[var(--muted-foreground)] sm:text-lg">
-                Campaign Manager keeps domain setup, mailbox control, contacts, replies, warm-up, and operational health in one workspace so teams can run outbound systems without losing clarity.
+                Manage domains, mailboxes, contacts, and replies without switching tools.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link href={primaryHref} className="btn-primary px-5 py-3 text-sm sm:text-base">
@@ -110,32 +109,9 @@ export default function LandingPage() {
                   <ArrowRight size={16} />
                 </Link>
                 <a href="#workflow" className="btn-secondary px-5 py-3 text-sm sm:text-base">
-                  Learn how it works
+                  How it works
                 </a>
               </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <LandingMetric
-                title="Domains and senders"
-                detail="Keep readiness, provider health, and sender posture visible before any campaign starts."
-                icon={Globe}
-              />
-              <LandingMetric
-                title="Campaign execution"
-                detail="Launch and monitor campaigns with clear list, compliance, and delivery context."
-                icon={Send}
-              />
-              <LandingMetric
-                title="Reply operations"
-                detail="Track inbox threads and operator follow-up without leaving the product."
-                icon={Inbox}
-              />
-              <LandingMetric
-                title="Warm-up and health"
-                detail="Understand worker state, scheduler posture, and provider blockers in one place."
-                icon={ShieldCheck}
-              />
             </div>
           </section>
 
@@ -227,25 +203,6 @@ export default function LandingPage() {
   );
 }
 
-function LandingMetric({
-  title,
-  detail,
-  icon: Icon,
-}: {
-  title: string;
-  detail: string;
-  icon: typeof Globe;
-}) {
-  return (
-    <div className="rounded-[1.6rem] border border-[var(--border)] bg-[var(--surface-muted)]/85 p-5">
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--surface)] text-[var(--foreground)] shadow-sm">
-        <Icon size={18} />
-      </div>
-      <div className="mt-4 text-base font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</div>
-      <div className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">{detail}</div>
-    </div>
-  );
-}
 
 function ValuePoint({ label, detail }: { label: string; detail: string }) {
   return (
