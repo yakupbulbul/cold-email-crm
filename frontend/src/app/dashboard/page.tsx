@@ -76,7 +76,13 @@ export default function Dashboard() {
         <EmptyState
           icon={AlertCircle}
           title="No operational summary available"
-          description="The backend did not return dashboard summary data yet. Refresh after the API becomes available."
+          description="Dashboard data will appear after you add a domain and mailbox."
+          action={
+            <Link href="/domains" className="btn-primary mt-4 inline-flex items-center gap-2">
+              <Globe size={16} />
+              Add a domain
+            </Link>
+          }
         />
       ) : (
         <>
