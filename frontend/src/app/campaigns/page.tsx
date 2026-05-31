@@ -121,6 +121,7 @@ export default function CampaignsPage() {
   const [sequenceErrors, setSequenceErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'campaign' | 'template'; id: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -224,10 +225,16 @@ export default function CampaignsPage() {
     event.preventDefault();
     setSubmitError(null);
     setBanner(null);
-    if (!name.trim() || !mailboxId || !subject.trim() || !body.trim()) {
-      setSubmitError('Name, mailbox, subject, and body are required.');
+    const errors: Record<string, string> = {};
+    if (!name.trim()) errors.name = 'Campaign name is required.';
+    if (!mailboxId) errors.mailbox = 'Select a mailbox.';
+    if (!subject.trim()) errors.subject = 'Subject line is required.';
+    if (!body.trim()) errors.body = 'Email body is required.';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     setIsSubmitting(true);
     const created = await createCampaign({
       name: name.trim(),
@@ -688,20 +695,23 @@ export default function CampaignsPage() {
       <form onSubmit={handleCreate} className="grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="campaign-name" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Campaign Name</label>
-          <input id="campaign-name" data-testid="campaign-name-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="April outreach" className="form-input" />
+          <input id="campaign-name" data-testid="campaign-name-input" value={name} onChange={(event) => { setName(event.target.value); setFieldErrors((e) => { const { name: _, ...rest } = e; return rest; }); }} placeholder="April outreach" className={`form-input ${fieldErrors.name ? 'border-red-300 focus:ring-red-400' : ''}`} />
+          {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
         </div>
         <div>
           <label htmlFor="campaign-mailbox" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Mailbox</label>
-          <select id="campaign-mailbox" data-testid="campaign-mailbox-select" value={mailboxId} onChange={(event) => setMailboxId(event.target.value)} className="form-input">
+          <select id="campaign-mailbox" data-testid="campaign-mailbox-select" value={mailboxId} onChange={(event) => { setMailboxId(event.target.value); setFieldErrors((e) => { const { mailbox: _, ...rest } = e; return rest; }); }} className={`form-input ${fieldErrors.mailbox ? 'border-red-300 focus:ring-red-400' : ''}`}>
             <option value="">Select a mailbox</option>
             {mailboxes.map((mailbox) => (
               <option key={mailbox.id} value={mailbox.id}>{mailbox.email}</option>
             ))}
           </select>
+          {fieldErrors.mailbox && <p className="mt-1 text-xs text-red-600">{fieldErrors.mailbox}</p>}
         </div>
         <div>
           <label htmlFor="campaign-subject" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Template Subject</label>
-          <input id="campaign-subject" data-testid="campaign-subject-input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Quick introduction" className="form-input" />
+          <input id="campaign-subject" data-testid="campaign-subject-input" value={subject} onChange={(event) => { setSubject(event.target.value); setFieldErrors((e) => { const { subject: _, ...rest } = e; return rest; }); }} placeholder="Quick introduction" className={`form-input ${fieldErrors.subject ? 'border-red-300 focus:ring-red-400' : ''}`} />
+          {fieldErrors.subject && <p className="mt-1 text-xs text-red-600">{fieldErrors.subject}</p>}
         </div>
         <div>
           <label htmlFor="campaign-template-picker" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Template Library</label>
@@ -741,7 +751,8 @@ export default function CampaignsPage() {
         </div>
         <div className="md:col-span-2">
           <label htmlFor="campaign-body" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Template Body</label>
-          <textarea id="campaign-body" data-testid="campaign-body-input" value={body} onChange={(event) => setBody(event.target.value)} rows={5} placeholder="Hi {{first_name}}, ..." className="form-input resize-y" />
+          <textarea id="campaign-body" data-testid="campaign-body-input" value={body} onChange={(event) => { setBody(event.target.value); setFieldErrors((e) => { const { body: _, ...rest } = e; return rest; }); }} rows={5} placeholder="Hi {{first_name}}, ..." className={`form-input resize-y ${fieldErrors.body ? 'border-red-300 focus:ring-red-400' : ''}`} />
+          {fieldErrors.body && <p className="mt-1 text-xs text-red-600">{fieldErrors.body}</p>}
         </div>
         <div className="md:col-span-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
