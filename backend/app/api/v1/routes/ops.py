@@ -66,12 +66,6 @@ def get_imap_health(
 ):
     return SystemHealthService(db).check_imap_health(host, port)
 
-@public_router.get("/health/mailcow")
-def get_mailcow_health(
-    db: Session = Depends(get_db),
-    _: None = Depends(_allow_anonymous_or_admin),
-):
-    return SystemHealthService(db).check_mailcow_health()
 
 @router.get("/jobs")
 def get_recent_jobs(status: str = "all", db: Session = Depends(get_db)):

@@ -10,7 +10,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.integrations.imap.provider import IMAPFetchedMessage, IMAPProviderError, MailcowIMAPProvider
+from app.integrations.imap.provider import IMAPFetchedMessage, IMAPProviderError, GoogleWorkspaceIMAPProvider
 from app.models.campaign import Campaign, Contact, SendLog
 from app.models.core import Mailbox
 from app.models.email import Message, Thread
@@ -286,7 +286,7 @@ class ThreadResolverService:
 class IMAPSyncManager:
     def __init__(self, db: Session):
         self.db = db
-        self.provider = MailcowIMAPProvider()
+        self.provider = GoogleWorkspaceIMAPProvider()
         self.registry = MailProviderRegistry(db)
 
     def diagnose_mailbox(self, mailbox: Mailbox) -> dict:

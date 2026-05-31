@@ -7,7 +7,7 @@ from app.models.core import Mailbox
 from app.models.campaign import SendLog
 from app.models.email import Message
 from app.schemas.email import SendEmailLogResponse, SendEmailRequest
-from app.integrations.smtp.provider import MailcowSMTPProvider, SMTPDiagnosticResult
+from app.integrations.smtp.provider import GoogleWorkspaceSMTPProvider, SMTPDiagnosticResult
 from app.services.mail_provider_service import MailProviderRegistry, ProviderUnavailableError
 from app.services.imap_service import MessageParserService, ThreadResolverService
 
@@ -23,7 +23,7 @@ class SMTPServiceError(Exception):
 class SMTPManagerService:
     def __init__(self, db: Session):
         self.db = db
-        self.provider = MailcowSMTPProvider()
+        self.provider = GoogleWorkspaceSMTPProvider()
         self.registry = MailProviderRegistry(db)
 
     def derive_security_mode(self, mailbox: Mailbox) -> str:
