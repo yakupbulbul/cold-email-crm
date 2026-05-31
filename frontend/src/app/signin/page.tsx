@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Lock, ShieldCheck, Activity, Eye, EyeOff, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import { AlertBanner, FieldGroup } from "@/components/ui/primitives";
 import { useRouter } from "next/navigation";
@@ -100,23 +100,9 @@ export default function SignInPage() {
                             </div>
                         </Link>
 
-                        <div className="mt-8">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
-                                Secure operator sign-in
-                            </div>
-                            <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-[-0.04em] text-[var(--foreground)] sm:text-3xl">
-                                Access the workspace for campaigns, senders, and replies.
-                            </h1>
-                            <p className="mt-4 text-sm leading-6 text-[var(--muted-foreground)]">
-                                Sign in with your operator credentials to manage outbound infrastructure and campaign operations.
-                            </p>
-                        </div>
-
-                        <div className="mt-6 space-y-3">
-                            <ValuePoint icon={ShieldCheck} text="Backend-authenticated workspace access" />
-                            <ValuePoint icon={Activity} text="Operational status, warm-up, inbox, and campaign controls" />
-                            <ValuePoint icon={CheckCircle2} text="Focused entry point for authorized users" />
-                        </div>
+                        <h1 className="mt-8 text-2xl font-semibold leading-tight tracking-[-0.04em] text-[var(--foreground)]">
+                            Your campaign operations workspace.
+                        </h1>
                     </div>
 
                     <div className="order-1 flex justify-center lg:order-2">
@@ -137,15 +123,9 @@ export default function SignInPage() {
                                     </Link>
                                 </div>
 
-                                <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
-                                    Workspace access
-                                </div>
-                                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-[var(--foreground)] sm:text-4xl">
+                                <h2 className="text-3xl font-semibold tracking-[-0.045em] text-[var(--foreground)] sm:text-4xl">
                                     Sign in
                                 </h2>
-                                <p className="mt-3 text-sm leading-6 text-[var(--muted-foreground)]">
-                                    Continue to your internal dashboard.
-                                </p>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-5">
@@ -157,7 +137,6 @@ export default function SignInPage() {
 
                                 <FieldGroup
                                     label="Email address"
-                                    hint="Use the operator email assigned to your workspace."
                                     error={emailError}
                                 >
                                     <div className="relative">
@@ -180,7 +159,6 @@ export default function SignInPage() {
 
                                 <FieldGroup
                                     label="Password"
-                                    hint="Your credentials stay within the existing backend auth flow."
                                     error={passwordError}
                                 >
                                     <div className="relative">
@@ -225,9 +203,8 @@ export default function SignInPage() {
                                 </button>
                             </form>
 
-                            <div className="mt-6 flex flex-col justify-between gap-3 border-t border-[var(--surface-muted)] pt-5 text-sm text-[var(--muted-foreground)] sm:flex-row sm:items-center">
-                                <span>Protected by backend session auth.</span>
-                                <Link href="/" className="font-medium text-[var(--foreground)] hover:text-[var(--foreground)]">
+                            <div className="mt-6 border-t border-[var(--surface-muted)] pt-5 text-center text-sm">
+                                <Link href="/" className="font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
                                     Product overview
                                 </Link>
                             </div>
@@ -239,19 +216,3 @@ export default function SignInPage() {
     );
 }
 
-function ValuePoint({
-    icon: Icon,
-    text,
-}: {
-    icon: typeof ShieldCheck;
-    text: string;
-}) {
-    return (
-        <div className="flex items-start gap-3 text-sm leading-6 text-[var(--muted-foreground)]">
-            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar)] text-white">
-                <Icon size={13} />
-            </div>
-            <span>{text}</span>
-        </div>
-    );
-}
