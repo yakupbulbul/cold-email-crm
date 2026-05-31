@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.v1.routes import health, sending, warmup, campaigns, ai, auth, leads, suppression, ops, ops_deliverability, domains, mailboxes, inbox, settings, lists, deliverability, command_center, notifications, quality_center
+from app.api.v1.routes import health, sending, warmup, campaigns, auth, leads, suppression, ops, ops_deliverability, domains, mailboxes, inbox, settings, lists, deliverability, command_center, notifications, quality_center
 from app.api.deps import get_current_active_user, get_current_active_admin
 
 api_router = APIRouter()
@@ -13,7 +13,6 @@ api_router.include_router(leads.router, prefix="/leads", tags=["leads"], depende
 api_router.include_router(suppression.router, prefix="/suppression", tags=["suppression"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(warmup.router, prefix="/warmup", tags=["warmup"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"], dependencies=[Depends(get_current_active_user)])
-api_router.include_router(ai.router, prefix="/ai", tags=["ai"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(sending.router, prefix="", tags=["sending"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(domains.router, prefix="/domains", tags=["domains"], dependencies=[Depends(get_current_active_user)])
 api_router.include_router(mailboxes.router, prefix="/mailboxes", tags=["mailboxes"], dependencies=[Depends(get_current_active_user)])

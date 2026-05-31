@@ -27,7 +27,6 @@ class Thread(Base):
     campaign = relationship("Campaign")
     contact = relationship("Contact")
     messages = relationship("Message", back_populates="thread", cascade="all, delete-orphan")
-    ai_summary = relationship("AiSummary", back_populates="thread", uselist=False, cascade="all, delete-orphan")
 
 
 class Message(Base):
@@ -62,20 +61,3 @@ class Message(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     thread = relationship("Thread", back_populates="messages")
-
-
-class AiSummary(Base):
-    __tablename__ = "ai_summaries"
-    
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    thread_id = Column(UUID(as_uuid=True), ForeignKey("threads.id", ondelete="CASCADE"), nullable=False, unique=True)
-    
-    summary = Column(Text, nullable=True)
-    intent = Column(String, nullable=True)  # e.g., "interested", "not_interested", "warmup"
-    tone = Column(String, nullable=True)
-    extracted_entities = Column(JSON, default=dict)
-    
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
-
-    thread = relationship("Thread", back_populates="ai_summary")
