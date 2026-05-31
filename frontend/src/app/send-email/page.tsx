@@ -192,7 +192,7 @@ export default function SendEmailPage() {
             From preview: <span className="break-all text-slate-800">{buildSenderPreview(selectedMailbox)}</span>
           </div>
           <div className="mt-2 text-sm text-slate-600">
-            {selectedMailbox.email} via {(selectedMailbox.provider_type || "mailcow").replaceAll("_", " ")} on {selectedMailbox.smtp_host}:{selectedMailbox.smtp_port} using {selectedMailbox.smtp_security_mode.toUpperCase()}
+            {selectedMailbox.email} via {(selectedMailbox.provider_type || "google_workspace").replaceAll("_", " ")} on {selectedMailbox.smtp_host}:{selectedMailbox.smtp_port} using {selectedMailbox.smtp_security_mode.toUpperCase()}
           </div>
           <div className="mt-2 text-sm text-slate-600">
             Provider state: {(selectedMailbox.provider_status || "active").replaceAll("_", " ")} · OAuth {(selectedMailbox.oauth_connection_status || "not_connected").replaceAll("_", " ")}

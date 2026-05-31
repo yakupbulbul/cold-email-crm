@@ -17,7 +17,7 @@ export default function MailboxesPage() {
   const [selectedDomainId, setSelectedDomainId] = useState('');
   const [localPart, setLocalPart] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [providerType, setProviderType] = useState<MailProviderType>('mailcow');
+  const [providerType, setProviderType] = useState<MailProviderType>('google_workspace');
   const [password, setPassword] = useState('');
   const [smtpSecurityMode, setSmtpSecurityMode] = useState<'starttls' | 'ssl' | 'plain'>('starttls');
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -67,11 +67,7 @@ export default function MailboxesPage() {
   const callbackOAuthMessage = searchParams.get("oauth_message");
 
   const enabledProviders = settingsSummary?.enabled_providers || [];
-  const mailboxModeMessage = providerType === "mailcow"
-    ? (settingsSummary?.mailcow_mutations_enabled
-      ? 'Mutation mode creates the mailbox in Mailcow and CRM together. If Mailcow rejects the request, nothing is stored locally.'
-      : 'Safe mode stores the Mailcow mailbox locally only. It does not provision anything in Mailcow.')
-    : 'Google Workspace mailboxes use backend-only OAuth. SMTP and IMAP routing stay unified after connection.';
+  const mailboxModeMessage = 'Google Workspace mailboxes use backend-only OAuth. SMTP and IMAP routing stay unified after connection.';
 
   const handleCreateMailbox = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -84,10 +80,6 @@ export default function MailboxesPage() {
       setSubmitError('Mailbox local-part and display name are required.');
       return;
     }
-    if (providerType === "mailcow" && !password.trim()) {
-      setSubmitError('Mailcow mailboxes require the mailbox password.');
-      return;
-    }
     const email = `${localPart.trim().toLowerCase()}@${selectedDomain.name}`;
     setIsSubmitting(true);
     let created: Mailbox | null = null;
@@ -96,11 +88,9 @@ export default function MailboxesPage() {
         domain_id: selectedDomain.id,
         email,
         display_name: displayName.trim(),
-        provider_type: providerType,
+        provider_type: "google_workspace",
         smtp_security_mode: smtpSecurityMode,
-        smtp_password: providerType === "mailcow" ? password : undefined,
-        imap_password: providerType === "mailcow" ? password : undefined,
-        oauth_enabled: providerType === "google_workspace",
+        oauth_enabled: true,
       });
     } catch (createError) {
       setSubmitError(createError instanceof Error ? createError.message : 'Mailbox create failed.');
@@ -262,7 +252,7 @@ export default function MailboxesPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard title="Configured mailboxes" value={mailboxes.length} detail="Senders currently available in the app." icon={Mail} />
         <MetricCard title="Domains" value={domains.length} detail="Verified or local domains ready for mailbox creation." icon={ShieldCheck} tone="info" />
-        <MetricCard title="Provisioning mode" value={providerType === "mailcow" ? (settingsSummary?.mailcow_mutations_enabled ? "Mailcow synced" : "Local only") : "OAuth mailbox"} detail={mailboxModeMessage} icon={Edit2} tone={providerType === "mailcow" && settingsSummary?.mailcow_mutations_enabled ? "success" : "warning"} />
+        <MetricCard title="Provisioning mode" value="OAuth mailbox" detail={mailboxModeMessage} icon={Edit2} tone="info" />
       </div>
 
       <SurfaceCard className="p-5">
@@ -270,9 +260,7 @@ export default function MailboxesPage() {
           <div>
             <label htmlFor="mailbox-provider" className="block text-sm font-semibold text-slate-700 mb-2">Provider</label>
             <select id="mailbox-provider" value={providerType} onChange={(event) => setProviderType(event.target.value as MailProviderType)} className="form-input">
-              {(["mailcow", "google_workspace"] as MailProviderType[]).filter((provider) => enabledProviders.includes(provider)).map((provider) => (
-                <option key={provider} value={provider}>{provider === "mailcow" ? "Mailcow" : "Google Workspace"}</option>
-              ))}
+              <option value="google_workspace">Google Workspace</option>
             </select>
           </div>
           <div>
@@ -295,7 +283,7 @@ export default function MailboxesPage() {
           </div>
           <div>
             <label htmlFor="mailbox-password" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Password</label>
-            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={providerType === "mailcow" ? "Local mailbox password" : "Not required for OAuth mailboxes"} disabled={providerType !== "mailcow"} className="form-input disabled:bg-slate-100 disabled:text-slate-400" />
+            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Not required for OAuth mailboxes" disabled className="form-input disabled:bg-slate-100 disabled:text-slate-400" />
           </div>
           <div>
             <label htmlFor="mailbox-smtp-mode" className="block text-sm font-semibold text-slate-700 mb-2">SMTP Security Mode</label>
@@ -378,10 +366,8 @@ export default function MailboxesPage() {
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{mb.provider_type.replaceAll("_", " ")}</p>
                         <p className="mt-1 text-[11px] text-slate-500">Visible sender: {mb.display_name?.trim() ? `${mb.display_name} <${mb.email}>` : mb.email}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                            mb.provider_type === "mailcow" && mb.remote_mailcow_provisioned ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                          }`}>
-                            {mb.provider_type === "mailcow" ? (mb.remote_mailcow_provisioned ? 'Mailcow synced' : 'Local only') : 'OAuth mailbox'}
+                          <span className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                            OAuth mailbox
                           </span>
                           {isGoogleWorkspace ? (
                             <StatusBadge tone={providerTone} className="text-[11px]">

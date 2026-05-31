@@ -234,7 +234,7 @@ export default function WarmupPage() {
                       <div>
                         <div className="font-semibold text-slate-800">{mailbox.email}</div>
                         <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                          {(mailbox.provider_type || "mailcow").replaceAll("_", " ")}
+                          {(mailbox.provider_type || "google_workspace").replaceAll("_", " ")}
                         </div>
                         <div className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                           {mailbox.warmup_status}

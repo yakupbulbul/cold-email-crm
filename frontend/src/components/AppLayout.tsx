@@ -20,7 +20,7 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
     },
     "/domains": {
         title: "Domains",
-        description: "Manage domain readiness, Mailcow visibility, and DNS verification without leaving the app.",
+        description: "Manage domain readiness and DNS verification without leaving the app.",
     },
     "/mailboxes": {
         title: "Mailboxes",
@@ -60,7 +60,7 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
     },
     "/settings": {
         title: "Settings",
-        description: "Review backend runtime state, worker mode, and Mailcow configuration without exposing secrets.",
+        description: "Review backend runtime state, worker mode, and Google Workspace configuration without exposing secrets.",
     },
     "/quality-center": {
         title: "Quality Center",

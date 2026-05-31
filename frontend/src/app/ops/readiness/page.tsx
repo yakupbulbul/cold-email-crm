@@ -87,7 +87,7 @@ export default function ReadinessDashboard() {
 
                             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-medium">
                                 <AlertTriangle className="inline-block mr-2 text-amber-500" size={16}/> 
-                                Always ensure <strong>Mailcow SMTP bounds</strong> are detached during restoration to prevent duplicate backlogged message deliveries.
+                                Always ensure <strong>SMTP sending</strong> is paused during restoration to prevent duplicate backlogged message deliveries.
                             </div>
                         </div>
                     </div>

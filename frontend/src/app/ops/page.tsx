@@ -146,14 +146,14 @@ export default function OpsDashboard() {
 
             {settingsSummary ? (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 mt-8">
-                    {(["mailcow", "google_workspace"] as const).map((provider) => {
+                    {(["google_workspace"] as const).map((provider) => {
                         const item = settingsSummary.providers[provider];
                         return (
                             <SurfaceCard key={provider} className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Provider</div>
-                                        <div className="mt-2 text-xl font-extrabold text-slate-900">{provider === "mailcow" ? "Mailcow" : "Google Workspace"}</div>
+                                        <div className="mt-2 text-xl font-extrabold text-slate-900">Google Workspace</div>
                                     </div>
                                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
                                         <Mail size={18} />

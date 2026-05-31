@@ -12,7 +12,6 @@ const statusTone: Record<string, string> = {
     warning: "bg-amber-50 text-amber-700 border-amber-200",
     degraded: "bg-amber-50 text-amber-700 border-amber-200",
     dns_partial: "bg-amber-50 text-amber-700 border-amber-200",
-    mailcow_verified: "bg-blue-50 text-blue-700 border-blue-200",
     local_only: "bg-slate-100 text-slate-700 border-slate-200",
     blocked: "bg-red-50 text-red-700 border-red-200",
     failed: "bg-red-50 text-red-700 border-red-200",
@@ -150,7 +149,7 @@ export default function DomainsPage() {
             <PageHeader
                 eyebrow="Infrastructure"
                 title="Domain Infrastructure"
-                description="Add domains, verify readiness, and inspect DNS plus Mailcow state from one operational surface."
+                description="Add domains, verify readiness, and inspect DNS state from one operational surface."
             />
 
             <SurfaceCard className="p-5">
@@ -201,7 +200,7 @@ export default function DomainsPage() {
                  <EmptyState
                     icon={Globe}
                     title="No domains added yet"
-                    description="Add a domain to inspect Mailcow visibility and MX, SPF, DKIM, and DMARC readiness."
+                    description="Add a domain to inspect MX, SPF, DKIM, and DMARC readiness."
                  />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -213,7 +212,6 @@ export default function DomainsPage() {
                                          <div className="text-lg font-bold">{d.name}</div>
                                          <div className="mt-2 flex flex-wrap gap-2">
                                              <StatusBadge label="Overall" value={d.status} />
-                                             <StatusBadge label="Mailcow" value={d.mailcow_status} />
                                              {deliverabilityByDomain[d.id] ? <StatusBadge label="Deliverability" value={deliverabilityByDomain[d.id].status} /> : null}
                                          </div>
                                      </div>
@@ -236,7 +234,7 @@ export default function DomainsPage() {
 
                                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                      <div className="font-semibold text-slate-700">Readiness summary</div>
-                                     <div className="mt-1">{d.mailcow_detail || "Mailcow verification has not run yet."}</div>
+                                     <div className="mt-1">{d.missing_requirements?.length ? d.missing_requirements[0] : "Domain verification has not run yet."}</div>
                                      {deliverabilityByDomain[d.id]?.blockers?.[0] || deliverabilityByDomain[d.id]?.warnings?.[0] ? (
                                          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
                                              {(deliverabilityByDomain[d.id].blockers[0] || deliverabilityByDomain[d.id].warnings[0]).message}
@@ -291,11 +289,6 @@ export default function DomainsPage() {
                                                  <div>Created: {new Date(d.created_at).toLocaleString()}</div>
                                                  <div>Last checked: {d.last_checked_at ? new Date(d.last_checked_at).toLocaleString() : "Never"}</div>
                                              </div>
-                                             <div className="rounded-xl bg-white p-4 border border-slate-200">
-                                                 <div className="font-semibold text-slate-800">Mailcow Verification</div>
-                                                 <div className="mt-2">Status: {d.mailcow_status.replaceAll("_", " ")}</div>
-                                                 <div>{d.mailcow_detail || "No Mailcow verification detail available."}</div>
-                                             </div>
                                          </div>
 
                                          <div className="mt-3 rounded-xl bg-white p-4 border border-slate-200">
@@ -337,12 +330,6 @@ export default function DomainsPage() {
                                          <div className="mt-3 rounded-xl bg-white p-4 border border-slate-200">
                                              <div className="font-semibold text-slate-800">How To Fix</div>
                                              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                                                 <GuidanceRow
-                                                     title="Mailcow"
-                                                     host={d.verification_summary?.remediation?.mailcow?.mailcow_host as string | undefined}
-                                                     expectedValue={d.verification_summary?.remediation?.mailcow?.action as string | undefined}
-                                                     explanation={d.verification_summary?.remediation?.mailcow?.detail as string | undefined}
-                                                 />
                                                  {(["mx", "spf", "dkim", "dmarc"] as const).map((key) => {
                                                      const guidance = d.verification_summary?.remediation?.dns?.[key] as {
                                                          host?: string;

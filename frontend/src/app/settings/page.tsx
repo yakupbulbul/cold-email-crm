@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApiService } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
-import { MailProviderType, SettingsSummary } from "@/types/models";
+import { SettingsSummary } from "@/types/models";
 import {
     AlertCircle,
     CheckCircle2,
@@ -91,34 +91,12 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
     );
 }
 
-function formatMessage(summary: SettingsSummary) {
-    if (!summary.mailcow_configured) {
-        return "Mailcow integration is not configured on the backend.";
-    }
-
-    if (summary.mailcow_status === "healthy") {
-        return summary.safe_mode
-            ? "Mailcow integration is configured and reachable in read-only safe mode."
-            : "Mailcow integration is configured and reachable with mutation mode enabled.";
-    }
-
-    if (summary.mailcow_reason === "unauthorized") {
-        return "Mailcow integration is configured but the backend credentials are unauthorized.";
-    }
-
-    if (summary.mailcow_reason === "unreachable") {
-        return "Mailcow integration is configured but the backend cannot reach Mailcow right now.";
-    }
-
-    return summary.mailcow_detail || "Mailcow integration is not healthy.";
-}
-
 export default function SettingsPage() {
     const { user } = useAuth();
     const { getSettingsSummary, updateProviderSettings, loading, error } = useApiService();
     const [summary, setSummary] = useState<SettingsSummary | null>(null);
     const [refreshing, setRefreshing] = useState(false);
-    const [providerSaving, setProviderSaving] = useState<MailProviderType | "default" | null>(null);
+    const [providerSaving, setProviderSaving] = useState<"google_workspace" | "default" | null>(null);
     const [providerError, setProviderError] = useState<string | null>(null);
 
     const loadSummary = useCallback(async () => {
@@ -130,31 +108,14 @@ export default function SettingsPage() {
         setRefreshing(false);
     }, [getSettingsSummary]);
 
-    const handleProviderToggle = useCallback(async (provider: MailProviderType, enabled: boolean) => {
-        setProviderSaving(provider);
+    const handleProviderToggle = useCallback(async (enabled: boolean) => {
+        setProviderSaving("google_workspace");
         setProviderError(null);
         try {
-            const updated = await updateProviderSettings(
-                provider === "mailcow"
-                    ? { mailcow_enabled: enabled }
-                    : { google_workspace_enabled: enabled },
-            );
+            const updated = await updateProviderSettings({ google_workspace_enabled: enabled });
             setSummary(updated);
         } catch (err) {
             setProviderError(err instanceof Error ? err.message : "Provider settings update failed.");
-        } finally {
-            setProviderSaving(null);
-        }
-    }, [updateProviderSettings]);
-
-    const handleDefaultProvider = useCallback(async (provider: MailProviderType) => {
-        setProviderSaving("default");
-        setProviderError(null);
-        try {
-            const updated = await updateProviderSettings({ default_provider: provider });
-            setSummary(updated);
-        } catch (err) {
-            setProviderError(err instanceof Error ? err.message : "Default provider update failed.");
         } finally {
             setProviderSaving(null);
         }
@@ -235,12 +196,11 @@ export default function SettingsPage() {
                         <DetailRow label="Readiness" value={<StatusBadge value="unknown" />} />
                     </SettingCard>
                     <SettingCard
-                        title="Mailcow Integration"
+                        title="Google Workspace"
                         subtitle="Backend summary is unavailable, so provider detail could not be refreshed."
                         icon={<Mail size={20} />}
                     >
                         <DetailRow label="Status" value={<StatusBadge value="unknown" />} />
-                        <DetailRow label="Mode" value="Read only" />
                     </SettingCard>
                     <SettingCard
                         title="Worker / Queue Mode"
@@ -264,12 +224,14 @@ export default function SettingsPage() {
         );
     }
 
+    const gwProvider = summary.providers?.google_workspace;
+
     return (
         <div className="space-y-6 animate-fade-in">
             <PageHeader
                 eyebrow="Configuration"
                 title="System settings"
-                description="Review real runtime state for the app, infrastructure, worker mode, and backend-only Mailcow integration."
+                description="Review real runtime state for the app, infrastructure, worker mode, and Google Workspace integration."
                 actions={(
                 <button
                     type="button"
@@ -310,13 +272,13 @@ export default function SettingsPage() {
                     </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Mailcow Mode</div>
-                    <div className="mt-3 text-2xl font-extrabold text-slate-800">
-                        {summary.mailcow_mutations_enabled ? "Mutation Enabled" : "Read Only"}
+                    <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Mail Provider</div>
+                    <div className="mt-3 text-2xl font-extrabold text-slate-800">Google Workspace</div>
+                    <div className="mt-2 text-sm text-slate-500">
+                        {gwProvider?.configured ? "Google Workspace OAuth is configured." : "Google Workspace OAuth needs configuration."}
                     </div>
-                    <div className="mt-2 text-sm text-slate-500">{formatMessage(summary)}</div>
                     <div className="mt-4">
-                        <StatusBadge value={summary.mailcow_status} />
+                        <StatusBadge value={gwProvider?.status || "unknown"} />
                     </div>
                 </div>
             </div>
@@ -370,81 +332,37 @@ export default function SettingsPage() {
                 </SettingCard>
 
                 <SettingCard
-                    title="Mail Providers"
-                    subtitle="Enable or disable mailbox providers globally, inspect provider health, and control the default provider for new mailboxes."
+                    title="Google Workspace Provider"
+                    subtitle="Google Workspace OAuth provider status and configuration."
                     icon={<Mail size={20} />}
                 >
                     <div className="space-y-4">
-                        {(["mailcow", "google_workspace"] as MailProviderType[]).map((provider) => {
-                            const providerSummary = summary.providers[provider];
-                            const checked = providerSummary?.enabled ?? false;
-                            return (
-                                <div key={provider} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                                        <div>
-                                            <div className="text-sm font-bold text-slate-900">{provider === "mailcow" ? "Mailcow" : "Google Workspace"}</div>
-                                            <div className="mt-1 text-sm text-slate-600">{providerSummary?.detail || "No provider detail available."}</div>
-                                            <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                <StatusBadge value={providerSummary?.status || "unknown"} />
-                                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                                                    {providerSummary?.configured ? "Configured" : "Not configured"}
-                                                </span>
-                                                {provider === "google_workspace" ? (
-                                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                                                        OAuth {providerSummary?.oauth_connection_status?.replaceAll("_", " ") || "not connected"}
-                                                    </span>
-                                                ) : null}
-                                            </div>
-                                        </div>
-                                        <label className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800">
-                                            <span>{checked ? "Enabled" : "Disabled"}</span>
-                                            <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={(event) => void handleProviderToggle(provider, event.target.checked)}
-                                                disabled={providerSaving === provider}
-                                            />
-                                        </label>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <div className="text-sm font-bold text-slate-900">Google Workspace</div>
+                                    <div className="mt-1 text-sm text-slate-600">{gwProvider?.detail || "No provider detail available."}</div>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                        <StatusBadge value={gwProvider?.status || "unknown"} />
+                                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                            {gwProvider?.configured ? "Configured" : "Not configured"}
+                                        </span>
+                                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                            OAuth {gwProvider?.oauth_connection_status?.replaceAll("_", " ") || "not connected"}
+                                        </span>
                                     </div>
                                 </div>
-                            );
-                        })}
-                        <div className="rounded-xl border border-slate-200 bg-white p-4">
-                            <div className="text-sm font-bold text-slate-900">Default provider</div>
-                            <div className="mt-1 text-sm text-slate-600">New mailbox setup defaults to this provider unless the operator chooses another one.</div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {(["mailcow", "google_workspace"] as MailProviderType[]).map((provider) => (
-                                    <button
-                                        key={provider}
-                                        type="button"
-                                        onClick={() => void handleDefaultProvider(provider)}
-                                        disabled={providerSaving === "default"}
-                                        className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-                                            summary.default_provider === provider
-                                                ? "border-slate-900 bg-slate-900 text-white"
-                                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                                        }`}
-                                    >
-                                        {provider === "mailcow" ? "Mailcow" : "Google Workspace"}
-                                    </button>
-                                ))}
+                                <label className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800">
+                                    <span>{gwProvider?.enabled ? "Enabled" : "Disabled"}</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={gwProvider?.enabled ?? false}
+                                        onChange={(event) => void handleProviderToggle(event.target.checked)}
+                                        disabled={providerSaving === "google_workspace"}
+                                    />
+                                </label>
                             </div>
                         </div>
-                    </div>
-                </SettingCard>
-
-                <SettingCard
-                    title="Mailcow Integration"
-                    subtitle="Backend-only Mailcow visibility. The frontend never talks to Mailcow directly."
-                    icon={<Mail size={20} />}
-                >
-                    <DetailRow label="Configured" value={summary.mailcow_configured ? "Yes" : "No"} />
-                    <DetailRow label="Status" value={<StatusBadge value={summary.mailcow_status} />} />
-                    <DetailRow label="Reason" value={summary.mailcow_reason ? summary.mailcow_reason.replaceAll("_", " ") : "None"} />
-                    <DetailRow label="Mode" value={summary.mailcow_mutations_enabled ? "Mutation enabled" : "Read only"} />
-                    <DetailRow label="Frontend direct access" value={summary.frontend_mailcow_direct_access ? "Enabled" : "Disabled"} />
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                        {summary.mailcow_detail || formatMessage(summary)}
                     </div>
                 </SettingCard>
 
@@ -471,21 +389,12 @@ export default function SettingsPage() {
                 </SettingCard>
 
                 <SettingCard
-                    title="Feature Flags / Safe Mode"
-                    subtitle="Safe operational posture for local and validation work."
+                    title="Feature Flags"
+                    subtitle="Operational posture for local and validation work."
                     icon={<Shield size={20} />}
                 >
-                    <DetailRow label="Safe mode" value={summary.safe_mode ? "Enabled" : "Disabled"} />
-                    <DetailRow
-                        label="Mailcow mutations"
-                        value={summary.mailcow_mutations_enabled ? "Enabled" : "Disabled"}
-                    />
                     <DetailRow label="Auth enabled" value={summary.auth_enabled ? "Yes" : "No"} />
-                    <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
-                        {summary.safe_mode
-                            ? "This environment is protecting Mailcow by default. Domain checks are read-only, mailbox provisioning stays local-only, and worker-backed actions may require full mode."
-                            : "Mutation mode is enabled. Review Mailcow-facing operations carefully."}
-                    </div>
+                    <DetailRow label="Default provider" value="Google Workspace" />
                     {error ? (
                         <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                             Latest refresh error: {error}
@@ -498,9 +407,11 @@ export default function SettingsPage() {
                 <h2 className="text-lg font-bold text-slate-800">Troubleshooting Guidance</h2>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                        <div className="font-semibold text-slate-800">Mailcow Verification</div>
+                        <div className="font-semibold text-slate-800">Google Workspace</div>
                         <div className="mt-2">
-                            {formatMessage(summary)}
+                            {gwProvider?.configured
+                                ? "Google Workspace OAuth is configured. Connect individual mailboxes from the Mailboxes page."
+                                : "Configure Google Workspace OAuth credentials in the backend environment variables."}
                         </div>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
