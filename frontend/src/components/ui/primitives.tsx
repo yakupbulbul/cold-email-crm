@@ -16,7 +16,7 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-slate-200/80 pb-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="flex flex-col gap-3 border-b border-[var(--border)] pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
         {eyebrow ? (
           <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted-foreground)]">
@@ -124,7 +124,7 @@ export function StatusBadge({
   className?: string;
 }) {
   const toneClasses = {
-    neutral: "border-slate-200 bg-slate-100 text-slate-700",
+    neutral: "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--foreground)]",
     success: "border-emerald-200 bg-emerald-50 text-emerald-700",
     warning: "border-amber-200 bg-amber-50 text-amber-700",
     danger: "border-rose-200 bg-rose-50 text-rose-700",
@@ -201,7 +201,7 @@ export function EmptyState({
   return (
     <SurfaceCard className="flex min-h-[260px] flex-col items-center justify-center p-8 text-center">
       <div data-testid="empty-state" className="contents" />
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-500">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-[var(--muted-foreground)]">
         <Icon size={24} />
       </div>
       <h3 className="mt-5 text-lg font-semibold text-[var(--foreground)]">{title}</h3>
@@ -243,7 +243,7 @@ export function DetailItem({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-3 last:border-b-0 last:pb-0 first:pt-0">
+    <div className="flex items-start justify-between gap-4 border-b border-[var(--surface-muted)] py-3 last:border-b-0 last:pb-0 first:pt-0">
       <div className="text-sm text-[var(--muted-foreground)]">{label}</div>
       <div className="text-right text-sm font-medium text-[var(--foreground)]">{value}</div>
     </div>

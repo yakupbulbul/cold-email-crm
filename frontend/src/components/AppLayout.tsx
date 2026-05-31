@@ -94,7 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50 w-full font-bold text-slate-400">
+            <div className="min-h-screen flex items-center justify-center bg-[var(--background)] w-full font-bold text-[var(--muted-foreground)]">
                 <div className="flex flex-col items-center gap-4">
                     <Spinner size="lg" />
                     <span>Hydrating Secure Session...</span>
@@ -117,7 +117,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <button
                             type="button"
                             onClick={() => setMobileNavOpen(true)}
-                            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm lg:hidden"
                             aria-label="Open navigation"
                         >
                             <Menu size={20} />

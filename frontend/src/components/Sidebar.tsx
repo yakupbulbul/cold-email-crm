@@ -58,31 +58,31 @@ export default function Sidebar({
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm transition-opacity lg:hidden",
+          "fixed inset-0 z-40 bg-[#2d1f14]/45 backdrop-blur-sm transition-opacity lg:hidden",
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0",
         )}
         onClick={onClose}
       />
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-[18rem] flex-col border-r border-slate-800 bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform lg:z-20 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-[18rem] flex-col border-r border-[#3d2e22] bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-transform lg:z-20 lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-      <div className="border-b border-slate-800 px-5 py-5">
+      <div className="border-b border-[#3d2e22] px-5 py-5">
         <div className="mb-4 flex items-center justify-between lg:hidden">
-          <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Navigation</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8b7e74]">Navigation</div>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700 text-slate-300"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#4a3a2e] text-[#d4c9bc]"
             aria-label="Close navigation"
           >
             <X size={18} />
           </button>
         </div>
         <Link href="/dashboard" className="flex items-center gap-4" onClick={onClose}>
-          <div className="rounded-2xl bg-white px-4 py-3">
+          <div className="rounded-2xl bg-[#faf8f5] px-4 py-3">
             <Image
               src="/crm-logo.png"
               alt="Campaign Manager"
@@ -93,15 +93,15 @@ export default function Sidebar({
             />
           </div>
           <div>
-            <div className="text-sm font-semibold text-white">Campaign Manager</div>
-            <div className="text-xs text-slate-400">B2B + B2C outreach ops</div>
+            <div className="text-sm font-semibold text-[#faf8f5]">Campaign Manager</div>
+            <div className="text-xs text-[#8b7e74]">B2B + B2C outreach ops</div>
           </div>
         </Link>
       </div>
       <nav className="flex-1 space-y-7 overflow-y-auto px-4 py-6 pb-8">
         {NAV_GROUPS.map((group) => (
           <div key={group.title}>
-            <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+            <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b7e74]">
               {group.title}
             </div>
             <div className="mt-3 space-y-1.5">
@@ -120,11 +120,11 @@ export default function Sidebar({
                     className={cn(
                       "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition-all",
                       isActive
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                        ? "bg-[#faf8f5] text-[#2d1f14] shadow-sm"
+                        : "text-[#d4c9bc] hover:bg-[#3d2e22] hover:text-[#faf8f5]",
                     )}
                   >
-                    <div className={cn("rounded-xl p-2", isActive ? "bg-slate-100 text-slate-700" : "bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-slate-200")}>
+                    <div className={cn("rounded-xl p-2", isActive ? "bg-[#d4e4d3] text-[#2d6a4f]" : "bg-[#3d2e22] text-[#8b7e74] group-hover:bg-[#4a3a2e] group-hover:text-[#d4c9bc]")}>
                       <Icon size={16} />
                     </div>
                     <span>{item.label}</span>

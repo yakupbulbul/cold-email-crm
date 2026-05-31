@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f7fb;
-  --foreground: #0f172a;
-  --muted-foreground: #5f6b85;
-  --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --border: #dbe3ef;
-  --border-strong: #c4d0e3;
-  --accent: #eef4ff;
-  --accent-strong: #dbe8ff;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #cbd5e1;
-  --primary: #2563eb;
+  --background: #faf8f5;
+  --foreground: #2d1f14;
+  --muted-foreground: #8b7e74;
+  --surface: #fffdf9;
+  --surface-muted: #f5f0eb;
+  --border: #e5ddd3;
+  --border-strong: #d4c9bc;
+  --accent: #d4e4d3;
+  --accent-strong: #b8d4b6;
+  --sidebar: #2d1f14;
+  --sidebar-foreground: #d4c9bc;
+  --primary: #2d6a4f;
   --primary-foreground: #ffffff;
-  --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --shadow-soft: 0 18px 40px rgba(45, 31, 20, 0.06);
 }
 
 @theme inline {
@@ -52,7 +52,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.22);
+  outline: 2px solid rgba(45, 106, 79, 0.22);
   outline-offset: 2px;
 }
 
@@ -78,10 +78,10 @@ a:focus-visible {
   width: 100%;
   border-radius: 1rem;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--surface);
   padding: 0.875rem 1rem;
   color: var(--foreground);
-  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.02);
+  box-shadow: inset 0 1px 1px rgba(45, 31, 20, 0.02);
 }
 
 .form-input-with-leading-icon {
@@ -93,12 +93,12 @@ a:focus-visible {
 }
 
 .form-input::placeholder {
-  color: #94a3b8;
+  color: #a89e94;
 }
 
 .form-input:focus {
-  border-color: rgba(37, 99, 235, 0.5);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  border-color: rgba(45, 106, 79, 0.5);
+  box-shadow: 0 0 0 4px rgba(45, 106, 79, 0.12);
 }
 
 .btn-primary {
@@ -107,15 +107,15 @@ a:focus-visible {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 999px;
-  background: var(--foreground);
-  color: white;
+  background: var(--primary);
+  color: var(--primary-foreground);
   padding: 0.85rem 1.2rem;
   font-weight: 600;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 10px 24px rgba(45, 106, 79, 0.2);
 }
 
 .btn-primary:hover {
-  background: #020617;
+  background: #245a42;
 }
 
 .btn-secondary {
@@ -125,7 +125,7 @@ a:focus-visible {
   gap: 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: white;
+  background: var(--surface);
   color: var(--foreground);
   padding: 0.85rem 1.2rem;
   font-weight: 600;
