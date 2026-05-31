@@ -40,6 +40,9 @@ import {
     Runbook,
     RunbookStep,
 } from "@/types/models";
+
+export type Paginated<T> = { items: T[]; total: number; skip: number; limit: number };
+
 type MailboxCreatePayload = {
     domain_id: string;
     email: string;
@@ -200,7 +203,7 @@ export function useApiService() {
     const runQualityReleaseReadiness = useCallback(() => requestOrThrow<QualityCheckRun>("/quality-center/runs/release-readiness", { method: "POST" }), [requestOrThrow]);
 
     // ── CAMPAIGNS ──
-    const getCampaigns = useCallback(() => request<Campaign[]>("/campaigns"), [request]);
+    const getCampaigns = useCallback((skip = 0, limit = 50) => request<Paginated<Campaign>>(`/campaigns?skip=${skip}&limit=${limit}`), [request]);
     const getCampaignById = useCallback((id: string) => request<Campaign>(`/campaigns/${id}`), [request]);
     const createCampaign = useCallback((data: CampaignCreatePayload) => request<Campaign>("/campaigns", { method: "POST", body: data }), [request]);
     const updateCampaign = useCallback((id: string, data: CampaignUpdatePayload) => requestOrThrow<Campaign>(`/campaigns/${id}`, { method: "PUT", body: data }), [requestOrThrow]);
@@ -221,8 +224,8 @@ export function useApiService() {
     const updateCampaignSequence = useCallback((id: string, steps: CampaignSequenceStep[]) => requestOrThrow<CampaignSequenceStep[]>(`/campaigns/${id}/sequence`, { method: "PUT", body: steps }), [requestOrThrow]);
 
     // ── LEADS / CONTACTS ──
-    const getLeads = useCallback(() => request<Contact[]>("/leads"), [request]);
-    const getLeadsWithFilters = useCallback((query: string) => request<Contact[]>(`/leads${query ? `?${query}` : ""}`), [request]);
+    const getLeads = useCallback((skip = 0, limit = 50) => request<Paginated<Contact>>(`/leads?skip=${skip}&limit=${limit}`), [request]);
+    const getLeadsWithFilters = useCallback((query: string) => request<Paginated<Contact>>(`/leads${query ? `?${query}` : ""}`), [request]);
     const updateLead = useCallback((leadId: string, data: LeadUpdatePayload) => requestOrThrow<Contact>(`/leads/${leadId}`, { method: "PATCH", body: data }), [requestOrThrow]);
     const updateLeadContactTypeBulk = useCallback((data: LeadBulkContactTypePayload) => requestOrThrow<{ status: string; lead_count: number; contact_type: "b2b" | "b2c" | null }>(`/leads/bulk/contact-type`, { method: "PATCH", body: data }), [requestOrThrow]);
     const verifyLead = useCallback((lead_id: string) => request<LeadVerificationResult>("/leads/verify", { method: "POST", body: { lead_id } }), [request]);
@@ -300,7 +303,7 @@ export function useApiService() {
     const getMessages = useCallback((threadId: string) => request<Message[]>(`/inbox/threads/${threadId}/messages`), [request]);
 
     // ── LISTS ──
-    const getLists = useCallback(() => request<LeadList[]>("/lists"), [request]);
+    const getLists = useCallback((skip = 0, limit = 200) => request<Paginated<LeadList>>(`/lists?skip=${skip}&limit=${limit}`), [request]);
     const getListById = useCallback((id: string) => request<LeadList>(`/lists/${id}`), [request]);
     const getListLeads = useCallback((id: string) => request<LeadListLeadResponse>(`/lists/${id}/leads`), [request]);
     const createList = useCallback((data: LeadListCreatePayload) => requestOrThrow<LeadList>("/lists", { method: "POST", body: data }), [requestOrThrow]);

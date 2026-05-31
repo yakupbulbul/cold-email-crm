@@ -129,6 +129,9 @@ export default function ContactsPage() {
   } = useApiService();
 
   const [leads, setLeads] = useState<Contact[]>([]);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
   const [lists, setLists] = useState<LeadList[]>([]);
   const [search, setSearch] = useState("");
   const [listFilterId, setListFilterId] = useState("all");
@@ -150,19 +153,20 @@ export default function ContactsPage() {
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([getLeads(), getLists()]).then(([leadData, listData]) => {
+    Promise.all([getLeads(page * pageSize, pageSize), getLists()]).then(([leadData, listData]) => {
       if (!ignore && leadData) {
-        setLeads(leadData);
+        setLeads(leadData.items);
+        setTotalLeads(leadData.total);
       }
       if (!ignore && listData) {
-        setLists(listData);
-        setBulkListTargetId((current) => current || listData[0]?.id || "");
+        setLists(listData.items);
+        setBulkListTargetId((current) => current || listData.items[0]?.id || "");
       }
     });
     return () => {
       ignore = true;
     };
-  }, [getLeads, getLists]);
+  }, [getLeads, getLists, page]);
 
   useEffect(() => {
     if (!bulkState || bulkState.status === "completed" || bulkState.status === "failed") {
@@ -308,10 +312,10 @@ export default function ContactsPage() {
     setAddingLeadId(leadId);
     try {
       await addLeadToList(listId, leadId);
-      const refreshedLeads = await getLeads();
+      const refreshedLeads = await getLeads(page * pageSize, pageSize);
       const refreshedLists = await getLists();
-      if (refreshedLeads) setLeads(refreshedLeads);
-      if (refreshedLists) setLists(refreshedLists);
+      if (refreshedLeads) { setLeads(refreshedLeads.items); setTotalLeads(refreshedLeads.total); }
+      if (refreshedLists) setLists(refreshedLists.items);
       setBanner("Lead added to list.");
     } catch (err) {
       setBanner(err instanceof Error ? err.message : "Lead add failed.");
@@ -328,10 +332,10 @@ export default function ContactsPage() {
     setAddingLeadId("__bulk__");
     try {
       await addLeadsToListBulk(bulkListTargetId, selectedLeadIds);
-      const refreshedLeads = await getLeads();
+      const refreshedLeads = await getLeads(page * pageSize, pageSize);
       const refreshedLists = await getLists();
-      if (refreshedLeads) setLeads(refreshedLeads);
-      if (refreshedLists) setLists(refreshedLists);
+      if (refreshedLeads) { setLeads(refreshedLeads.items); setTotalLeads(refreshedLeads.total); }
+      if (refreshedLists) setLists(refreshedLists.items);
       setSelectedLeadIds([]);
       setBanner("Selected leads added to list.");
     } catch (err) {
@@ -350,8 +354,8 @@ export default function ContactsPage() {
     setAddingLeadId("__bulk_tags__");
     try {
       await assignLeadTagsBulk(selectedLeadIds, tags);
-      const refreshedLeads = await getLeads();
-      if (refreshedLeads) setLeads(refreshedLeads);
+      const refreshedLeads = await getLeads(page * pageSize, pageSize);
+      if (refreshedLeads) { setLeads(refreshedLeads.items); setTotalLeads(refreshedLeads.total); }
       setBulkTags("");
       setSelectedLeadIds([]);
       setBanner("Tags assigned to selected leads.");
@@ -373,8 +377,8 @@ export default function ContactsPage() {
         lead_ids: selectedLeadIds,
         contact_type: bulkContactType,
       });
-      const refreshedLeads = await getLeads();
-      if (refreshedLeads) setLeads(refreshedLeads);
+      const refreshedLeads = await getLeads(page * pageSize, pageSize);
+      if (refreshedLeads) { setLeads(refreshedLeads.items); setTotalLeads(refreshedLeads.total); }
       setSelectedLeadIds([]);
       setBanner(`Updated ${result.lead_count} lead${result.lead_count === 1 ? "" : "s"} to ${result.contact_type || "mixed"}.`);
     } catch (err) {
@@ -392,8 +396,8 @@ export default function ContactsPage() {
     setAddingLeadId("__bulk_suppress__");
     try {
       await suppressLeadsBulk(selectedLeadIds, "bulk_contact_action");
-      const refreshedLeads = await getLeads();
-      if (refreshedLeads) setLeads(refreshedLeads);
+      const refreshedLeads = await getLeads(page * pageSize, pageSize);
+      if (refreshedLeads) { setLeads(refreshedLeads.items); setTotalLeads(refreshedLeads.total); }
       setSelectedLeadIds([]);
       setBanner("Selected leads suppressed.");
     } catch (err) {
@@ -725,6 +729,31 @@ export default function ContactsPage() {
               </TableRow>
             )}
           </Table>
+
+          {/* Pagination controls */}
+          {totalLeads > pageSize && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[var(--muted-foreground)]">
+                Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, totalLeads)} of {totalLeads}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="btn-secondary px-3 py-1.5 text-sm disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={(page + 1) * pageSize >= totalLeads}
+                  className="btn-secondary px-3 py-1.5 text-sm disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
 
           {filteredLeads.length > 0 && (
             <div className="flex items-center gap-3">

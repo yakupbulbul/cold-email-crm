@@ -129,8 +129,8 @@ export default function CampaignsPage() {
         setIsPageLoading(false);
         return;
       }
-      setCampaigns(campaignData);
-      setLists(listData);
+      setCampaigns(campaignData.items);
+      setLists(listData.items);
       setTemplates(templateData);
       if (mailboxData) {
         setMailboxes(mailboxData);
@@ -143,12 +143,12 @@ export default function CampaignsPage() {
 
   const refreshCampaigns = async () => {
     const refreshed = await getCampaigns();
-    if (refreshed) setCampaigns(refreshed);
+    if (refreshed) setCampaigns(refreshed.items);
   };
 
   const refreshLists = async () => {
     const refreshed = await getLists();
-    if (refreshed) setLists(refreshed);
+    if (refreshed) setLists(refreshed.items);
   };
 
   const refreshTemplates = async () => {

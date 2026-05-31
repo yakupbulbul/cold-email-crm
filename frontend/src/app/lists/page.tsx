@@ -49,10 +49,10 @@ export default function ListsPage() {
   useEffect(() => {
     const load = async () => {
       const [listData, leadData] = await Promise.all([getLists(), getLeads()]);
-      if (listData) setLists(listData);
+      if (listData) setLists(listData.items);
       if (leadData) {
-        setLeads(leadData);
-        setSelectedLeadId((current) => current || leadData[0]?.id || "");
+        setLeads(leadData.items);
+        setSelectedLeadId((current) => current || leadData.items[0]?.id || "");
       }
     };
     void load();
@@ -93,7 +93,7 @@ export default function ListsPage() {
   const refreshLists = async (focusListId?: string | null) => {
     const listData = await getLists();
     if (listData) {
-      setLists(listData);
+      setLists(listData.items);
       if (focusListId) {
         setSelectedListId(focusListId);
         const detail = await getListLeads(focusListId);
@@ -198,7 +198,7 @@ export default function ListsPage() {
       setBanner(`Updated ${updated.email} contact type to ${updated.contact_type || "mixed"}.`);
       await refreshLists(selectedListId);
       const refreshedLeads = await getLeads();
-      if (refreshedLeads) setLeads(refreshedLeads);
+      if (refreshedLeads) setLeads(refreshedLeads.items);
     } catch (err) {
       setBanner(err instanceof Error ? err.message : "Lead update failed.");
     } finally {
@@ -236,7 +236,7 @@ export default function ListsPage() {
       setBanner(`Updated ${result.lead_count} lead${result.lead_count === 1 ? "" : "s"} to ${result.contact_type || "mixed"}.`);
       await refreshLists(selectedListId);
       const refreshedLeads = await getLeads();
-      if (refreshedLeads) setLeads(refreshedLeads);
+      if (refreshedLeads) setLeads(refreshedLeads.items);
     } catch (err) {
       setBanner(err instanceof Error ? err.message : "Bulk contact type update failed.");
     } finally {
