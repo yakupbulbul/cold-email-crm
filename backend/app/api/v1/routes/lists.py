@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -42,9 +42,15 @@ def create_list(req: LeadListCreate, db: Session = Depends(get_db)):
 
 @router.get("")
 @router.get("/")
-def list_lists(db: Session = Depends(get_db)):
+def list_lists(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
     service = LeadListService(db)
-    return [service.summarize_list(item) for item in db.query(LeadList).order_by(LeadList.created_at.desc()).all()]
+    total = db.query(LeadList).count()
+    lists = db.query(LeadList).order_by(LeadList.created_at.desc()).offset(skip).limit(limit).all()
+    return {"items": [service.summarize_list(item) for item in lists], "total": total, "skip": skip, "limit": limit}
 
 
 @router.get("/{list_id}")
@@ -86,12 +92,30 @@ def delete_list(list_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{list_id}/leads")
-def get_list_leads(list_id: str, db: Session = Depends(get_db)):
+def get_list_leads(
+    list_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
     lead_list = _get_list_or_404(db, list_id)
     service = LeadListService(db)
-    contacts = [member.lead for member in lead_list.members]
+
+    total = db.query(LeadListMember).filter(LeadListMember.list_id == lead_list.id).count()
+    members = (
+        db.query(LeadListMember)
+        .filter(LeadListMember.list_id == lead_list.id)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    contacts = [m.lead for m in members]
+
     return {
         "list": service.summarize_list(lead_list),
+        "total": total,
+        "skip": skip,
+        "limit": limit,
         "leads": [
             {
                 "id": str(contact.id),

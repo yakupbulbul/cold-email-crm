@@ -78,6 +78,8 @@ def list_leads(
     min_score: int | None = Query(default=None),
     min_engagement_score: int | None = Query(default=None),
     tag: str | None = Query(default=None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
     query = db.query(Contact)
@@ -104,10 +106,18 @@ def list_leads(
         query = query.filter(Contact.engagement_score >= min_engagement_score)
     if list_id:
         query = query.join(LeadListMember, LeadListMember.lead_id == Contact.id).filter(LeadListMember.list_id == list_id)
-    contacts = query.all()
+
+    # Tag filtering requires Python-side check, so paginate after
     if tag:
-        contacts = [contact for contact in contacts if tag in normalize_tags(contact.tags)]
-    return [_serialize_contact(db, contact) for contact in contacts]
+        contacts = query.all()
+        contacts = [c for c in contacts if tag in normalize_tags(c.tags)]
+        total = len(contacts)
+        contacts = contacts[skip:skip + limit]
+    else:
+        total = query.count()
+        contacts = query.order_by(Contact.created_at.desc()).offset(skip).limit(limit).all()
+
+    return {"items": [_serialize_contact(db, c) for c in contacts], "total": total, "skip": skip, "limit": limit}
 
 @router.post("/import/csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
