@@ -37,11 +37,9 @@ class ProviderStatusItem(BaseModel):
     reason: str | None = None
     checked_at: str | None = None
     oauth_connection_status: str | None = None
-    safe_mode: bool | None = None
 
 
 class SettingsProvidersUpdateRequest(BaseModel):
-    mailcow_enabled: bool | None = None
     google_workspace_enabled: bool | None = None
     default_provider: str | None = None
     allow_existing_disabled_provider_mailboxes: bool | None = None
@@ -57,13 +55,6 @@ class SettingsSummaryResponse(BaseModel):
     worker_available: bool
     worker_detail: str | None = None
     readiness_status: str
-    safe_mode: bool
-    mailcow_mutations_enabled: bool
-    mailcow_configured: bool
-    mailcow_status: str
-    mailcow_reason: str | None = None
-    mailcow_detail: str | None = None
-    frontend_mailcow_direct_access: bool
     default_provider: str
     enabled_providers: list[str]
     allow_existing_disabled_provider_mailboxes: bool
@@ -93,20 +84,9 @@ def get_settings_summary(
                 "postgres": {"status": "unknown", "detail": "Database health could not be determined."},
                 "redis": {"status": "unknown", "detail": "Redis health could not be determined."},
                 "workers": {"status": "unknown", "detail": "Worker health could not be determined."},
-                "mailcow": {"status": "unknown", "detail": "Mailcow health could not be determined."},
                 "providers": {},
             },
             "detail": str(exc),
-        }
-
-    try:
-        mailcow_health = health_service.check_mailcow_health()
-    except Exception as exc:
-        mailcow_health = {
-            "status": provider_settings.mailcow_last_check_status or "unknown",
-            "detail": provider_settings.mailcow_last_check_message or "Mailcow health could not be determined.",
-            "reason": "mailcow_health_unavailable",
-            "configured": bool(settings.MAILCOW_BASE_URL and settings.MAILCOW_API_KEY),
         }
 
     try:
@@ -118,13 +98,6 @@ def get_settings_summary(
         provider_health = provider_registry.provider_health_payload()
     except Exception:
         provider_health = {
-            "mailcow": {
-                "enabled": provider_settings.mailcow_enabled,
-                "configured": bool(settings.MAILCOW_BASE_URL and settings.MAILCOW_API_KEY),
-                "status": provider_settings.mailcow_last_check_status or "unknown",
-                "detail": provider_settings.mailcow_last_check_message or "Mailcow provider health is currently unavailable.",
-                "reason": "provider_health_unavailable",
-            },
             "google_workspace": {
                 "enabled": provider_settings.google_workspace_enabled,
                 "configured": bool(settings.GOOGLE_WORKSPACE_CLIENT_ID and settings.GOOGLE_WORKSPACE_CLIENT_SECRET and settings.GOOGLE_WORKSPACE_REDIRECT_URI),
@@ -134,9 +107,6 @@ def get_settings_summary(
             },
         }
 
-    provider_settings.mailcow_last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    provider_settings.mailcow_last_check_status = provider_health["mailcow"]["status"]
-    provider_settings.mailcow_last_check_message = provider_health["mailcow"].get("detail")
     provider_settings.google_workspace_last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
     provider_settings.google_workspace_last_check_status = provider_health["google_workspace"]["status"]
     provider_settings.google_workspace_last_check_message = provider_health["google_workspace"].get("detail")
@@ -162,26 +132,10 @@ def get_settings_summary(
         worker_available=worker_status.get("status") == "healthy",
         worker_detail=worker_status.get("detail"),
         readiness_status=readiness["status"],
-        safe_mode=not settings.MAILCOW_ENABLE_MUTATIONS,
-        mailcow_mutations_enabled=settings.MAILCOW_ENABLE_MUTATIONS,
-        mailcow_configured=mailcow_health.get("configured", False),
-        mailcow_status=mailcow_health.get("status", "unknown"),
-        mailcow_reason=mailcow_health.get("reason"),
-        mailcow_detail=mailcow_health.get("detail"),
-        frontend_mailcow_direct_access=False,
         default_provider=provider_settings.default_provider,
         enabled_providers=[key for key, enabled in provider_registry.get_enabled_provider_map().items() if enabled],
         allow_existing_disabled_provider_mailboxes=provider_settings.allow_existing_disabled_provider_mailboxes,
         providers={
-            "mailcow": ProviderStatusItem(
-                enabled=provider_settings.mailcow_enabled,
-                configured=provider_health["mailcow"].get("configured", False),
-                status=provider_health["mailcow"].get("status", "unknown"),
-                detail=provider_health["mailcow"].get("detail"),
-                reason=provider_health["mailcow"].get("reason"),
-                checked_at=provider_settings.mailcow_last_checked_at.isoformat() if provider_settings.mailcow_last_checked_at else None,
-                safe_mode=not settings.MAILCOW_ENABLE_MUTATIONS,
-            ),
             "google_workspace": ProviderStatusItem(
                 enabled=provider_settings.google_workspace_enabled,
                 configured=provider_health["google_workspace"].get("configured", False),
@@ -205,7 +159,6 @@ def get_settings_summary(
             "database": item(overall_health["components"]["postgres"]),
             "redis": item(overall_health["components"]["redis"]),
             "workers": item(worker_status),
-            "mailcow": item(mailcow_health),
         },
     )
 
@@ -218,10 +171,9 @@ def update_provider_settings(
 ):
     if not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Only admins can update provider settings.")
-    if req.default_provider and req.default_provider not in {"mailcow", "google_workspace"}:
-        raise HTTPException(status_code=422, detail="default_provider must be mailcow or google_workspace.")
+    if req.default_provider and req.default_provider != "google_workspace":
+        raise HTTPException(status_code=422, detail="default_provider must be google_workspace.")
     ProviderSettingsService(db).update(
-        mailcow_enabled=req.mailcow_enabled,
         google_workspace_enabled=req.google_workspace_enabled,
         default_provider=req.default_provider,
         allow_existing_disabled_provider_mailboxes=req.allow_existing_disabled_provider_mailboxes,
@@ -234,7 +186,6 @@ def update_provider_settings(
         message="Provider settings updated.",
         actor=current_user,
         metadata={
-            "mailcow_enabled": req.mailcow_enabled,
             "google_workspace_enabled": req.google_workspace_enabled,
             "default_provider": req.default_provider,
             "allow_existing_disabled_provider_mailboxes": req.allow_existing_disabled_provider_mailboxes,

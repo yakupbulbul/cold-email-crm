@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Dict, Any
 from app.core.config import settings
-from app.integrations.mailcow import MailcowClient
 from app.services.mail_provider_service import MailProviderRegistry
 
 logger = logging.getLogger(__name__)
@@ -114,24 +113,6 @@ class SystemHealthService:
             logger.error(f"IMAP Check Failed for {host}: {e}")
             return {"status": "failed", "service": f"imap_{host}", "error": str(e)}
 
-    def check_mailcow_health(self) -> Dict[str, Any]:
-        result = MailcowClient().check_health()
-        payload: Dict[str, Any] = {
-            "status": result.status,
-            "service": "mailcow_api",
-            "detail": result.detail,
-            "mutations_enabled": settings.MAILCOW_ENABLE_MUTATIONS,
-            "reason": result.reason,
-            "configured": result.configured,
-            "reachable": result.reachable,
-            "header_attached": result.header_attached,
-            "base_url": result.base_url,
-            "request_path": result.request_path,
-        }
-        if result.http_status is not None:
-            payload["http_status"] = result.http_status
-        return payload
-
     def check_provider_health(self) -> Dict[str, Any]:
         registry = MailProviderRegistry(self.db)
         return registry.provider_health_payload()
@@ -140,11 +121,10 @@ class SystemHealthService:
         db_stat = self.check_db_health()
         redis_stat = self.check_redis_health()
         worker_stat = self.check_worker_health()
-        mailcow_stat = self.check_mailcow_health()
         provider_stats = self.check_provider_health()
 
         is_all_healthy = all(x["status"] == "healthy" for x in [db_stat, redis_stat])
-        is_any_failed = any(x["status"] == "failed" for x in [db_stat, redis_stat, worker_stat, mailcow_stat])
+        is_any_failed = any(x["status"] == "failed" for x in [db_stat, redis_stat, worker_stat])
 
         overall = "healthy"
         if is_any_failed:
@@ -152,17 +132,15 @@ class SystemHealthService:
         elif (
             not is_all_healthy
             or worker_stat["status"] in {"degraded", "disabled"}
-            or mailcow_stat["status"] in {"degraded", "unknown"}
         ):
             overall = "degraded"
-            
+
         return {
             "status": overall,
             "components": {
                 "postgres": db_stat,
                 "redis": redis_stat,
                 "workers": worker_stat,
-                "mailcow": mailcow_stat,
                 "providers": provider_stats,
             }
         }

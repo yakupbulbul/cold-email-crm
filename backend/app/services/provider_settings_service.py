@@ -16,9 +16,8 @@ class ProviderSettingsService:
         if row is not None:
             return row
         row = MailProviderSetting(
-            mailcow_enabled=True,
-            google_workspace_enabled=False,
-            default_provider="mailcow",
+            google_workspace_enabled=True,
+            default_provider="google_workspace",
             allow_existing_disabled_provider_mailboxes=False,
         )
         self.db.add(row)
@@ -29,14 +28,11 @@ class ProviderSettingsService:
     def update(
         self,
         *,
-        mailcow_enabled: bool | None = None,
         google_workspace_enabled: bool | None = None,
         default_provider: str | None = None,
         allow_existing_disabled_provider_mailboxes: bool | None = None,
     ) -> MailProviderSetting:
         row = self.get_or_create()
-        if mailcow_enabled is not None:
-            row.mailcow_enabled = mailcow_enabled
         if google_workspace_enabled is not None:
             row.google_workspace_enabled = google_workspace_enabled
         if default_provider is not None:
