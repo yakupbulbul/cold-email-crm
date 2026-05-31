@@ -6,11 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useApiService } from "@/services/api";
 import type { HeaderNotification } from "@/types/models";
 
-const severityStyles: Record<string, string> = {
-  critical: "border-rose-200 bg-rose-50 text-rose-700",
-  warning: "border-amber-200 bg-amber-50 text-amber-700",
-  info: "border-[#b8d4b6] bg-[#d4e4d3] text-[#2d6a4f]",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+const severityStyles: Record<string, { border: string; badge: string }> = {
+  critical: { border: "border-l-rose-500", badge: "text-rose-600" },
+  warning: { border: "border-l-amber-500", badge: "text-amber-600" },
+  info: { border: "border-l-[#2d6a4f]", badge: "text-[#2d6a4f]" },
+  success: { border: "border-l-emerald-500", badge: "text-emerald-600" },
 };
 
 function formatRelativeTime(value: string) {
@@ -265,24 +265,24 @@ export default function TopBar({
                   ) : (
                     notifications.map((notification) => {
                       const isUnread = !notification.read_at;
+                      const styles = severityStyles[notification.severity] || severityStyles.info;
                       return (
                         <button
                           key={notification.id}
                           type="button"
                           onClick={() => void handleNotificationClick(notification)}
-                          className="flex w-full gap-3 border-b border-[var(--surface-muted)] px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-[var(--surface-muted)]"
+                          className={`flex w-full border-b border-l-[3px] border-b-[var(--surface-muted)] px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-[var(--surface-muted)] ${styles.border}`}
                         >
-                          <span className={`mt-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${severityStyles[notification.severity] || severityStyles.info}`}>
-                            {notification.severity}
-                          </span>
                           <span className="min-w-0 flex-1">
                             <span className="flex items-start justify-between gap-3">
-                              <span className="line-clamp-1 text-sm font-semibold text-[var(--foreground)]">{notification.title}</span>
+                              <span className="text-sm font-semibold text-[var(--foreground)]">{notification.title}</span>
                               {isUnread ? <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-rose-500" /> : null}
                             </span>
                             <span className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--muted-foreground)]">{notification.message}</span>
-                            <span className="mt-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
-                              <span>{notification.source.replaceAll("_", " ")}</span>
+                            <span className="mt-2 flex items-center gap-1.5 text-[11px] tracking-wide text-[var(--muted-foreground)]">
+                              <span className={`font-bold uppercase ${styles.badge}`}>{notification.severity}</span>
+                              <span>·</span>
+                              <span className="font-medium uppercase">{notification.source.replaceAll("_", " ")}</span>
                               <span>·</span>
                               <span>{formatRelativeTime(notification.created_at)}</span>
                             </span>
