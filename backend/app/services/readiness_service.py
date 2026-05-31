@@ -52,9 +52,7 @@ class ReadinessService:
 
         # Secrets & Keys
         has_secret = bool(settings.SECRET_KEY)
-        has_openai = bool(settings.OPENAI_API_KEY)
-        mailcow = health_stat["components"]["mailcow"]
-        
+
         checks.append({
             "category": "Security",
             "check": "JWT Secret Key",
@@ -62,18 +60,15 @@ class ReadinessService:
             "detail": "SECRET_KEY is configured for session tokens." if has_secret else "MISSING SECRET_KEY! Auth will fail."
         })
 
+        # Google Workspace provider check
+        providers = health_stat["components"].get("providers", {})
+        gw = providers.get("google_workspace", {})
+        gw_status = gw.get("status", "unknown")
         checks.append({
             "category": "Integrations",
-            "check": "OpenAI Credentials",
-            "status": "pass" if has_openai else "warning",
-            "detail": "AI capabilities are enabled." if has_openai else "OPENAI_API_KEY missing. AI features disabled."
-        })
-
-        checks.append({
-            "category": "Integrations",
-            "check": "Mailcow API Connectivity",
-            "status": "pass" if mailcow["status"] == "healthy" else ("warning" if mailcow["status"] in {"degraded", "unknown"} else "fail"),
-            "detail": mailcow.get("detail", "Mailcow connectivity check did not return detail."),
+            "check": "Google Workspace OAuth",
+            "status": "pass" if gw_status == "healthy" else ("warning" if gw_status in {"misconfigured", "unknown"} else "fail"),
+            "detail": gw.get("detail", "Google Workspace provider health not available."),
         })
 
         total = len(checks)

@@ -17,10 +17,6 @@ services:
   backend:
     environment:
       APP_ENV: staging
-      MAILCOW_SMTP_HOST: mailpit
-      MAILCOW_SMTP_PORT: "1025"
-      MAILCOW_IMAP_HOST: mailpit
-      MAILCOW_IMAP_PORT: "1143"
       SEED_TEST_DATA: "true"
     depends_on:
       - mailpit
@@ -28,9 +24,5 @@ services:
   worker:
     environment:
       APP_ENV: staging
-      MAILCOW_SMTP_HOST: mailpit
-      MAILCOW_SMTP_PORT: "1025"
-      MAILCOW_IMAP_HOST: mailpit
-      MAILCOW_IMAP_PORT: "1143"
     depends_on:
       - mailpit
