@@ -100,7 +100,7 @@ def seed(session):
 
     # ── System Alerts ────────────────────────────────────────────────────
     alerts = [
-        SystemAlert(alert_type="smtp_health_failed", severity="critical", title="SMTP Connection Failure", message="Mailcow SMTP relay did not respond within 5s.", source="seed_script", is_active=True),
+        SystemAlert(alert_type="smtp_health_failed", severity="critical", title="SMTP Connection Failure", message="SMTP relay did not respond within 5s.", source="seed_script", is_active=True),
         SystemAlert(alert_type="bounce_rate_high", severity="warning", title="High Bounce Rate", message="Bounce rate exceeded 8% on mailbox dev@example.com", source="seed_script", is_active=True),
     ]
     session.add_all(alerts)

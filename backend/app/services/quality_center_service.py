@@ -160,7 +160,7 @@ class QualityCenterService:
                 ("postgres", "Database connectivity"),
                 ("redis", "Redis connectivity"),
                 ("workers", "Worker and scheduler readiness"),
-                ("mailcow", "Mailcow/provider API health"),
+                ("google_workspace", "Google Workspace provider health"),
             ]:
                 component = components.get(key, {})
                 status = _result_status_from_health(component.get("status"))

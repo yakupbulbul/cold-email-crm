@@ -179,7 +179,7 @@ class DeliverabilityService:
             "display_name": mailbox.display_name,
             "domain_id": str(mailbox.domain_id) if mailbox.domain_id else None,
             "domain": mailbox.domain.name if mailbox.domain else mailbox.email.split("@")[-1],
-            "provider_type": mailbox.provider_type or "mailcow",
+            "provider_type": mailbox.provider_type or "google_workspace",
             "status": status,
             "score": self._score_from_checks(checks),
             "last_checked_at": self._iso(mailbox.smtp_last_checked_at or mailbox.last_provider_check_at or mailbox.warmup_last_checked_at),
@@ -371,7 +371,6 @@ class DeliverabilityService:
     def provider_summary(self) -> dict[str, Any]:
         settings_row = ProviderSettingsService(self.db).get_or_create()
         enabled_map = {
-            "mailcow": settings_row.mailcow_enabled,
             "google_workspace": settings_row.google_workspace_enabled,
         }
         items = []
@@ -489,9 +488,12 @@ class DeliverabilityService:
         return self._check("bimi", "BIMI readiness", "warning", "info", "BIMI has not been checked or configured. This is optional for sending readiness.", "Add BIMI later if brand indicators are required.", bimi or {}, domain.dns_last_checked_at)
 
     def _domain_provider_check(self, domain: Domain) -> dict[str, Any]:
-        if domain.mailcow_status in {"verified", "pending", None}:
-            return self._check("provider_visibility", "Provider visibility", "pass" if domain.mailcow_status == "verified" else "warning", "info" if domain.mailcow_status == "verified" else "warning", domain.mailcow_detail or f"Provider visibility is {domain.mailcow_status or 'not checked'}.", "Verify the domain with the configured mail provider." if domain.mailcow_status != "verified" else None, None, domain.mailcow_last_checked_at)
-        return self._check("provider_visibility", "Provider visibility", "fail", "critical", domain.mailcow_detail or f"Provider visibility is {domain.mailcow_status}.", "Fix provider domain visibility before sending.", None, domain.mailcow_last_checked_at)
+        status = domain.status or "pending"
+        if status in {"ready", "dns_partial"}:
+            return self._check("provider_visibility", "Provider visibility", "pass", "info", "Domain DNS is configured for Google Workspace.", None, None, domain.dns_last_checked_at)
+        if status == "pending":
+            return self._check("provider_visibility", "Provider visibility", "warning", "warning", "Domain DNS has not been verified yet.", "Run domain verification to check DNS records.", None, domain.dns_last_checked_at)
+        return self._check("provider_visibility", "Provider visibility", "fail", "critical", f"Domain status is {status}.", "Fix DNS configuration before sending.", None, domain.dns_last_checked_at)
 
     def _mailbox_status_check(self, mailbox: Mailbox) -> dict[str, Any]:
         if mailbox.status == "active":
@@ -499,7 +501,7 @@ class DeliverabilityService:
         return self._check("mailbox_active", "Mailbox active", "fail", "critical", f"Mailbox is {mailbox.status}.", "Activate the mailbox before sending.")
 
     def _mailbox_provider_check(self, mailbox: Mailbox) -> dict[str, Any]:
-        provider_type = mailbox.provider_type or "mailcow"
+        provider_type = mailbox.provider_type or "google_workspace"
         try:
             self.providers.resolve_mailbox_provider(mailbox)
         except ProviderUnavailableError as exc:
@@ -511,8 +513,6 @@ class DeliverabilityService:
         return self._check("provider_available", "Provider available", "pass", "info", f"{provider_type.replace('_', ' ')} is available for this mailbox.", None, None, mailbox.last_provider_check_at)
 
     def _mailbox_oauth_check(self, mailbox: Mailbox) -> dict[str, Any]:
-        if (mailbox.provider_type or "mailcow") != "google_workspace":
-            return self._check("oauth", "OAuth connection", "pass", "info", "OAuth is not required for this provider.")
         status = mailbox.oauth_connection_status or (mailbox.oauth_token.connection_status if mailbox.oauth_token else "not_connected")
         if status == "connected":
             return self._check("oauth", "OAuth connection", "pass", "info", "Google Workspace OAuth is connected.", None, None, mailbox.oauth_last_checked_at)

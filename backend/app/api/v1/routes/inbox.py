@@ -32,7 +32,7 @@ def _serialize_mailbox_sync(mailbox: Mailbox) -> dict:
         block_reason = "Mailbox is inactive."
     elif not mailbox.inbox_sync_enabled:
         block_reason = "Inbox sync is disabled for this mailbox."
-    elif (mailbox.provider_type or "mailcow") == "google_workspace" and mailbox.oauth_connection_status != "connected":
+    elif mailbox.oauth_connection_status != "connected":
         block_reason = "Google Workspace OAuth must be connected before inbox sync can run."
     elif mailbox.inbox_last_error:
         block_reason = mailbox.inbox_last_error
