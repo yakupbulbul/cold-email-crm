@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Send, Globe, Inbox, AlertCircle, ArrowRight, Users } from 'lucide-react';
+import { Send, Globe, Inbox, AlertCircle, ArrowRight, RefreshCw, Users } from 'lucide-react';
 import { useApiService } from '@/services/api';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Spinner from '@/components/ui/Spinner';
 import { DeliverabilitySummary } from '@/types/models';
 import { AlertBanner, EmptyState, MetricCard, PageHeader, SectionTitle, StatusBadge, SurfaceCard } from "@/components/ui/primitives";
@@ -12,17 +12,34 @@ export default function Dashboard() {
   const { getDeliverabilitySummary, getMailboxes, loading, error } = useApiService();
   const [stats, setStats] = useState<DeliverabilitySummary | null>(null);
   const [mailboxCount, setMailboxCount] = useState<number>(0);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDashboardStats = useCallback(async () => {
+    const res = await getDeliverabilitySummary();
+    if (res) setStats(res);
+    const boxes = await getMailboxes();
+    if (boxes) setMailboxCount(boxes.length);
+    setLastRefreshed(new Date());
+  }, [getDeliverabilitySummary, getMailboxes]);
 
   useEffect(() => {
-    const fetchDashboardStats = async () => {
-      const res = await getDeliverabilitySummary();
-      if (res) setStats(res);
-      
-      const boxes = await getMailboxes();
-      if (boxes) setMailboxCount(boxes.length);
-    };
     fetchDashboardStats();
-  }, [getDeliverabilitySummary, getMailboxes]);
+  }, [fetchDashboardStats]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchDashboardStats();
+    setRefreshing(false);
+  };
+
+  const formatLastRefreshed = () => {
+    if (!lastRefreshed) return '';
+    const seconds = Math.floor((Date.now() - lastRefreshed.getTime()) / 1000);
+    if (seconds < 60) return 'Updated just now';
+    const minutes = Math.floor(seconds / 60);
+    return `Updated ${minutes} min ago`;
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -32,6 +49,11 @@ export default function Dashboard() {
         description="See infrastructure readiness, audience quality, and the next action your operators should take."
         actions={(
           <div className="flex flex-wrap items-center gap-3">
+            {lastRefreshed && <span className="text-xs text-[var(--muted-foreground)]">{formatLastRefreshed()}</span>}
+            <button type="button" onClick={() => void handleRefresh()} disabled={refreshing} className="btn-secondary inline-flex items-center gap-2">
+              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
             <Link href="/campaigns" className="btn-primary">
               New campaign
             </Link>
