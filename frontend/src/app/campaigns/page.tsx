@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Archive, BarChart2, Calendar, Link2, LoaderCircle, Pencil, Play, Plus, RefreshCw, ShieldAlert, Trash2, Users, X } from 'lucide-react';
 
 import Spinner from '@/components/ui/Spinner';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from '@/components/ui/primitives';
 import { useApiService } from '@/services/api';
 import { Campaign, CampaignDryRunResult, CampaignPreflightResult, CampaignSequenceStep, EmailTemplate, LeadList, Mailbox } from '@/types/models';
@@ -118,6 +119,8 @@ export default function CampaignsPage() {
   const [templateName, setTemplateName] = useState('');
   const [sequenceSteps, setSequenceSteps] = useState<Record<string, CampaignSequenceStep[]>>({});
   const [sequenceErrors, setSequenceErrors] = useState<Record<string, string>>({});
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'campaign' | 'template'; id: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -755,7 +758,7 @@ export default function CampaignsPage() {
               {templates.slice(0, 6).map((template) => (
                 <div key={template.id} className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)]">
                   <button type="button" onClick={() => applyTemplateToCreate(template.id)} className="hover:text-[var(--primary)]">{template.name}</button>
-                  <button type="button" onClick={() => void handleDeleteTemplate(template.id)} className="text-[var(--muted-foreground)] hover:text-red-600" aria-label={`Delete ${template.name}`}>
+                  <button type="button" onClick={() => setDeleteTarget({ type: 'template', id: template.id })} className="text-[var(--muted-foreground)] hover:text-red-600" aria-label={`Delete ${template.name}`}>
                     <X size={13} />
                   </button>
                 </div>
@@ -1225,7 +1228,7 @@ export default function CampaignsPage() {
                           <button
                             data-testid={`delete-campaign-${campaign.id}`}
                             type="button"
-                            onClick={() => void handleDelete(campaign.id)}
+                            onClick={() => setDeleteTarget({ type: 'campaign', id: campaign.id })}
                             disabled={!!actionState || !!editState}
                             className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-bold text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                           >
@@ -1422,6 +1425,31 @@ export default function CampaignsPage() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          setDeleteLoading(true);
+          if (deleteTarget.type === 'campaign') {
+            await handleDelete(deleteTarget.id);
+          } else {
+            await handleDeleteTemplate(deleteTarget.id);
+          }
+          setDeleteLoading(false);
+          setDeleteTarget(null);
+        }}
+        title={deleteTarget?.type === 'campaign' ? 'Delete campaign' : 'Delete template'}
+        message={
+          deleteTarget?.type === 'campaign'
+            ? 'This will permanently delete the campaign and all its sending history. This cannot be undone.'
+            : 'This will permanently delete this email template. This cannot be undone.'
+        }
+        confirmLabel="Delete"
+        confirmTone="danger"
+        loading={deleteLoading}
+      />
     </div>
   );
 }
