@@ -5,6 +5,7 @@ import { useApiService } from "@/services/api";
 import { DeliverabilityEntity, Domain } from "@/types/models";
 import { ServerCrash, Globe, Plus, RefreshCw, ShieldCheck, ShieldAlert, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { AlertBanner, EmptyState, PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
 const statusTone: Record<string, string> = {
@@ -52,6 +53,8 @@ export default function DomainsPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeDetailsId, setActiveDetailsId] = useState<string | null>(null);
     const [busyDomainId, setBusyDomainId] = useState<string | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -267,12 +270,12 @@ export default function DomainsPage() {
                                      <button
                                          type="button"
                                          data-testid={`delete-domain-${d.id}`}
-                                         onClick={() => void handleDomainAction(d.id, "delete")}
+                                         onClick={() => setDeleteTarget(d.id)}
                                          disabled={busyDomainId === d.id}
                                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                                      >
                                          <Trash2 size={16} />
-                                         {busyDomainId === d.id ? "Removing..." : "Remove"}
+                                         Remove
                                      </button>
                                  </div>
 
@@ -357,6 +360,23 @@ export default function DomainsPage() {
                      ))}
                 </div>
             )}
+
+            <ConfirmDialog
+                isOpen={deleteTarget !== null}
+                onClose={() => setDeleteTarget(null)}
+                onConfirm={async () => {
+                    if (!deleteTarget) return;
+                    setDeleteLoading(true);
+                    await handleDomainAction(deleteTarget, "delete");
+                    setDeleteLoading(false);
+                    setDeleteTarget(null);
+                }}
+                title="Remove domain"
+                message="This will permanently remove the domain and its DNS records. This cannot be undone."
+                confirmLabel="Remove"
+                confirmTone="danger"
+                loading={deleteLoading}
+            />
         </div>
     );
 }
