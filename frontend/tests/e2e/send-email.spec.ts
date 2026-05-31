@@ -113,8 +113,6 @@ test("send email page shows honest backend errors", async ({ page }) => {
           daily_send_limit: 50,
           current_warmup_stage: 0,
           warmup_enabled: false,
-          remote_mailcow_provisioned: false,
-          provisioning_mode: "local_only",
           created_at: "2026-04-09T10:00:00Z",
         },
       ]),

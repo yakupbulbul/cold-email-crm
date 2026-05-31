@@ -1,4 +1,4 @@
-# Lightweight test environment — postgres + redis only (no Mailcow/Mailpit)
+# Lightweight test environment — postgres + redis only (no Mailpit)
 # Used for fast pytest unit/API runs in CI
 # Usage: docker compose -f docker-compose.test.yml up -d
 

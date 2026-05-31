@@ -242,8 +242,6 @@ test("warmup page toggles mailbox participation and surfaces honest blockers", a
         daily_send_limit: 50,
         current_warmup_stage: 1,
         status: "active",
-        remote_mailcow_provisioned: false,
-        provisioning_mode: "local_only",
         created_at: "2026-04-12T08:00:00Z",
       }),
     });
