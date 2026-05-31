@@ -11,9 +11,7 @@ class Domain(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, unique=True, index=True, nullable=False)
     status = Column(String, default="pending")
-    mailcow_status = Column(String, default="pending")
-    mailcow_detail = Column(String, nullable=True)
-    
+
     # DNS Statuses
     spf_status = Column(String, default="pending")
     dkim_status = Column(String, default="pending")
@@ -24,7 +22,6 @@ class Domain(Base):
     verification_summary = Column(JSON, nullable=True)
     verification_error = Column(String, nullable=True)
     last_checked_at = Column(DateTime, nullable=True)
-    mailcow_last_checked_at = Column(DateTime, nullable=True)
     dns_last_checked_at = Column(DateTime, nullable=True)
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
@@ -42,7 +39,7 @@ class Mailbox(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     display_name = Column(String, nullable=False)
 
-    provider_type = Column(String, default="mailcow", nullable=False, index=True)
+    provider_type = Column(String, default="google_workspace", nullable=False, index=True)
     provider_status = Column(String, default="active", nullable=False)
     provider_mailbox_id = Column(String, nullable=True)
     provider_domain_id = Column(String, nullable=True)
@@ -83,7 +80,6 @@ class Mailbox(Base):
     warmup_block_reason = Column(String, nullable=True)
     
     status = Column(String, default="active")
-    remote_mailcow_provisioned = Column(Boolean, default=False, nullable=False)
     smtp_last_checked_at = Column(DateTime, nullable=True)
     smtp_last_check_status = Column(String, nullable=True)
     smtp_last_check_category = Column(String, nullable=True)
@@ -103,13 +99,9 @@ class MailProviderSetting(Base):
     __tablename__ = "mail_provider_settings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    mailcow_enabled = Column(Boolean, default=True, nullable=False)
-    google_workspace_enabled = Column(Boolean, default=False, nullable=False)
-    default_provider = Column(String, default="mailcow", nullable=False)
+    google_workspace_enabled = Column(Boolean, default=True, nullable=False)
+    default_provider = Column(String, default="google_workspace", nullable=False)
     allow_existing_disabled_provider_mailboxes = Column(Boolean, default=False, nullable=False)
-    mailcow_last_checked_at = Column(DateTime, nullable=True)
-    mailcow_last_check_status = Column(String, nullable=True)
-    mailcow_last_check_message = Column(String, nullable=True)
     google_workspace_last_checked_at = Column(DateTime, nullable=True)
     google_workspace_last_check_status = Column(String, nullable=True)
     google_workspace_last_check_message = Column(String, nullable=True)
