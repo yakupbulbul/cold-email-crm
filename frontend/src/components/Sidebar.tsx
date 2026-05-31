@@ -82,14 +82,14 @@ export default function Sidebar({
           </button>
         </div>
         <Link href="/dashboard" className="flex items-center gap-4" onClick={onClose}>
-          <div className="rounded-2xl bg-[#faf8f5] px-4 py-3">
+          <div className="rounded-2xl overflow-hidden">
             <Image
               src="/crm-logo.png"
               alt="Campaign Manager"
-              width={78}
-              height={40}
+              width={48}
+              height={48}
               priority
-              className="h-auto w-full max-w-[78px]"
+              className="h-12 w-12 rounded-2xl"
             />
           </div>
           <div>
