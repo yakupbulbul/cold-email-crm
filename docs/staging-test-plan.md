@@ -7,11 +7,11 @@ environment before every production release.
 
 ## Environments
 
-| Environment | URL | DB | SMTP/IMAP | AI |
-|-------------|-----|----|-----------|----|
-| local-dev | `http://localhost:3000` | dev postgres | Mailpit | disabled |
-| staging | `https://staging.crm.example.com` | staging postgres | Mailpit / Mailcow staging | enabled |
-| production | `https://crm.example.com` | prod postgres | Mailcow prod | enabled |
+| Environment | URL | DB | SMTP/IMAP |
+|-------------|-----|----|-----------|
+| local-dev | `http://localhost:3000` | dev postgres | Mailpit |
+| staging | `https://staging.crm.example.com` | staging postgres | Mailpit / Google Workspace |
+| production | `https://crm.example.com` | prod postgres | Google Workspace |
 
 ## Test Execution Matrix
 

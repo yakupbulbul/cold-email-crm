@@ -46,7 +46,7 @@
 |------|--------|----------------|-------|-------|
 | 4.1 | Go to `/inbox` | Thread list or empty state renders | | |
 | 4.2 | Click a thread (if present) | Message detail view opens | | |
-| 4.3 | Click AI Summarize (if visible) | Summary text appears or graceful error | | |
+| 4.3 | _(removed)_ | | | |
 | 4.4 | Open reply composer | Reply textarea opens | | |
 
 ---
@@ -107,7 +107,7 @@
 | 9.4 | Go to `/ops/alerts` | Alert list or "all clear" message visible | | |
 | 9.5 | Go to `/ops/deliverability` | KPI cards and mailbox table visible | | |
 | 9.6 | Go to `/ops/readiness` | Checklist cards render | | |
-| 9.7 | GET `/api/v1/ops/health/mailcow` as admin | Safe Mailcow health payload returned without exposing credentials | | |
+| 9.7 | _(removed)_ | | | |
 
 ---
 
@@ -125,7 +125,7 @@
 
 | Step | Action | Expected Result | ✅/❌ | Notes |
 |------|--------|----------------|-------|-------|
-| 11.1 | GET `/api/v1/ops/readiness` | Structured status plus checklist items; lean mode may be degraded and Mailcow auth may still fail safely | | |
+| 11.1 | GET `/api/v1/ops/readiness` | Structured status plus checklist items; lean mode may be degraded if workers are intentionally blocked | | |
 | 11.2 | Verify `SECRET_KEY` is not the default test value | Strong random string in env | | |
 | 11.3 | Verify `alembic upgrade head` shows no pending migrations | `Running upgrade ... done` | | |
 | 11.4 | Confirm HTTPS terminates at proxy, HTTP redirects cleanly | `curl -I http://...` returns 301 | | |

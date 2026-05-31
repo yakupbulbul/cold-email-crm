@@ -78,17 +78,6 @@ For a Google Workspace mailbox:
 
 Tokens and secrets must remain backend-only. The UI should only show safe status, last refresh time, expiry time, external account email, and error summaries.
 
-## Mailcow Checklist
-
-For a Mailcow mailbox:
-
-- Provider must be enabled in `/settings`.
-- Mailcow API health should be healthy or honestly degraded.
-- SMTP diagnostics should pass before campaign or warm-up sending.
-- IMAP diagnostics should pass before inbox sync is trusted.
-
-Mailcow API health does not prove SMTP readiness. Always check SMTP separately.
-
 ## Smoke Command
 
 Run:

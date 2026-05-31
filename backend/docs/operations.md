@@ -4,7 +4,7 @@
 The Operations Dashboard (`/ops`) provides a real-time aggregate of standard API pings reaching core components:
 1. **PostgreSQL Check**: Verifies read/write query latencies over the primary database mapped inside `docker-compose`.
 2. **Redis Backplane Check**: Resolves persistent socket connections mapping queued states natively.
-3. **SMTP/IMAP Engine Link**: Resolves raw port availability confirming outbound relay connections explicitly mapping the Mailcow interface.
+3. **SMTP/IMAP Engine Link**: Resolves raw port availability confirming outbound relay connections via Google Workspace OAuth.
 
 ## Background Worker Reliability (Job Queues)
 Extensive CSV ingestion protocols and Verifier tasks operate via Celery workflows async. You can monitor, halt, or violently retry tasks explicitly in the Ops Jobs panel (`/ops/jobs`). Background workers possess idempotent payloads natively; halting a task midway retains mapped rows predictably.
