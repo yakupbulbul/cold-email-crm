@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 
@@ -461,8 +461,25 @@ def _campaign_payload(db: Session, campaign: Campaign) -> dict:
 
 @router.get("/")
 @router.get("")  # Handle both /campaigns and /campaigns/ without redirect
-def list_campaigns(db: Session = Depends(get_db)):
-    return [_campaign_payload(db, campaign) for campaign in db.query(Campaign).all()]
+def list_campaigns(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    from app.core.cache import cache_get, cache_set
+
+    cache_key = f"campaigns:list:{skip}:{limit}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    total = db.query(Campaign).count()
+    campaigns = db.query(Campaign).order_by(Campaign.created_at.desc()).offset(skip).limit(limit).all()
+    items = [_campaign_payload(db, c) for c in campaigns]
+    result = {"items": items, "total": total, "skip": skip, "limit": limit}
+
+    cache_set(cache_key, result, ttl=60)
+    return result
 
 @router.post("/", response_model=CampaignResponse)
 @router.post("")  # Handle both /campaigns and /campaigns/ without redirect
