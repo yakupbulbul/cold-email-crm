@@ -13,11 +13,11 @@ test("create mailbox button is visible", async ({ page }) => {
   await expect(btn).toBeVisible({ timeout: 6_000 });
 });
 
-test("mailboxes page shows honest provisioning mode guidance", async ({ page }) => {
+test("mailboxes page shows Google Workspace guidance", async ({ page }) => {
   await page.goto("/mailboxes");
   await page.waitForLoadState("networkidle");
   await expect(page.getByTestId("mailbox-mode-message")).toContainText(
-    /Safe mode stores the Mailcow mailbox locally only|Mutation mode creates the mailbox in Mailcow and CRM together|Google Workspace mailboxes use backend-only OAuth/i,
+    /Google Workspace mailboxes use backend-only OAuth/i,
   );
 });
 
@@ -31,7 +31,6 @@ test("mailbox row actions render when mailboxes exist", async ({ page }) => {
     await expect(editButtons.first()).toBeVisible();
     await expect(deleteButtons.first()).toBeVisible();
     await expect(checkButtons.first()).toBeVisible();
-    await expect(page.getByText(/Mailcow synced|Local only/).first()).toBeVisible();
   } else {
     await expect(page.getByText("No Mailboxes Found")).toBeVisible();
   }
@@ -44,8 +43,7 @@ test("google workspace mailbox shows connect controls and callback success state
       contentType: "application/json",
       body: JSON.stringify({
         default_provider: "google_workspace",
-        enabled_providers: ["mailcow", "google_workspace"],
-        mailcow_mutations_enabled: false,
+        enabled_providers: ["google_workspace"],
       }),
     });
   });
@@ -97,8 +95,6 @@ test("google workspace mailbox shows connect controls and callback success state
           daily_send_limit: 50,
           current_warmup_stage: 1,
           status: "active",
-          remote_mailcow_provisioned: false,
-          provisioning_mode: "local_only",
           created_at: new Date().toISOString(),
         },
       ]),
@@ -120,8 +116,7 @@ test("connected google workspace mailbox shows reconnect and disconnect controls
       contentType: "application/json",
       body: JSON.stringify({
         default_provider: "google_workspace",
-        enabled_providers: ["mailcow", "google_workspace"],
-        mailcow_mutations_enabled: false,
+        enabled_providers: ["google_workspace"],
       }),
     });
   });
@@ -162,8 +157,6 @@ test("connected google workspace mailbox shows reconnect and disconnect controls
           daily_send_limit: 50,
           current_warmup_stage: 1,
           status: "active",
-          remote_mailcow_provisioned: false,
-          provisioning_mode: "local_only",
           created_at: new Date().toISOString(),
         },
       ]),

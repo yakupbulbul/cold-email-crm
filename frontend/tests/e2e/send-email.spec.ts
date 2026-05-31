@@ -19,8 +19,6 @@ test("send email page submits a real backend-driven send request and shows logs"
           daily_send_limit: 50,
           current_warmup_stage: 0,
           warmup_enabled: false,
-          remote_mailcow_provisioned: true,
-          provisioning_mode: "mailcow_synced",
           created_at: "2026-04-09T10:00:00Z",
         },
       ]),

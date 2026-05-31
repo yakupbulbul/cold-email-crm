@@ -32,7 +32,6 @@ test("frontend stays on the local backend boundary and runtime responses are sec
   const serializedMailboxes = JSON.stringify(mailboxes);
 
   for (const forbidden of [
-    "MAILCOW_API_KEY",
     "SECRET_KEY",
     "access_token",
     "smtp_password",
@@ -44,7 +43,6 @@ test("frontend stays on the local backend boundary and runtime responses are sec
     expect(serializedMailboxes).not.toContain(forbidden);
   }
 
-  expect(settingsSummary.frontend_mailcow_direct_access).toBe(false);
   expect(Array.isArray(mailboxes)).toBe(true);
 
   const crossOriginRequests = [...seenRequests].filter(
