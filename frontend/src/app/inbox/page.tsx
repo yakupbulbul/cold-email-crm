@@ -158,7 +158,8 @@ export default function InboxPage() {
             <button
               type="button"
               onClick={() => refreshInbox()}
-              className="btn-secondary"
+              disabled={syncing}
+              className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               Refresh view
             </button>
@@ -291,11 +292,11 @@ export default function InboxPage() {
         {!hasThreads ? (
           <EmptyState
             icon={InboxIcon}
-            title="No inbox threads yet"
+            title="No threads found"
             description={
               blockers.length > 0
                 ? blockers.map((blocker) => blocker.message).join(" ")
-                : "Inbox sync is healthy, but no replies or conversations have been ingested yet."
+                : "No conversations yet. Sync your inbox to pull in recent threads."
             }
           />
         ) : (

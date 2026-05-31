@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Activity, AlertCircle, Clock3, Mailbox, Pause, Play, RefreshCcw, ShieldAlert, Zap } from "lucide-react";
 
@@ -160,7 +161,7 @@ export default function WarmupPage() {
           <button
             type="button"
             onClick={() => void loadWarmup()}
-            disabled={pageLoading}
+            disabled={pageLoading || !!actionState}
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCcw size={18} />
@@ -226,7 +227,8 @@ export default function WarmupPage() {
               <div className="space-y-3">
                 {status.mailboxes.length === 0 ? (
                   <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 text-sm text-[var(--muted-foreground)]">
-                    No mailboxes exist yet. Create at least two healthy mailboxes before warm-up can run.
+                    Warm-up needs at least two active mailboxes to exchange emails.{" "}
+                    <Link href="/mailboxes" className="font-semibold text-[var(--primary)] hover:underline">Go to Mailboxes</Link> to connect them.
                   </div>
                 ) : status.mailboxes.map((mailbox) => (
                   <div key={mailbox.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
