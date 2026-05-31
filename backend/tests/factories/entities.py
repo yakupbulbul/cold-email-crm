@@ -44,12 +44,10 @@ def create_domain(
     *,
     name: str | None = None,
     status: str = "local_only",
-    mailcow_status: str = "local_only",
 ) -> Domain:
     domain = Domain(
         name=name or f"{_next('domain')}.example.com",
         status=status,
-        mailcow_status=mailcow_status,
     )
     db.add(domain)
     db.commit()

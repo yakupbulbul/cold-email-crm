@@ -20,9 +20,6 @@ os.environ.setdefault("POSTGRES_URL", TEST_DB_URL)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6380/1")
 os.environ.setdefault("APP_ENV", "test")
-os.environ["MAILCOW_ENABLE_MUTATIONS"] = "false"
-os.environ["MAILCOW_API_URL"] = ""
-os.environ["MAILCOW_API_KEY"] = ""
 os.environ["GOOGLE_WORKSPACE_CLIENT_ID"] = ""
 os.environ["GOOGLE_WORKSPACE_CLIENT_SECRET"] = ""
 os.environ["GOOGLE_WORKSPACE_REDIRECT_URI"] = ""
@@ -40,7 +37,6 @@ from tests.factories import (
     create_suppression_entry,
     create_user,
 )
-from tests.utils.mailcow import mocked_mailcow_response
 
 engine = create_engine(TEST_DB_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -167,22 +163,6 @@ def suppression_factory(db: Session):
 
     return factory
 
-
-@pytest.fixture()
-def mock_mailcow_request(monkeypatch):
-    calls: list[tuple[str, str]] = []
-
-    def factory(*, status_code: int = 200, payload: dict | None = None):
-        response = mocked_mailcow_response(status_code=status_code, payload=payload)
-
-        def _request(self, method: str, path: str):
-            calls.append((method, path))
-            return response
-
-        monkeypatch.setattr("app.integrations.mailcow.client.MailcowClient._request", _request)
-        return calls
-
-    return factory
 
 
 def _issue_token(client: TestClient, email: str, password: str, *, is_admin: bool) -> dict:
