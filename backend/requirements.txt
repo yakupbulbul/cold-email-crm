@@ -16,5 +16,6 @@ passlib[bcrypt]>=1.7.4
 aiofiles>=23.0.0
 httpx>=0.25.0
 PySocks>=1.7.1
+mcp>=1.0.0
 pytest>=8.0.0
 pytest-cov>=5.0.0
