@@ -4,8 +4,8 @@ import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import AppLayout from '@/components/AppLayout'
 
-const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' })
-const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin'], variable: '--font-ibm-plex-mono', weight: ['400', '500', '600'] })
+const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' })
+const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin'], variable: '--font-ibm-plex-mono', weight: ['400', '500', '600'], display: 'swap' })
 
 export const metadata: Metadata = {
   title: 'Campaign Manager',
