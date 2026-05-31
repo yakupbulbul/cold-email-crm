@@ -11,7 +11,7 @@ class Settings(BaseSettings):
         enable_decoding=False,
     )
 
-    PROJECT_NAME: str = "AI-Powered Cold Email CRM"
+    PROJECT_NAME: str = "Cold Email CRM"
     API_V1_STR: str = "/api/v1"
     APP_ENV: str = "development"
 
@@ -32,20 +32,6 @@ class Settings(BaseSettings):
     # Database / Redis
     POSTGRES_URL: str = "postgresql://user:password@127.0.0.1:5432/cold_email_crm"
     REDIS_URL: str = "redis://127.0.0.1:6379/0"
-
-    # External APIs
-    OPENAI_API_KEY: str | None = None
-
-    # Mailcow API Integration
-    MAILCOW_API_URL: str | None = None
-    MAILCOW_API_KEY: str | None = None
-    MAILCOW_API_TIMEOUT_SECONDS: int = 10
-    MAILCOW_VERIFY_SSL: bool = True
-    MAILCOW_ENABLE_MUTATIONS: bool = False
-    MAILCOW_SMTP_HOST: str | None = None
-    MAILCOW_SMTP_PORT: int = 587
-    MAILCOW_IMAP_HOST: str | None = None
-    MAILCOW_IMAP_PORT: int = 993
 
     # Google Workspace OAuth / XOAUTH2
     GOOGLE_WORKSPACE_CLIENT_ID: str | None = None
@@ -126,10 +112,6 @@ class Settings(BaseSettings):
             raise ValueError(
                 "SECRET_KEY is using an unsafe placeholder. Set a local value in .env before starting the app."
             )
-        has_mailcow_url = bool(self.MAILCOW_API_URL)
-        has_mailcow_key = bool(self.MAILCOW_API_KEY)
-        if has_mailcow_url != has_mailcow_key:
-            raise ValueError("MAILCOW_API_URL and MAILCOW_API_KEY must be set together")
         return self
 
 
