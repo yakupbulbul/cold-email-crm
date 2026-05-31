@@ -1,12 +1,7 @@
-export type MailProviderType = "mailcow" | "google_workspace";
+export type MailProviderType = "google_workspace";
 
 export interface DomainVerificationSummary {
     remediation?: {
-        mailcow?: {
-            mailcow_host?: string;
-            action?: string;
-            detail?: string;
-        };
         dns?: Record<string, {
             host?: string;
             type?: string;
@@ -22,8 +17,6 @@ export interface Domain {
     id: string;
     name: string;
     status: string;
-    mailcow_status: string;
-    mailcow_detail?: string | null;
     spf_status: string;
     dkim_status: string;
     dmarc_status: string;
@@ -33,7 +26,6 @@ export interface Domain {
     verification_summary?: DomainVerificationSummary;
     verification_error?: string | null;
     last_checked_at?: string | null;
-    mailcow_last_checked_at?: string | null;
     dns_last_checked_at?: string | null;
     created_at: string;
     updated_at?: string;
@@ -84,8 +76,6 @@ export interface Mailbox {
     inbox_last_synced_at?: string | null;
     inbox_last_success_at?: string | null;
     inbox_last_error?: string | null;
-    remote_mailcow_provisioned: boolean;
-    provisioning_mode: "local_only" | "mailcow_synced";
     created_at: string;
 }
 
@@ -416,13 +406,6 @@ export interface SettingsSummary {
     worker_available: boolean;
     worker_detail?: string | null;
     readiness_status: "healthy" | "degraded" | "failed" | "unknown";
-    safe_mode: boolean;
-    mailcow_mutations_enabled: boolean;
-    mailcow_configured: boolean;
-    mailcow_status: string;
-    mailcow_reason?: string | null;
-    mailcow_detail?: string | null;
-    frontend_mailcow_direct_access: boolean;
     default_provider: MailProviderType;
     enabled_providers: MailProviderType[];
     allow_existing_disabled_provider_mailboxes: boolean;

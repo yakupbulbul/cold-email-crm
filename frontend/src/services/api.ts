@@ -73,7 +73,6 @@ type MailboxWarmupPayload = {
 };
 
 type ProviderSettingsUpdatePayload = {
-    mailcow_enabled?: boolean;
     google_workspace_enabled?: boolean;
     default_provider?: MailProviderType;
     allow_existing_disabled_provider_mailboxes?: boolean;
