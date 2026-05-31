@@ -12,12 +12,9 @@ from app.integrations.imap.provider import (
     IMAPConnectionResult,
     IMAPFetchedMessage,
     IMAPProviderError,
-    MailcowIMAPProvider,
 )
-from app.integrations.mailcow.client import MailcowClient
 from app.integrations.smtp.provider import (
     GoogleWorkspaceSMTPProvider,
-    MailcowSMTPProvider,
     SMTPDiagnosticResult,
 )
 from app.models.core import Mailbox
@@ -72,74 +69,6 @@ class MailProviderAdapter(ABC):
     @abstractmethod
     def get_mailbox_capabilities(self, mailbox: Mailbox) -> MailboxCapabilities:
         raise NotImplementedError
-
-    def is_provider_available(self) -> tuple[bool, str | None]:
-        return True, None
-
-
-class MailcowProviderAdapter(MailProviderAdapter):
-    provider_type = "mailcow"
-
-    def __init__(self, db: Session):
-        super().__init__(db)
-        self.smtp = MailcowSMTPProvider()
-        self.imap = MailcowIMAPProvider()
-        self.client = MailcowClient()
-
-    def send_email(self, mailbox: Mailbox, **kwargs) -> tuple[bool, str]:
-        return self.smtp.send_email(
-            host=mailbox.smtp_host,
-            port=mailbox.smtp_port,
-            username=mailbox.smtp_username,
-            password=mailbox.smtp_password_encrypted,
-            security_mode=(mailbox.smtp_security_mode or "").strip().lower() or ("ssl" if mailbox.smtp_port == 465 else "starttls"),
-            **kwargs,
-        )
-
-    def diagnose_smtp(self, mailbox: Mailbox) -> SMTPDiagnosticResult:
-        return self.smtp.diagnose_connection(
-            host=mailbox.smtp_host,
-            port=mailbox.smtp_port,
-            username=mailbox.smtp_username,
-            password=mailbox.smtp_password_encrypted,
-            security_mode=(mailbox.smtp_security_mode or "").strip().lower() or ("ssl" if mailbox.smtp_port == 465 else "starttls"),
-        )
-
-    def diagnose_imap(self, mailbox: Mailbox) -> IMAPConnectionResult:
-        return self.imap.diagnose_connection(
-            mailbox.imap_host,
-            mailbox.imap_port,
-            mailbox.imap_username,
-            mailbox.imap_password_encrypted,
-        )
-
-    def sync_inbox(self, mailbox: Mailbox) -> list[IMAPFetchedMessage]:
-        return self.imap.fetch_messages(
-            mailbox.imap_host,
-            mailbox.imap_port,
-            mailbox.imap_username,
-            mailbox.imap_password_encrypted,
-            since_uid=mailbox.inbox_last_seen_uid,
-        )
-
-    def check_provider_health(self) -> dict:
-        result = self.client.check_health()
-        return {
-            "status": result.status,
-            "configured": result.configured,
-            "detail": result.detail,
-            "reason": result.reason,
-        }
-
-    def get_mailbox_capabilities(self, mailbox: Mailbox) -> MailboxCapabilities:
-        return MailboxCapabilities(
-            provider_type=self.provider_type,
-            can_send=True,
-            can_sync_inbox=True,
-            can_warmup=True,
-            uses_oauth=False,
-            diagnostics=["smtp", "imap", "mailcow_api"],
-        )
 
     def is_provider_available(self) -> tuple[bool, str | None]:
         return True, None
@@ -241,14 +170,11 @@ class MailProviderRegistry:
     def get_enabled_provider_map(self) -> dict[str, bool]:
         row = self.get_provider_settings()
         return {
-            "mailcow": row.mailcow_enabled,
             "google_workspace": row.google_workspace_enabled,
         }
 
     def get_provider(self, provider_type: str) -> MailProviderAdapter:
-        normalized = (provider_type or "mailcow").strip().lower()
-        if normalized == "mailcow":
-            return MailcowProviderAdapter(self.db)
+        normalized = (provider_type or "google_workspace").strip().lower()
         if normalized == "google_workspace":
             return GoogleWorkspaceProviderAdapter(self.db)
         raise ProviderUnavailableError(f"Unsupported mailbox provider '{provider_type}'.", category="unsupported_provider", status_code=400)
@@ -256,7 +182,7 @@ class MailProviderRegistry:
     def ensure_provider_allowed(self, provider_type: str, *, mailbox: Mailbox | None = None) -> None:
         settings_row = self.get_provider_settings()
         enabled_map = self.get_enabled_provider_map()
-        normalized = (provider_type or "mailcow").strip().lower()
+        normalized = (provider_type or "google_workspace").strip().lower()
         if enabled_map.get(normalized, False):
             return
         if mailbox is not None and settings_row.allow_existing_disabled_provider_mailboxes:
@@ -268,8 +194,8 @@ class MailProviderRegistry:
         )
 
     def resolve_mailbox_provider(self, mailbox: Mailbox) -> MailProviderAdapter:
-        self.ensure_provider_allowed(mailbox.provider_type or "mailcow", mailbox=mailbox)
-        provider = self.get_provider(mailbox.provider_type or "mailcow")
+        self.ensure_provider_allowed(mailbox.provider_type or "google_workspace", mailbox=mailbox)
+        provider = self.get_provider(mailbox.provider_type or "google_workspace")
         available, reason = provider.is_provider_available()
         if not available:
             raise ProviderUnavailableError(reason or "The mailbox provider is not available.", category="provider_unavailable", status_code=424)
@@ -278,7 +204,7 @@ class MailProviderRegistry:
     def provider_health_payload(self) -> dict[str, dict]:
         payload: dict[str, dict] = {}
         enabled_map = self.get_enabled_provider_map()
-        for provider_type in ["mailcow", "google_workspace"]:
+        for provider_type in ["google_workspace"]:
             adapter = self.get_provider(provider_type)
             health = adapter.check_provider_health()
             payload[provider_type] = {
