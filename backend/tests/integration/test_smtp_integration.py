@@ -1,5 +1,5 @@
 """
-test_smtp_integration.py — Real SMTP connectivity tests against Mailpit or staging Mailcow.
+test_smtp_integration.py — Real SMTP connectivity tests against Mailpit.
 
 Run with: pytest -m integration tests/integration/test_smtp_integration.py
 
@@ -15,7 +15,7 @@ SMTP_PORT = int(os.environ.get("SMTP_TEST_PORT", "1025"))
 
 @pytest.mark.integration
 def test_smtp_server_is_reachable():
-    """SMTP server (Mailpit/Mailcow) accepts connections."""
+    """SMTP server (Mailpit) accepts connections."""
     try:
         server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=5)
         server.ehlo()

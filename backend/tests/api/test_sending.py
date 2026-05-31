@@ -14,9 +14,7 @@ def _mailbox_payload(domain_id: str, email: str) -> dict:
     }
 
 
-def _create_active_mailbox(client: TestClient, auth_headers: dict, monkeypatch, domain_name: str, email: str) -> str:
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
+def _create_active_mailbox(client: TestClient, auth_headers: dict, domain_name: str, email: str) -> str:
     domain_resp = client.post("/api/v1/domains", json={"name": domain_name}, headers=auth_headers)
     mailbox_resp = client.post("/api/v1/mailboxes", json=_mailbox_payload(domain_resp.json()["id"], email), headers=auth_headers)
     return mailbox_resp.json()["id"]
@@ -26,12 +24,11 @@ def test_send_email_sends_immediately_and_logs_attempt(client: TestClient, auth_
     mailbox_id = _create_active_mailbox(
         client,
         auth_headers,
-        monkeypatch,
         "send-email-success.example.com",
         "sender@send-email-success.example.com",
     )
     monkeypatch.setattr(
-        "app.services.smtp_service.MailcowSMTPProvider.send_email",
+        "app.services.smtp_service.GoogleWorkspaceSMTPProvider.send_email",
         lambda self, **kwargs: (True, "<message-id-1@example.com>"),
     )
 
@@ -69,7 +66,6 @@ def test_send_email_requires_active_mailbox(client: TestClient, auth_headers: di
     mailbox_id = _create_active_mailbox(
         client,
         auth_headers,
-        monkeypatch,
         "send-email-inactive.example.com",
         "sender@send-email-inactive.example.com",
     )
@@ -97,12 +93,11 @@ def test_send_email_returns_safe_failure_and_logs_attempt(client: TestClient, au
     mailbox_id = _create_active_mailbox(
         client,
         auth_headers,
-        monkeypatch,
         "send-email-fail.example.com",
         "sender@send-email-fail.example.com",
     )
     monkeypatch.setattr(
-        "app.services.smtp_service.MailcowSMTPProvider.send_email",
+        "app.services.smtp_service.GoogleWorkspaceSMTPProvider.send_email",
         lambda self, **kwargs: (False, "Connection timed out while connecting to smtp.example.com"),
     )
 
@@ -134,12 +129,11 @@ def test_send_email_logs_endpoint_returns_recent_attempts(client: TestClient, au
     mailbox_id = _create_active_mailbox(
         client,
         auth_headers,
-        monkeypatch,
         "send-email-logs.example.com",
         "sender@send-email-logs.example.com",
     )
     monkeypatch.setattr(
-        "app.services.smtp_service.MailcowSMTPProvider.send_email",
+        "app.services.smtp_service.GoogleWorkspaceSMTPProvider.send_email",
         lambda self, **kwargs: (True, "<message-id-logs@example.com>"),
     )
 
@@ -163,7 +157,7 @@ def test_send_email_logs_endpoint_returns_recent_attempts(client: TestClient, au
 
 
 def test_provider_generates_rfc_message_id_when_missing():
-    from app.integrations.smtp.provider import MailcowSMTPProvider
+    from app.integrations.smtp.provider import GoogleWorkspaceSMTPProvider
 
     captured = {}
 
@@ -180,8 +174,8 @@ def test_provider_generates_rfc_message_id_when_missing():
         def settimeout(self, timeout):
             return None
 
-        def login(self, username, password):
-            return None
+        def docmd(self, cmd, arg=""):
+            return (235, b"2.7.0 Accepted")
 
         def send_message(self, msg, from_addr=None, to_addrs=None):
             captured["message_id"] = msg.get("Message-ID")
@@ -192,7 +186,7 @@ def test_provider_generates_rfc_message_id_when_missing():
         def quit(self):
             return None
 
-    provider = MailcowSMTPProvider()
+    provider = GoogleWorkspaceSMTPProvider()
 
     import smtplib
 
@@ -200,10 +194,10 @@ def test_provider_generates_rfc_message_id_when_missing():
     smtplib.SMTP = FakeSMTP
     try:
         success, message_id = provider.send_email(
-            host="smtp.example.com",
+            host="smtp.gmail.com",
             port=587,
             username="sender@example.com",
-            password="password",
+            access_token="test-token",
             security_mode="starttls",
             sender_email="sender@example.com",
             from_header="Support Team <sender@example.com>",
@@ -230,11 +224,11 @@ def test_sender_identity_falls_back_to_raw_email_when_display_name_missing(db):
     mailbox = Mailbox(
         email="sender@example.com",
         display_name="   ",
-        smtp_host="smtp.example.com",
+        smtp_host="smtp.gmail.com",
         smtp_port=587,
         smtp_username="sender@example.com",
         smtp_password_encrypted="password",
-        imap_host="imap.example.com",
+        imap_host="imap.gmail.com",
         imap_port=993,
         imap_username="sender@example.com",
         imap_password_encrypted="password",

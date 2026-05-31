@@ -56,8 +56,6 @@ def test_list_crud_and_membership_persist(client: TestClient, auth_headers: dict
 
 
 def test_bulk_membership_and_campaign_list_deduplication(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "lists-campaign.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(

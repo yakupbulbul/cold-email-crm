@@ -5,8 +5,8 @@ from app.workers.imap_sync_worker import sync_all_inboxes
 def test_imap_sync_skips_disabled_mailboxes(db, monkeypatch):
     synced_mailboxes: list[str] = []
 
-    verified_domain = Domain(name="verified-workers.example.com", mailcow_status="verified")
-    local_only_domain = Domain(name="local-workers.example.com", mailcow_status="local_only")
+    verified_domain = Domain(name="verified-workers.example.com")
+    local_only_domain = Domain(name="local-workers.example.com")
     db.add_all([verified_domain, local_only_domain])
     db.flush()
 

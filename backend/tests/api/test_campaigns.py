@@ -35,8 +35,6 @@ def test_campaign_preflight_history_endpoint_exists(client: TestClient):
 
 def test_start_campaign_requires_background_workers(client: TestClient, auth_headers: dict, monkeypatch):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", False)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-workers.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -71,8 +69,6 @@ def test_start_campaign_requires_background_workers(client: TestClient, auth_hea
 
 def test_start_campaign_requires_scheduled_lead(client: TestClient, auth_headers: dict, monkeypatch):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-start.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -107,8 +103,6 @@ def test_start_campaign_requires_scheduled_lead(client: TestClient, auth_headers
 
 def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
     queued_campaign_ids: list[str] = []
 
     def _queue_task(campaign_id: str):
@@ -168,8 +162,6 @@ def test_start_campaign_queues_job_when_lead_exists(client: TestClient, auth_hea
 
 def test_start_campaign_returns_503_when_queue_submit_fails(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     def _raise_queue_failure(campaign_id: str):
         raise RuntimeError("redis down")
@@ -225,8 +217,6 @@ def test_start_campaign_returns_503_when_queue_submit_fails(client: TestClient, 
 
 
 def test_pause_campaign_updates_status(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-pause.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -394,8 +384,6 @@ def test_list_campaigns_includes_last_delivery_attempt_in_execution_summary(clie
 
 
 def test_delete_campaign_removes_draft_campaign(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-delete.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -431,8 +419,6 @@ def test_delete_campaign_removes_draft_campaign(client: TestClient, auth_headers
 
 
 def test_delete_campaign_blocks_non_draft_campaign(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-non-draft.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -470,8 +456,6 @@ def test_delete_campaign_blocks_non_draft_campaign(client: TestClient, auth_head
 
 
 def test_archive_campaign_updates_non_draft_status(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-archive.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -512,8 +496,6 @@ def test_archive_campaign_updates_non_draft_status(client: TestClient, auth_head
 
 def test_start_campaign_blocks_archived_campaign(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-archived-start.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -551,8 +533,6 @@ def test_start_campaign_blocks_archived_campaign(client: TestClient, auth_header
 
 
 def test_unarchive_campaign_restores_archived_to_paused(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-unarchive.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -592,8 +572,6 @@ def test_unarchive_campaign_restores_archived_to_paused(client: TestClient, auth
 
 
 def test_unarchive_campaign_blocks_non_archived_records(client: TestClient, auth_headers: dict, monkeypatch):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-unarchive-block.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -674,8 +652,6 @@ def test_delete_campaign_returns_404_for_missing_record(client: TestClient, auth
 
 
 def test_create_campaign_persists_b2c_fields(client: TestClient, auth_headers: dict, monkeypatch):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-b2c.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(
@@ -716,8 +692,6 @@ def test_create_campaign_persists_b2c_fields(client: TestClient, auth_headers: d
 
 def test_b2c_strict_campaign_excludes_unknown_consent_and_type_mismatch(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
     monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", lambda campaign_id: type("Task", (), {"id": "campaign-job-2"})())
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-b2c-strict.example.com"}, headers=auth_headers)
@@ -802,8 +776,6 @@ def test_b2c_strict_campaign_excludes_unknown_consent_and_type_mismatch(client: 
 
 def test_start_campaign_resyncs_attached_lists_after_lead_becomes_eligible(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
     queued_campaign_ids: list[str] = []
 
     def _queue_task(campaign_id: str):
@@ -883,8 +855,6 @@ def test_start_campaign_resyncs_attached_lists_after_lead_becomes_eligible(clien
 
 def test_start_campaign_reschedules_failed_list_leads_when_still_eligible(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
     monkeypatch.setattr("app.api.v1.routes.campaigns.run_campaign_cycle.delay", lambda campaign_id: type("Task", (), {"id": "campaign-job-retry"})())
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-retry.example.com"}, headers=auth_headers)
@@ -951,8 +921,6 @@ def test_start_campaign_reschedules_failed_list_leads_when_still_eligible(client
 
 
 def test_list_campaigns_includes_execution_summary(client: TestClient, auth_headers: dict, monkeypatch):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
     monkeypatch.setattr("app.api.v1.routes.campaigns.settings.BACKGROUND_WORKERS_ENABLED", True)
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-execution.example.com"}, headers=auth_headers)
@@ -991,8 +959,6 @@ def test_list_campaigns_includes_execution_summary(client: TestClient, auth_head
 
 
 def test_update_campaign_persists_fields(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "campaign-edit.example.com"}, headers=auth_headers)
     mailbox_resp = client.post(

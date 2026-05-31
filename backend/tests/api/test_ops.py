@@ -58,19 +58,6 @@ def test_deliverability_mailboxes_endpoint(client: TestClient, auth_headers: dic
     assert resp.status_code == 200
 
 
-def test_mailcow_health_endpoint_returns_safe_payload(client: TestClient, auth_headers: dict):
-    resp = client.get("/api/v1/ops/health/mailcow", headers=auth_headers)
-    assert resp.status_code == 200
-    payload = resp.json()
-    assert payload["service"] == "mailcow_api"
-    assert "status" in payload
-    assert "reason" in payload
-    assert "configured" in payload
-    assert "reachable" in payload
-    assert "header_attached" in payload
-    assert "request_path" in payload
-    assert payload["mutations_enabled"] is False
-
 
 def test_worker_health_reports_disabled_in_lean_mode(client: TestClient, auth_headers: dict):
     resp = client.get("/api/v1/ops/health/workers", headers=auth_headers)

@@ -8,7 +8,7 @@ from app.models.email import Message, Thread
 
 
 def _create_mailbox(db, email="sales@inbox-example.com"):
-    domain = Domain(name=email.split("@", 1)[1], mailcow_status="verified")
+    domain = Domain(name=email.split("@", 1)[1])
     db.add(domain)
     db.flush()
     mailbox = Mailbox(
@@ -185,7 +185,7 @@ def test_manual_sync_uses_send_log_headers_to_thread_replies(client, auth_header
         )()
     ]
     monkeypatch.setattr(
-        "app.services.imap_service.MailcowIMAPProvider.fetch_messages",
+        "app.services.imap_service.GoogleWorkspaceIMAPProvider.fetch_messages",
         lambda self, host, port, username, password, since_uid=None: fetched,
     )
 

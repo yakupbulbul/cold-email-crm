@@ -36,8 +36,6 @@ def test_warmup_start_requires_background_workers(client: TestClient, auth_heade
 
 def test_global_warmup_start_unpauses_without_auto_enabling_mailboxes(client: TestClient, auth_headers: dict, monkeypatch, db):
     monkeypatch.setattr("app.api.v1.routes.warmup.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "warmup-global.example.com"}, headers=auth_headers)
     _create_mailbox(client, auth_headers, domain_resp.json()["id"], "a@warmup-global.example.com")
@@ -53,8 +51,6 @@ def test_global_warmup_start_unpauses_without_auto_enabling_mailboxes(client: Te
 
 
 def test_patch_mailbox_warmup_updates_participation_and_status(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "warmup-mailbox.example.com"}, headers=auth_headers)
     mailbox = _create_mailbox(client, auth_headers, domain_resp.json()["id"], "a@warmup-mailbox.example.com")
@@ -78,8 +74,6 @@ def test_warmup_status_reports_blockers_and_mailbox_truth(client: TestClient, au
     monkeypatch.setattr("app.api.v1.routes.warmup.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.services.warmup_service.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.services.health_service.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "warmup-status.example.com"}, headers=auth_headers)
     mailbox_a = _create_mailbox(client, auth_headers, domain_resp.json()["id"], "a@warmup-status.example.com")
@@ -118,8 +112,6 @@ def test_warmup_pair_generation_is_bidirectional_for_ready_mailboxes(client: Tes
     monkeypatch.setattr("app.api.v1.routes.warmup.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.services.warmup_service.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.services.health_service.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
     monkeypatch.setattr("app.api.v1.routes.warmup.run_warmup_cycle.delay", lambda **kwargs: type("Task", (), {"id": "warmup-job-1"})())
 
     domain_resp = client.post("/api/v1/domains", json={"name": "warmup-pairs.example.com"}, headers=auth_headers)
@@ -152,8 +144,6 @@ def test_warmup_pair_generation_is_bidirectional_for_ready_mailboxes(client: Tes
 
 
 def test_warmup_logs_endpoint_returns_recent_activity(client: TestClient, auth_headers: dict, monkeypatch, db):
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
 
     domain_resp = client.post("/api/v1/domains", json={"name": "warmup-logs.example.com"}, headers=auth_headers)
     mailbox_a = _create_mailbox(client, auth_headers, domain_resp.json()["id"], "a@warmup-logs.example.com")
@@ -188,8 +178,6 @@ def test_warmup_pause_disables_active_pairs(client: TestClient, auth_headers: di
     monkeypatch.setattr("app.api.v1.routes.warmup.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.services.warmup_service.settings.BACKGROUND_WORKERS_ENABLED", True)
     monkeypatch.setattr("app.services.health_service.settings.BACKGROUND_WORKERS_ENABLED", True)
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_SMTP_HOST", "smtp.example.com")
-    monkeypatch.setattr("app.api.v1.routes.mailboxes.settings.MAILCOW_IMAP_HOST", "imap.example.com")
     monkeypatch.setattr("app.api.v1.routes.warmup.run_warmup_cycle.delay", lambda **kwargs: type("Task", (), {"id": "warmup-job-1"})())
 
     domain_resp = client.post("/api/v1/domains", json={"name": "warmup-pause.example.com"}, headers=auth_headers)
