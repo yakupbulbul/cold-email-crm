@@ -120,8 +120,8 @@ export default function InboxPage() {
             <ShieldAlert size={22} />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Inbox Unavailable</h2>
-            <p className="mt-2 max-w-lg text-sm text-slate-600">The backend failed while loading inbox status or thread data.</p>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Inbox Unavailable</h2>
+            <p className="mt-2 max-w-lg text-sm text-[var(--muted-foreground)]">The backend failed while loading inbox status or thread data.</p>
           </div>
           <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         </SurfaceCard>
@@ -192,17 +192,17 @@ export default function InboxPage() {
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
         <SurfaceCard className="space-y-4 p-4">
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Sync Health</h2>
-            <p className="mt-2 text-sm text-slate-600">{status?.worker_status.detail}</p>
-            <p className="mt-1 text-sm text-slate-600">{status?.scheduler_status.detail}</p>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Sync Health</h2>
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]">{status?.worker_status.detail}</p>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">{status?.scheduler_status.detail}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mailbox</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Mailbox</label>
             <select
               value={mailboxFilter}
               onChange={(event) => setMailboxFilter(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)]"
             >
               <option value="all">All mailboxes</option>
               {(status?.mailboxes ?? []).map((mailbox) => (
@@ -213,33 +213,33 @@ export default function InboxPage() {
             </select>
           </div>
 
-          <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          <label className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--foreground)]">
             <span>Show unread only</span>
             <input type="checkbox" checked={showUnreadOnly} onChange={(event) => setShowUnreadOnly(event.target.checked)} />
           </label>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Search threads</label>
+            <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Search threads</label>
             <div className="relative">
-              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search subject or sender"
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-900"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] py-2 pl-9 pr-3 text-sm text-[var(--foreground)]"
               />
             </div>
           </div>
 
-          <div className="space-y-2 border-t border-slate-200 pt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mailbox Sync Status</h3>
+          <div className="space-y-2 border-t border-[var(--border)] pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Mailbox Sync Status</h3>
             <div className="space-y-2">
               {(status?.mailboxes ?? []).map((mailbox) => (
-                <div key={mailbox.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <div key={mailbox.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900">{mailbox.email}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="truncate text-sm font-medium text-[var(--foreground)]">{mailbox.email}</p>
+                      <p className="text-xs text-[var(--muted-foreground)]">
                         {mailbox.inbox_sync_status} · {(mailbox.provider_type || "google_workspace").replaceAll("_", " ")}
                       </p>
                     </div>
@@ -248,22 +248,22 @@ export default function InboxPage() {
                         ? "bg-green-100 text-green-700"
                         : mailbox.inbox_sync_status === "failing"
                           ? "bg-red-100 text-red-700"
-                          : "bg-slate-100 text-slate-600"
+                          : "bg-[var(--surface-muted)] text-[var(--muted-foreground)]"
                     }`}>
                       {mailbox.inbox_sync_status}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-[var(--muted-foreground)]">
                     Last sync: {formatDateTime(mailbox.inbox_last_synced_at)}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                     Last success: {formatDateTime(mailbox.inbox_last_success_at)}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                     IMAP: {mailbox.imap_health || mailbox.inbox_sync_status} · {mailbox.imap_health_detail || "No IMAP detail available."}
                   </p>
                   {mailbox.oauth_connection_status ? (
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                       OAuth: {mailbox.oauth_connection_status.replaceAll("_", " ")}
                     </p>
                   ) : null}
@@ -277,7 +277,7 @@ export default function InboxPage() {
                     type="button"
                     onClick={() => void handleMailboxSync(mailbox.id, mailbox.email)}
                     disabled={syncingMailboxId === mailbox.id || syncing}
-                    className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {syncingMailboxId === mailbox.id ? <LoaderCircle size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                     Sync this mailbox
@@ -301,39 +301,39 @@ export default function InboxPage() {
         ) : (
           <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
             <SurfaceCard className="overflow-hidden p-0">
-              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Threads</h2>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Threads</h2>
+                <span className="rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--foreground)]">
                   {threads.length} visible
                 </span>
               </div>
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[var(--surface-muted)]">
                 {threads.map((thread) => (
                   <button
                     key={thread.id}
                     type="button"
                     onClick={() => setSelectedThreadId(thread.id)}
-                    className={`flex w-full flex-col gap-2 px-4 py-4 text-left transition-colors ${selectedThreadId === thread.id ? "bg-slate-50" : "hover:bg-slate-50/70"}`}
+                    className={`flex w-full flex-col gap-2 px-4 py-4 text-left transition-colors ${selectedThreadId === thread.id ? "bg-[var(--surface-muted)]" : "hover:bg-[var(--surface-muted)]/70"}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{thread.subject || "No subject"}</p>
-                        <p className="truncate text-sm text-slate-600">{thread.contact_email || "Unknown sender"}</p>
-                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="truncate text-sm font-semibold text-[var(--foreground)]">{thread.subject || "No subject"}</p>
+                        <p className="truncate text-sm text-[var(--muted-foreground)]">{thread.contact_email || "Unknown sender"}</p>
+                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                           {(thread.mailbox_provider || "google_workspace").replaceAll("_", " ")}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-slate-500">{formatDateTime(thread.last_message_at)}</p>
+                        <p className="text-xs text-[var(--muted-foreground)]">{formatDateTime(thread.last_message_at)}</p>
                         {thread.unread ? (
-                          <span className="mt-1 inline-flex rounded-full bg-blue-100 px-2 py-1 text-[11px] font-semibold text-blue-700">
+                          <span className="mt-1 inline-flex rounded-full bg-[#d4e4d3] px-2 py-1 text-[11px] font-semibold text-[var(--primary)]">
                             {thread.unread_count ?? 1} unread
                           </span>
                         ) : null}
                       </div>
                     </div>
-                    <p className="line-clamp-2 text-sm text-slate-600">{thread.last_message_preview || thread.snippet || "No preview available."}</p>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <p className="line-clamp-2 text-sm text-[var(--muted-foreground)]">{thread.last_message_preview || thread.snippet || "No preview available."}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
                       <span>{thread.mailbox_email}</span>
                       <span>•</span>
                       <span>{thread.linkage_status === "linked" ? (thread.campaign_name ? `Campaign: ${thread.campaign_name}` : "Linked contact") : "Unlinked reply"}</span>
@@ -346,9 +346,9 @@ export default function InboxPage() {
             <SurfaceCard className="p-0">
               {selectedThread ? (
                 <div className="flex h-full flex-col">
-                  <div className="border-b border-slate-200 px-5 py-4">
-                    <h2 className="text-xl font-semibold text-slate-900">{selectedThread.subject || "No subject"}</h2>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                  <div className="border-b border-[var(--border)] px-5 py-4">
+                    <h2 className="text-xl font-semibold text-[var(--foreground)]">{selectedThread.subject || "No subject"}</h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <span>{selectedThread.contact_email || "Unknown sender"}</span>
                       <span>•</span>
                       <span>{selectedThread.mailbox_email}</span>
@@ -363,13 +363,13 @@ export default function InboxPage() {
                   <div className="space-y-4 p-5">
                     {selectedThread.messages.map((message) => (
                       <div key={message.id} className={`rounded-2xl border px-4 py-3 ${
-                        message.direction === "inbound" ? "border-slate-200 bg-white" : "border-blue-100 bg-blue-50/70"
+                        message.direction === "inbound" ? "border-[var(--border)] bg-[var(--surface)]" : "border-[#b8d4b6] bg-[#d4e4d3]/70"
                       }`}>
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
                           <span>{message.direction === "inbound" ? message.from_address : message.to_address}</span>
                           <span>{formatDateTime(message.sent_at)}</span>
                         </div>
-                        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800">{message.body_text || "No plain-text body available."}</p>
+                        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{message.body_text || "No plain-text body available."}</p>
                       </div>
                     ))}
                   </div>

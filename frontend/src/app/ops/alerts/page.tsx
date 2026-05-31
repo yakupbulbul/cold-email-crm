@@ -41,48 +41,48 @@ export default function AlertsDashboard() {
     const getSeverityIcon = (sev: string) => {
         if (sev === "critical") return <ShieldAlert className="text-red-600" size={24} />;
         if (sev === "warning") return <Activity className="text-amber-500" size={24} />;
-        return <Info className="text-blue-500" size={24} />;
+        return <Info className="text-[var(--primary)]" size={24} />;
     };
 
     return (
         <div className="space-y-6 animate-fade-in relative min-h-screen pb-12">
-            <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-[var(--foreground)] tracking-tight flex items-center gap-3">
                 <Bell className="text-red-500" size={32} /> Incident Management & Alerts
             </h1>
 
             {loading ? (
                 <div className="flex justify-center py-20"><Spinner size="lg" /></div>
             ) : alerts.length === 0 ? (
-                <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-16 flex flex-col items-center justify-center text-center mt-8">
+                <div className="bg-[var(--surface)] border-2 border-dashed border-[var(--border)] rounded-2xl p-16 flex flex-col items-center justify-center text-center mt-8">
                     <CheckCircle className="text-emerald-500 mb-4" size={48} />
-                    <h3 className="text-xl font-bold text-slate-800">All Systems Nominal</h3>
-                    <p className="text-slate-500 font-medium">There are no active alerts or incidents tracked in the cluster.</p>
+                    <h3 className="text-xl font-bold text-[var(--foreground)]">All Systems Nominal</h3>
+                    <p className="text-[var(--muted-foreground)] font-medium">There are no active alerts or incidents tracked in the cluster.</p>
                 </div>
             ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mt-8">
+                <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm p-6 mt-8">
                     <Table columns={["Severity", "Alert Rule Data", "Message", "Timestamp", "Actions"]}>
                         {alerts.map(alert => (
                             <TableRow key={alert.id} className={!alert.is_acknowledged ? "bg-red-50/50" : ""}>
                                 <TableCell>
                                     <div className="flex items-center gap-2">
                                         {getSeverityIcon(alert.severity)}
-                                        <span className="font-bold text-slate-700 capitalize w-20">{alert.severity}</span>
+                                        <span className="font-bold text-[var(--foreground)] capitalize w-20">{alert.severity}</span>
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="font-bold text-slate-800">{alert.title}</div>
-                                    <div className="text-xs text-slate-500 font-mono mt-1">{alert.alert_type}</div>
+                                    <div className="font-bold text-[var(--foreground)]">{alert.title}</div>
+                                    <div className="text-xs text-[var(--muted-foreground)] font-mono mt-1">{alert.alert_type}</div>
                                 </TableCell>
                                 <TableCell className="max-w-md">
-                                    <span className="text-slate-600 font-medium text-sm drop-shadow-sm">{alert.message}</span>
+                                    <span className="text-[var(--muted-foreground)] font-medium text-sm drop-shadow-sm">{alert.message}</span>
                                 </TableCell>
-                                <TableCell className="text-slate-500 text-xs font-mono">
+                                <TableCell className="text-[var(--muted-foreground)] text-xs font-mono">
                                     {new Date(alert.created_at).toLocaleString()}
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
                                         {!alert.is_acknowledged && (
-                                            <button onClick={() => handleAcknowledge(alert.id)} className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 shadow-sm rounded-lg hover:bg-slate-50 transition-colors text-slate-700">
+                                            <button onClick={() => handleAcknowledge(alert.id)} className="text-xs font-bold px-3 py-1.5 bg-[var(--surface)] border border-[var(--border)] shadow-sm rounded-lg hover:bg-[var(--surface-muted)] transition-colors text-[var(--foreground)]">
                                                 Acknowledge
                                             </button>
                                         )}

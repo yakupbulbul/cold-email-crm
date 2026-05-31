@@ -134,7 +134,7 @@ export default function WarmupPage() {
             type="button"
             onClick={() => void handlePause()}
             disabled={pageLoading || activeAction === "start" || activeAction === "pause" || activeAction === "run-now"}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {activeAction === "pause" ? <Spinner size="sm" /> : <Pause size={18} />}
             Pause All
@@ -143,7 +143,7 @@ export default function WarmupPage() {
             type="button"
             onClick={() => void handleStart()}
             disabled={pageLoading || activeAction === "start" || activeAction === "pause" || activeAction === "run-now"}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-2.5 font-bold text-white transition-colors hover:bg-[#245a42] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {activeAction === "start" ? <Spinner size="sm" /> : <Play size={18} fill="currentColor" />}
             Start Warm-up
@@ -152,7 +152,7 @@ export default function WarmupPage() {
             type="button"
             onClick={() => void handleRunNow()}
             disabled={pageLoading || activeAction === "start" || activeAction === "pause" || activeAction === "run-now"}
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-2.5 font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#b8d4b6] bg-[#d4e4d3] px-5 py-2.5 font-bold text-[var(--primary)] transition-colors hover:bg-[#d4e4d3] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {activeAction === "run-now" ? <Spinner size="sm" /> : <Zap size={18} />}
             Run now
@@ -161,7 +161,7 @@ export default function WarmupPage() {
             type="button"
             onClick={() => void loadWarmup()}
             disabled={pageLoading}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCcw size={18} />
             Refresh
@@ -192,8 +192,8 @@ export default function WarmupPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-800">
+            <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+              <div className="mb-4 flex items-center gap-2 text-lg font-bold text-[var(--foreground)]">
                 <Clock3 size={18} />
                 Runtime status
               </div>
@@ -205,7 +205,7 @@ export default function WarmupPage() {
               </div>
               <div className="mt-4 space-y-2">
                 {status.next_action ? (
-                  <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+                  <div className="rounded-xl border border-[#b8d4b6] bg-[#d4e4d3] px-4 py-3 text-sm font-medium text-[#2d6a4f]">
                     Next warm-up action: {status.next_action}
                   </div>
                 ) : null}
@@ -221,32 +221,32 @@ export default function WarmupPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 text-lg font-bold text-slate-800">Mailbox participation</div>
+            <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+              <div className="mb-4 text-lg font-bold text-[var(--foreground)]">Mailbox participation</div>
               <div className="space-y-3">
                 {status.mailboxes.length === 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 text-sm text-[var(--muted-foreground)]">
                     No mailboxes exist yet. Create at least two healthy mailboxes before warm-up can run.
                   </div>
                 ) : status.mailboxes.map((mailbox) => (
-                  <div key={mailbox.id} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div key={mailbox.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <div className="font-semibold text-slate-800">{mailbox.email}</div>
-                        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <div className="font-semibold text-[var(--foreground)]">{mailbox.email}</div>
+                        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                           {(mailbox.provider_type || "google_workspace").replaceAll("_", " ")}
                         </div>
-                        <div className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                        <div className="mt-1 text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                           {mailbox.warmup_status}
                         </div>
-                        <div className="mt-2 text-sm text-slate-600">
-                          Last result: <span className="font-medium text-slate-800">{mailbox.warmup_last_result || "never_run"}</span>
+                        <div className="mt-2 text-sm text-[var(--muted-foreground)]">
+                          Last result: <span className="font-medium text-[var(--foreground)]">{mailbox.warmup_last_result || "never_run"}</span>
                         </div>
                         {mailbox.warmup_block_reason ? (
                           <div className="mt-1 text-sm text-amber-700">{mailbox.warmup_block_reason}</div>
                         ) : null}
                         {mailbox.warmup_recommendation ? (
-                          <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                          <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--muted-foreground)]">
                             Recommendation: {mailbox.warmup_recommendation}
                           </div>
                         ) : null}
@@ -257,8 +257,8 @@ export default function WarmupPage() {
                         disabled={activeAction === "toggle" && actionState?.id === mailbox.id}
                         className={`inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                           mailbox.warmup_enabled
-                            ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
+                            ? "border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-muted)]"
+                            : "bg-[var(--primary)] text-white hover:bg-[#245a42]"
                         }`}
                       >
                         {activeAction === "toggle" && actionState?.id === mailbox.id ? (
@@ -272,14 +272,14 @@ export default function WarmupPage() {
             </section>
           </div>
 
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 p-6">
-              <h2 className="text-lg font-bold text-slate-800">Active warm-up pairs</h2>
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
+            <div className="border-b border-[var(--surface-muted)] p-6">
+              <h2 className="text-lg font-bold text-[var(--foreground)]">Active warm-up pairs</h2>
             </div>
             {pairs.length === 0 ? (
-              <div className="p-10 text-center text-slate-500">
+              <div className="p-10 text-center text-[var(--muted-foreground)]">
                 <Zap className="mx-auto mb-4 opacity-50" size={42} />
-                <div className="font-semibold text-slate-700">No active warm-up pairs</div>
+                <div className="font-semibold text-[var(--foreground)]">No active warm-up pairs</div>
                 <div className="mt-2 text-sm">
                   {blockers.length > 0 ? blockers[0].message : "Enable at least two SMTP-healthy mailboxes to generate warm-up pairs."}
                 </div>
@@ -287,7 +287,7 @@ export default function WarmupPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-[var(--surface-muted)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                     <tr>
                       <th className="px-6 py-4">Sender</th>
                       <th className="px-6 py-4">Recipient</th>
@@ -300,17 +300,17 @@ export default function WarmupPage() {
                   </thead>
                   <tbody>
                     {pairs.map((pair) => (
-                      <tr key={pair.id} className="border-t border-slate-100 align-top">
-                        <td className="px-6 py-4 font-medium text-slate-800">{pair.sender_email}</td>
-                        <td className="px-6 py-4 font-medium text-slate-800">{pair.recipient_email}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{pair.state}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{formatDateTime(pair.last_send_at)}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{formatDateTime(pair.next_scheduled_at)}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
+                      <tr key={pair.id} className="border-t border-[var(--surface-muted)] align-top">
+                        <td className="px-6 py-4 font-medium text-[var(--foreground)]">{pair.sender_email}</td>
+                        <td className="px-6 py-4 font-medium text-[var(--foreground)]">{pair.recipient_email}</td>
+                        <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">{pair.state}</td>
+                        <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">{formatDateTime(pair.last_send_at)}</td>
+                        <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">{formatDateTime(pair.next_scheduled_at)}</td>
+                        <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">
                           <div>{pair.last_result || "Not run yet"}</div>
                           {pair.last_error ? <div className="mt-1 text-amber-700">{pair.last_error}</div> : null}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
+                        <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">
                           {pair.daily_sent_count} / {pair.daily_limit}
                         </td>
                       </tr>
@@ -321,20 +321,20 @@ export default function WarmupPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 p-6">
-              <h2 className="text-lg font-bold text-slate-800">Recent warm-up activity</h2>
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
+            <div className="border-b border-[var(--surface-muted)] p-6">
+              <h2 className="text-lg font-bold text-[var(--foreground)]">Recent warm-up activity</h2>
             </div>
             {logs.length === 0 ? (
-              <div className="p-10 text-center text-slate-500">
+              <div className="p-10 text-center text-[var(--muted-foreground)]">
                 <Activity className="mx-auto mb-4 opacity-50" size={42} />
-                <div className="font-semibold text-slate-700">No recent warm-up activity</div>
+                <div className="font-semibold text-[var(--foreground)]">No recent warm-up activity</div>
                 <div className="mt-2 text-sm">Recent send, failure, and skipped warm-up events will appear here.</div>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-[var(--surface-muted)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                     <tr>
                       <th className="px-6 py-4">Timestamp</th>
                       <th className="px-6 py-4">Sender</th>
@@ -345,12 +345,12 @@ export default function WarmupPage() {
                   </thead>
                   <tbody>
                     {logs.map((log) => (
-                      <tr key={log.id} className="border-t border-slate-100 align-top">
-                        <td className="px-6 py-4 text-sm text-slate-600">{formatDateTime(log.timestamp)}</td>
-                        <td className="px-6 py-4 text-sm text-slate-700">{log.sender_email || "Unknown sender"}</td>
-                        <td className="px-6 py-4 text-sm text-slate-700">{log.recipient_email || log.target_email}</td>
-                        <td className="px-6 py-4 text-sm font-medium text-slate-800">{log.status}</td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
+                      <tr key={log.id} className="border-t border-[var(--surface-muted)] align-top">
+                        <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">{formatDateTime(log.timestamp)}</td>
+                        <td className="px-6 py-4 text-sm text-[var(--foreground)]">{log.sender_email || "Unknown sender"}</td>
+                        <td className="px-6 py-4 text-sm text-[var(--foreground)]">{log.recipient_email || log.target_email}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-[var(--foreground)]">{log.status}</td>
+                        <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">
                           {log.result_detail || "No detail recorded."}
                           {log.error_category ? <div className="mt-1 text-amber-700">Category: {log.error_category}</div> : null}
                         </td>
@@ -369,10 +369,10 @@ export default function WarmupPage() {
 
 function DetailCard({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
-      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-2 text-sm font-semibold text-slate-800">{value}</div>
-      {detail ? <div className="mt-1 text-sm text-slate-600">{detail}</div> : null}
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
+      <div className="text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">{label}</div>
+      <div className="mt-2 text-sm font-semibold text-[var(--foreground)]">{value}</div>
+      {detail ? <div className="mt-1 text-sm text-[var(--muted-foreground)]">{detail}</div> : null}
     </div>
   );
 }

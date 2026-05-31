@@ -69,39 +69,39 @@ export default function LandingPage() {
   const primaryLabel = token ? "Open workspace" : "Sign in to workspace";
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f7f9fc_0%,#eef4ff_45%,#f4f7fb_100%)] text-slate-950">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#faf8f5_0%,#f0ebe4_45%,#faf8f5_100%)] text-[var(--foreground)]">
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-        <header className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/80 bg-white/80 px-5 py-4 shadow-[0_20px_50px_rgba(15,23,42,0.07)] backdrop-blur sm:px-6">
+        <header className="flex items-center justify-between gap-4 rounded-[2rem] border border-white/80 bg-[var(--surface)]/80 px-5 py-4 shadow-[0_20px_50px_rgba(45,31,20,0.07)] backdrop-blur sm:px-6">
           <Link href="/" className="flex items-center gap-3">
-            <div className="rounded-2xl bg-slate-950 px-4 py-3">
+            <div className="rounded-2xl bg-[var(--sidebar)] px-4 py-3">
               <Image src="/crm-logo.png" alt="Campaign Manager" width={78} height={38} className="h-auto w-[78px]" priority />
             </div>
             <div>
-              <div className="text-sm font-semibold tracking-[-0.02em] text-slate-950">Campaign Manager</div>
-              <div className="text-xs text-slate-500">Cold email CRM and operator workspace</div>
+              <div className="text-sm font-semibold tracking-[-0.02em] text-[var(--foreground)]">Campaign Manager</div>
+              <div className="text-xs text-[var(--muted-foreground)]">Cold email CRM and operator workspace</div>
             </div>
           </Link>
           <div className="flex items-center gap-3">
             <Link href={primaryHref} className="btn-secondary px-4 py-2.5 text-sm">
               {token ? "Open workspace" : "Sign in"}
             </Link>
-            <a href="#product" className="hidden text-sm font-medium text-slate-600 hover:text-slate-900 sm:inline-flex">
+            <a href="#product" className="hidden text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] sm:inline-flex">
               Explore product
             </a>
           </div>
         </header>
 
         <main className="space-y-8 py-8 sm:space-y-12 sm:py-12">
-          <section className="grid gap-8 rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-[0_28px_70px_rgba(15,23,42,0.08)] backdrop-blur sm:p-8 lg:grid-cols-[1.15fr,0.85fr] lg:items-center lg:p-10">
+          <section className="grid gap-8 rounded-[2rem] border border-white/70 bg-[var(--surface)]/88 p-6 shadow-[0_28px_70px_rgba(45,31,20,0.08)] backdrop-blur sm:p-8 lg:grid-cols-[1.15fr,0.85fr] lg:items-center lg:p-10">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#b8d4b6] bg-[#d4e4d3] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#2d6a4f]">
                 <Sparkles size={14} />
                 Unified outreach operations
               </div>
-              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.06em] text-slate-950 sm:text-5xl lg:text-[3.7rem] lg:leading-[0.95]">
+              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.06em] text-[var(--foreground)] sm:text-5xl lg:text-[3.7rem] lg:leading-[0.95]">
                 Run cold email infrastructure, campaigns, inbox, and warm-up from one product.
               </h1>
-              <p className="mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+              <p className="mt-5 max-w-xl text-base leading-7 text-[var(--muted-foreground)] sm:text-lg">
                 Campaign Manager keeps domain setup, mailbox control, contacts, replies, warm-up, and operational health in one workspace so teams can run outbound systems without losing clarity.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -140,12 +140,12 @@ export default function LandingPage() {
           </section>
 
           <section id="product" className="grid gap-6 lg:grid-cols-[0.8fr,1.2fr]">
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[var(--shadow-soft)] sm:p-7">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Product overview</div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+            <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)] sm:p-7">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted-foreground)]">Product overview</div>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">
                 Built for teams that need one operational surface instead of scattered tools.
               </h2>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
+              <p className="mt-4 text-sm leading-7 text-[var(--muted-foreground)]">
                 The product brings together sender infrastructure, mailbox connectivity, campaign execution, contact quality, reply monitoring, warm-up, and runtime health so operators can see what is ready, blocked, or failing without guessing.
               </p>
               <div className="mt-6 space-y-3">
@@ -157,13 +157,13 @@ export default function LandingPage() {
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {MODULES.map((module) => (
-                <article key={module.title} className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)]">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                <article key={module.title} className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--sidebar)] text-white">
                     <module.icon size={18} />
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold tracking-[-0.03em] text-slate-950">{module.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{module.description}</p>
-                  <Link href={token ? "/dashboard" : module.href} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 hover:text-slate-700">
+                  <h3 className="mt-4 text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">{module.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">{module.description}</p>
+                  <Link href={token ? "/dashboard" : module.href} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] hover:text-[var(--foreground)]">
                     {token ? "Open workspace" : "Open in workspace"}
                     <ArrowRight size={15} />
                   </Link>
@@ -173,29 +173,29 @@ export default function LandingPage() {
           </section>
 
           <section id="workflow" className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-            <div className="rounded-[2rem] border border-slate-200 bg-slate-950 p-6 text-white shadow-[0_28px_60px_rgba(15,23,42,0.2)] sm:p-8">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">How it works</div>
+            <div className="rounded-[2rem] border border-[#3d2e22] bg-[var(--sidebar)] p-6 text-[#faf8f5] shadow-[0_28px_60px_rgba(45,31,20,0.2)] sm:p-8">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8b7e74]">How it works</div>
               <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
                 A straightforward workflow from infrastructure to replies.
               </h2>
               <div className="mt-6 space-y-4">
                 {WORKFLOW.map((step, index) => (
-                  <div key={step} className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-950">
+                  <div key={step} className="flex items-start gap-4 rounded-2xl border border-white/10 bg-[var(--surface)]/5 px-4 py-4">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-xs font-semibold text-[var(--foreground)]">
                       {index + 1}
                     </div>
-                    <div className="text-sm leading-6 text-slate-200">{step}</div>
+                    <div className="text-sm leading-6 text-[#d4c9bc]">{step}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[var(--shadow-soft)] sm:p-8">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Get started</div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+            <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted-foreground)]">Get started</div>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">
                 Use the product as a guided workspace, not a collection of disconnected pages.
               </h2>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
+              <p className="mt-4 text-sm leading-7 text-[var(--muted-foreground)]">
                 Start with sender setup, move into mailbox and contact preparation, then use campaigns, inbox, and warm-up to operate with clear system feedback.
               </p>
               <div className="mt-6 grid gap-3">
@@ -205,8 +205,8 @@ export default function LandingPage() {
                   "Launch campaigns and inspect replies",
                   "Monitor warm-up and operations",
                 ].map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                    <BadgeCheck size={16} className="text-slate-900" />
+                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--foreground)]">
+                    <BadgeCheck size={16} className="text-[var(--foreground)]" />
                     {item}
                   </div>
                 ))}
@@ -237,21 +237,21 @@ function LandingMetric({
   icon: typeof Globe;
 }) {
   return (
-    <div className="rounded-[1.6rem] border border-slate-200 bg-slate-50/85 p-5">
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-sm">
+    <div className="rounded-[1.6rem] border border-[var(--border)] bg-[var(--surface-muted)]/85 p-5">
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--surface)] text-[var(--foreground)] shadow-sm">
         <Icon size={18} />
       </div>
-      <div className="mt-4 text-base font-semibold tracking-[-0.02em] text-slate-950">{title}</div>
-      <div className="mt-2 text-sm leading-6 text-slate-600">{detail}</div>
+      <div className="mt-4 text-base font-semibold tracking-[-0.02em] text-[var(--foreground)]">{title}</div>
+      <div className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">{detail}</div>
     </div>
   );
 }
 
 function ValuePoint({ label, detail }: { label: string; detail: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-      <div className="text-sm font-semibold text-slate-950">{label}</div>
-      <div className="mt-1 text-sm leading-6 text-slate-600">{detail}</div>
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
+      <div className="text-sm font-semibold text-[var(--foreground)]">{label}</div>
+      <div className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">{detail}</div>
     </div>
   );
 }

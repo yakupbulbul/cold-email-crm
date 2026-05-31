@@ -240,7 +240,7 @@ export default function CommandCenterPage() {
           <button
             type="button"
             onClick={() => void loadData()}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] shadow-sm hover:bg-[var(--surface-muted)]"
           >
             <RefreshCw size={16} /> Refresh
           </button>
@@ -265,26 +265,26 @@ export default function CommandCenterPage() {
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <SurfaceCard className="p-6">
               <SectionTitle title="Today and Next Actions" description="Create manual tasks and update the operational queue as you test campaigns, inbox, providers, and warm-up." />
-              <form onSubmit={handleCreateTask} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1.4fr_0.8fr_0.7fr_0.7fr_auto]">
+              <form onSubmit={handleCreateTask} className="grid gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 md:grid-cols-[1.4fr_0.8fr_0.7fr_0.7fr_auto]">
                 <input
                   value={taskForm.title}
                   onChange={(event) => setTaskForm({ ...taskForm, title: event.target.value })}
                   placeholder="Add a task, e.g. Test 9 April campaign"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400"
+                  className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
                 />
-                <select value={taskForm.category} onChange={(event) => setTaskForm({ ...taskForm, category: event.target.value as OperatorTaskCategory })} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                <select value={taskForm.category} onChange={(event) => setTaskForm({ ...taskForm, category: event.target.value as OperatorTaskCategory })} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
                   {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
                 </select>
-                <select value={taskForm.priority} onChange={(event) => setTaskForm({ ...taskForm, priority: event.target.value as OperatorTaskPriority })} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                <select value={taskForm.priority} onChange={(event) => setTaskForm({ ...taskForm, priority: event.target.value as OperatorTaskPriority })} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
                   {priorityOptions.map((priority) => <option key={priority} value={priority}>{priority}</option>)}
                 </select>
                 <input
                   type="datetime-local"
                   value={taskForm.due_at}
                   onChange={(event) => setTaskForm({ ...taskForm, due_at: event.target.value })}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
                 />
-                <button disabled={saving === "task" || !taskForm.title.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:bg-slate-400">
+                <button disabled={saving === "task" || !taskForm.title.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--sidebar)] px-4 py-2 text-sm font-semibold text-white disabled:bg-[var(--border-strong)]">
                   {saving === "task" ? <Spinner size="sm" /> : <Plus size={16} />} Add
                 </button>
               </form>
@@ -296,7 +296,7 @@ export default function CommandCenterPage() {
                   nextActions.map((task) => {
                     const href = entityHref(task);
                     return (
-                      <div key={task.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div key={task.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -304,9 +304,9 @@ export default function CommandCenterPage() {
                               <StatusBadge tone={statusTone(task.status)}>{task.status.replace("_", " ")}</StatusBadge>
                               <StatusBadge>{task.category}</StatusBadge>
                             </div>
-                            <h3 className="mt-3 font-semibold text-slate-900">{task.title}</h3>
-                            {task.description ? <p className="mt-1 text-sm text-slate-500">{task.description}</p> : null}
-                            <div className="mt-2 text-xs text-slate-400">Due: {formatDate(task.due_at)}</div>
+                            <h3 className="mt-3 font-semibold text-[var(--foreground)]">{task.title}</h3>
+                            {task.description ? <p className="mt-1 text-sm text-[var(--muted-foreground)]">{task.description}</p> : null}
+                            <div className="mt-2 text-xs text-[var(--muted-foreground)]">Due: {formatDate(task.due_at)}</div>
                             {href ? <Link href={href} className="mt-2 inline-block text-xs font-semibold text-sky-700 hover:text-sky-900">Open related context</Link> : null}
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -316,7 +316,7 @@ export default function CommandCenterPage() {
                                 type="button"
                                 disabled={saving === task.id || task.status === status}
                                 onClick={() => void handleTaskStatus(task, status)}
-                                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                                className="rounded-xl border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-40"
                               >
                                 {status.replace("_", " ")}
                               </button>
@@ -338,13 +338,13 @@ export default function CommandCenterPage() {
                   onChange={(event) => setDailyNote(event.target.value)}
                   rows={8}
                   placeholder="Today: tested direct send, checked inbox sync, campaign retry still needs validation..."
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400"
+                  className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm outline-none focus:border-[var(--border-strong)]"
                 />
                 <button
                   type="button"
                   onClick={() => void handleSaveNote()}
                   disabled={saving === "note"}
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:bg-slate-400"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[var(--sidebar)] px-4 py-2 text-sm font-semibold text-white disabled:bg-[var(--border-strong)]"
                 >
                   {saving === "note" ? <Spinner size="sm" /> : <NotebookPen size={16} />} Save today’s note
                 </button>
@@ -352,18 +352,18 @@ export default function CommandCenterPage() {
 
               <SurfaceCard className="p-6">
                 <SectionTitle title="Runbooks" description="Create reusable operating checklists, then start them as real tasks." />
-                <form onSubmit={handleCreateRunbook} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <form onSubmit={handleCreateRunbook} className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
                   <FieldGroup label="Runbook name">
-                    <input value={runbookForm.name} onChange={(event) => setRunbookForm({ ...runbookForm, name: event.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Campaign launch checklist" />
+                    <input value={runbookForm.name} onChange={(event) => setRunbookForm({ ...runbookForm, name: event.target.value })} className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" placeholder="Campaign launch checklist" />
                   </FieldGroup>
                   <FieldGroup label="Steps" hint="One step per line. They become tasks when the runbook starts.">
-                    <textarea value={runbookForm.steps} onChange={(event) => setRunbookForm({ ...runbookForm, steps: event.target.value })} rows={4} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Run dry-run&#10;Check deliverability blockers&#10;Start campaign pass" />
+                    <textarea value={runbookForm.steps} onChange={(event) => setRunbookForm({ ...runbookForm, steps: event.target.value })} rows={4} className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm" placeholder="Run dry-run&#10;Check deliverability blockers&#10;Start campaign pass" />
                   </FieldGroup>
                   <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <select value={runbookForm.category} onChange={(event) => setRunbookForm({ ...runbookForm, category: event.target.value as OperatorTaskCategory })} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                    <select value={runbookForm.category} onChange={(event) => setRunbookForm({ ...runbookForm, category: event.target.value as OperatorTaskCategory })} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm">
                       {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
                     </select>
-                    <button disabled={saving === "runbook" || !runbookForm.name.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50">
+                    <button disabled={saving === "runbook" || !runbookForm.name.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] shadow-sm disabled:opacity-50">
                       {saving === "runbook" ? <Spinner size="sm" /> : <BookOpenCheck size={16} />} Create
                     </button>
                   </div>
@@ -374,21 +374,21 @@ export default function CommandCenterPage() {
                     <EmptyState title="No runbooks yet" description="Create your first checklist for campaign launch, Google Workspace setup, inbox sync, or warm-up testing." icon={BookOpenCheck} />
                   ) : (
                     runbooks.map((runbook) => (
-                      <div key={runbook.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div key={runbook.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
                               <StatusBadge>{runbook.category}</StatusBadge>
-                              <span className="text-xs text-slate-400">{runbook.steps.length} steps</span>
+                              <span className="text-xs text-[var(--muted-foreground)]">{runbook.steps.length} steps</span>
                             </div>
-                            <h3 className="mt-2 font-semibold text-slate-900">{runbook.name}</h3>
-                            {runbook.description ? <p className="mt-1 text-sm text-slate-500">{runbook.description}</p> : null}
+                            <h3 className="mt-2 font-semibold text-[var(--foreground)]">{runbook.name}</h3>
+                            {runbook.description ? <p className="mt-1 text-sm text-[var(--muted-foreground)]">{runbook.description}</p> : null}
                           </div>
                           <button
                             type="button"
                             onClick={() => void handleStartRunbook(runbook)}
                             disabled={saving === `runbook-${runbook.id}` || !runbook.is_active}
-                            className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:bg-slate-400"
+                            className="rounded-xl bg-[var(--sidebar)] px-3 py-2 text-xs font-semibold text-white disabled:bg-[var(--border-strong)]"
                           >
                             {saving === `runbook-${runbook.id}` ? "Starting..." : "Start"}
                           </button>
@@ -406,19 +406,19 @@ export default function CommandCenterPage() {
             {actions.length === 0 ? (
               <EmptyState title="No operational actions logged yet" description="Actions appear here after you start campaigns, run dry-runs, send email, sync inboxes, check providers, or create manual tasks." icon={CalendarClock} />
             ) : (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[var(--surface-muted)]">
                 {actions.map((action) => {
                   const href = entityHref(action);
                   return (
                     <div key={action.id} className="grid gap-3 py-4 md:grid-cols-[10rem_1fr_auto] md:items-start">
-                      <div className="text-xs text-slate-400">{formatDate(action.created_at)}</div>
+                      <div className="text-xs text-[var(--muted-foreground)]">{formatDate(action.created_at)}</div>
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <StatusBadge tone={resultTone(action.result)}>{action.result}</StatusBadge>
                           <StatusBadge>{action.source}</StatusBadge>
-                          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{action.action_type.replaceAll("_", " ")}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">{action.action_type.replaceAll("_", " ")}</span>
                         </div>
-                        <p className="mt-2 text-sm font-medium text-slate-800">{action.message}</p>
+                        <p className="mt-2 text-sm font-medium text-[var(--foreground)]">{action.message}</p>
                       </div>
                       {href ? <Link href={href} className="text-sm font-semibold text-sky-700 hover:text-sky-900">Open context</Link> : null}
                     </div>

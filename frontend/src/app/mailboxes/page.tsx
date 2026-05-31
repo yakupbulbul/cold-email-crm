@@ -258,13 +258,13 @@ export default function MailboxesPage() {
       <SurfaceCard className="p-5">
       <form onSubmit={handleCreateMailbox} className="grid gap-4 md:grid-cols-2">
           <div>
-            <label htmlFor="mailbox-provider" className="block text-sm font-semibold text-slate-700 mb-2">Provider</label>
+            <label htmlFor="mailbox-provider" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Provider</label>
             <select id="mailbox-provider" value={providerType} onChange={(event) => setProviderType(event.target.value as MailProviderType)} className="form-input">
               <option value="google_workspace">Google Workspace</option>
             </select>
           </div>
           <div>
-            <label htmlFor="mailbox-domain" className="block text-sm font-semibold text-slate-700 mb-2">Domain</label>
+            <label htmlFor="mailbox-domain" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Domain</label>
             <select id="mailbox-domain" data-testid="mailbox-domain-select" value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)} className="form-input">
               <option value="">Select a domain</option>
               {domains.map((domain) => (
@@ -273,20 +273,20 @@ export default function MailboxesPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="mailbox-local-part" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Local Part</label>
+            <label htmlFor="mailbox-local-part" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Mailbox Local Part</label>
             <input id="mailbox-local-part" data-testid="mailbox-local-part-input" value={localPart} onChange={(event) => setLocalPart(event.target.value)} placeholder="sales" className="form-input" />
           </div>
           <div>
-            <label htmlFor="mailbox-display-name" className="block text-sm font-semibold text-slate-700 mb-2">Display Name</label>
+            <label htmlFor="mailbox-display-name" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Display Name</label>
             <input id="mailbox-display-name" data-testid="mailbox-display-name-input" value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Sales Team" className="form-input" />
-            <p className="mt-2 text-xs text-slate-500">This becomes the visible sender name in email clients, for example: Sales Team &lt;sales@example.com&gt;.</p>
+            <p className="mt-2 text-xs text-[var(--muted-foreground)]">This becomes the visible sender name in email clients, for example: Sales Team &lt;sales@example.com&gt;.</p>
           </div>
           <div>
-            <label htmlFor="mailbox-password" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox Password</label>
-            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Not required for OAuth mailboxes" disabled className="form-input disabled:bg-slate-100 disabled:text-slate-400" />
+            <label htmlFor="mailbox-password" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Mailbox Password</label>
+            <input id="mailbox-password" data-testid="mailbox-password-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Not required for OAuth mailboxes" disabled className="form-input disabled:bg-[var(--surface-muted)] disabled:text-[var(--muted-foreground)]" />
           </div>
           <div>
-            <label htmlFor="mailbox-smtp-mode" className="block text-sm font-semibold text-slate-700 mb-2">SMTP Security Mode</label>
+            <label htmlFor="mailbox-smtp-mode" className="block text-sm font-semibold text-[var(--foreground)] mb-2">SMTP Security Mode</label>
             <select id="mailbox-smtp-mode" value={smtpSecurityMode} onChange={(event) => setSmtpSecurityMode(event.target.value as 'starttls' | 'ssl' | 'plain')} className="form-input">
               <option value="starttls">STARTTLS</option>
               <option value="ssl">SSL/TLS</option>
@@ -294,7 +294,7 @@ export default function MailboxesPage() {
             </select>
           </div>
           <div className="md:col-span-2 flex items-center justify-between gap-4">
-            {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div data-testid="mailbox-mode-message" className="text-sm text-slate-500">{mailboxModeMessage}</div>}
+            {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div data-testid="mailbox-mode-message" className="text-sm text-[var(--muted-foreground)]">{mailboxModeMessage}</div>}
             <button data-testid="create-mailbox-button" type="submit" disabled={isSubmitting || domains.length === 0} className="btn-primary">
               <Plus size={18} /> {isSubmitting ? 'Adding...' : 'Add Mailbox'}
             </button>
@@ -307,8 +307,8 @@ export default function MailboxesPage() {
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
                 <ServerCrash className="text-red-500" size={28} />
             </div>
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Failed to Load Mailboxes</h3>
-            <p className="text-sm text-slate-500 max-w-sm mb-2">Something went wrong while fetching your mailbox infrastructure.</p>
+            <h3 className="text-lg font-bold text-[var(--foreground)] mb-2">Failed to Load Mailboxes</h3>
+            <p className="text-sm text-[var(--muted-foreground)] max-w-sm mb-2">Something went wrong while fetching your mailbox infrastructure.</p>
             <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded">{error}</p>
         </SurfaceCard>
       ) : loading ? (
@@ -322,11 +322,11 @@ export default function MailboxesPage() {
         <SurfaceCard className="overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="py-4 px-6 font-semibold text-xs text-slate-500 uppercase tracking-wider">Email Server</th>
-                <th className="py-4 px-6 font-semibold text-xs text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="py-4 px-6 font-semibold text-xs text-slate-500 uppercase tracking-wider w-48">Daily Limit</th>
-                <th className="py-4 px-6 font-semibold text-xs text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-[var(--surface-muted)] border-b border-[var(--border)]">
+                <th className="py-4 px-6 font-semibold text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Email Server</th>
+                <th className="py-4 px-6 font-semibold text-xs text-[var(--muted-foreground)] uppercase tracking-wider">Status</th>
+                <th className="py-4 px-6 font-semibold text-xs text-[var(--muted-foreground)] uppercase tracking-wider w-48">Daily Limit</th>
+                <th className="py-4 px-6 font-semibold text-xs text-[var(--muted-foreground)] uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -354,19 +354,19 @@ export default function MailboxesPage() {
                         : "neutral";
                 const isCallbackMailbox = callbackMailboxId === mb.id;
                 return (
-                <tr key={mb.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors group ${isCallbackMailbox ? 'bg-blue-50/40' : ''}`}>
+                <tr key={mb.id} className={`border-b border-[var(--surface-muted)] hover:bg-[var(--surface-muted)] transition-colors group ${isCallbackMailbox ? 'bg-[#d4e4d3]/40' : ''}`}>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
-                      <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 rounded-xl shadow-sm border border-blue-100">
+                      <div className="p-3 bg-gradient-to-br from-[#d4e4d3] to-[#c8dbc6] text-[var(--primary)] rounded-xl shadow-sm border border-[#b8d4b6]">
                         <Mail size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-800 text-sm mb-0.5">{mb.email}</p>
-                        <p className="text-xs text-slate-500 font-medium">{mb.display_name || "SMTP/IMAP Account"}</p>
-                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{mb.provider_type.replaceAll("_", " ")}</p>
-                        <p className="mt-1 text-[11px] text-slate-500">Visible sender: {mb.display_name?.trim() ? `${mb.display_name} <${mb.email}>` : mb.email}</p>
+                        <p className="font-bold text-[var(--foreground)] text-sm mb-0.5">{mb.email}</p>
+                        <p className="text-xs text-[var(--muted-foreground)] font-medium">{mb.display_name || "SMTP/IMAP Account"}</p>
+                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">{mb.provider_type.replaceAll("_", " ")}</p>
+                        <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">Visible sender: {mb.display_name?.trim() ? `${mb.display_name} <${mb.email}>` : mb.email}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold bg-[var(--surface-muted)] text-[var(--muted-foreground)] border border-[var(--border)]">
                             OAuth mailbox
                           </span>
                           {isGoogleWorkspace ? (
@@ -385,17 +385,17 @@ export default function MailboxesPage() {
                             {deliverabilityIssue.message}
                           </p>
                         ) : null}
-                        <p className="mt-1 text-[11px] font-medium text-slate-500">SMTP {mb.smtp_security_mode.toUpperCase()} on {mb.smtp_host}:{mb.smtp_port}</p>
-                        <p className="mt-1 text-[11px] font-medium text-slate-500">IMAP {(mb.imap_security_mode || 'ssl').toUpperCase()} on {mb.imap_host}:{mb.imap_port}</p>
-                        <p className={`mt-1 text-[11px] font-medium ${((diagnostic?.status || mb.smtp_last_check_status) === 'healthy') ? 'text-emerald-700' : 'text-slate-500'}`}>
+                        <p className="mt-1 text-[11px] font-medium text-[var(--muted-foreground)]">SMTP {mb.smtp_security_mode.toUpperCase()} on {mb.smtp_host}:{mb.smtp_port}</p>
+                        <p className="mt-1 text-[11px] font-medium text-[var(--muted-foreground)]">IMAP {(mb.imap_security_mode || 'ssl').toUpperCase()} on {mb.imap_host}:{mb.imap_port}</p>
+                        <p className={`mt-1 text-[11px] font-medium ${((diagnostic?.status || mb.smtp_last_check_status) === 'healthy') ? 'text-emerald-700' : 'text-[var(--muted-foreground)]'}`}>
                           {diagnostic?.message || mb.last_provider_check_message || mb.smtp_last_check_message || 'Provider diagnostics have not been checked yet.'}
                         </p>
                         {isGoogleWorkspace ? (
-                          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                          <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Google Workspace provider</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">Google Workspace provider</p>
+                                <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
                                   {mb.external_account_email ? `Connected as ${mb.external_account_email}` : "OAuth connection required before send and inbox sync can use Google Workspace."}
                                 </p>
                               </div>
@@ -406,7 +406,7 @@ export default function MailboxesPage() {
                                       type="button"
                                       disabled={isBusy}
                                       onClick={() => void handleStartOAuth(mb.id)}
-                                      className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
+                                      className="rounded-lg border border-violet-200 bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
                                       data-testid={`reconnect-google-mailbox-${mb.id}`}
                                     >
                                       Reconnect
@@ -415,7 +415,7 @@ export default function MailboxesPage() {
                                       type="button"
                                       disabled={isBusy}
                                       onClick={() => void handleDisconnectOAuth(mb.id)}
-                                      className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
+                                      className="rounded-lg border border-amber-200 bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
                                       data-testid={`disconnect-google-mailbox-${mb.id}`}
                                     >
                                       Disconnect
@@ -426,7 +426,7 @@ export default function MailboxesPage() {
                                     type="button"
                                     disabled={isBusy}
                                     onClick={() => void handleStartOAuth(mb.id)}
-                                    className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
+                                    className="rounded-lg border border-violet-200 bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-violet-700 transition-colors hover:bg-violet-50 disabled:opacity-50"
                                     data-testid={`connect-google-mailbox-${mb.id}`}
                                   >
                                     {mb.oauth_connection_status === "expired" || mb.oauth_connection_status === "error" ? "Reconnect Google Workspace" : "Connect Google Workspace"}
@@ -436,32 +436,32 @@ export default function MailboxesPage() {
                                   type="button"
                                   disabled={isBusy}
                                   onClick={() => void handleCheckMailboxProvider(mb.id)}
-                                  className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50"
+                                  className="rounded-lg border border-emerald-200 bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50"
                                   data-testid={`provider-check-google-mailbox-${mb.id}`}
                                 >
                                   Run Provider Check
                                 </button>
                               </div>
                             </div>
-                            <div className="mt-3 grid gap-2 text-[11px] text-slate-500 md:grid-cols-3 xl:grid-cols-5">
+                            <div className="mt-3 grid gap-2 text-[11px] text-[var(--muted-foreground)] md:grid-cols-3 xl:grid-cols-5">
                               <div>
-                                <span className="font-semibold text-slate-600">OAuth status:</span> {oauthStatus}
+                                <span className="font-semibold text-[var(--muted-foreground)]">OAuth status:</span> {oauthStatus}
                               </div>
                               <div>
-                                <span className="font-semibold text-slate-600">Last provider check:</span> {mb.last_provider_check_at ? new Date(mb.last_provider_check_at).toLocaleString() : "Not run"}
+                                <span className="font-semibold text-[var(--muted-foreground)]">Last provider check:</span> {mb.last_provider_check_at ? new Date(mb.last_provider_check_at).toLocaleString() : "Not run"}
                               </div>
                               <div>
-                                <span className="font-semibold text-slate-600">Last OAuth check:</span> {mb.oauth_last_checked_at ? new Date(mb.oauth_last_checked_at).toLocaleString() : "Never"}
+                                <span className="font-semibold text-[var(--muted-foreground)]">Last OAuth check:</span> {mb.oauth_last_checked_at ? new Date(mb.oauth_last_checked_at).toLocaleString() : "Never"}
                               </div>
                               <div>
-                                <span className="font-semibold text-slate-600">Last token refresh:</span> {mb.oauth_last_refreshed_at ? new Date(mb.oauth_last_refreshed_at).toLocaleString() : "Never"}
+                                <span className="font-semibold text-[var(--muted-foreground)]">Last token refresh:</span> {mb.oauth_last_refreshed_at ? new Date(mb.oauth_last_refreshed_at).toLocaleString() : "Never"}
                               </div>
                               <div>
-                                <span className="font-semibold text-slate-600">Token expires:</span> {mb.oauth_token_expires_at ? new Date(mb.oauth_token_expires_at).toLocaleString() : "Unknown"}
+                                <span className="font-semibold text-[var(--muted-foreground)]">Token expires:</span> {mb.oauth_token_expires_at ? new Date(mb.oauth_token_expires_at).toLocaleString() : "Unknown"}
                               </div>
                             </div>
                             {diagnostic ? (
-                              <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-600">
+                              <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[11px] text-[var(--muted-foreground)]">
                                 SMTP XOAUTH2: <span className="font-semibold">{diagnostic.status}</span>. IMAP result is included in the provider check message above.
                               </div>
                             ) : null}
@@ -480,7 +480,7 @@ export default function MailboxesPage() {
                   </td>
                   <td className="py-4 px-6">
                     {isEditing ? (
-                      <select value={editingStatus} onChange={(event) => setEditingStatus(event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500">
+                      <select value={editingStatus} onChange={(event) => setEditingStatus(event.target.value)} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]">
                         <option value="active">active</option>
                         <option value="paused">paused</option>
                         <option value="disabled">disabled</option>
@@ -498,16 +498,16 @@ export default function MailboxesPage() {
                           value={editingDisplayName}
                           onChange={(event) => setEditingDisplayName(event.target.value)}
                           placeholder="Display name"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                          className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
                         />
                         <input
                           value={editingDailyLimit}
                           onChange={(event) => setEditingDailyLimit(event.target.value)}
                           type="number"
                           min="1"
-                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                          className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
                         />
-                        <select value={editingSecurityMode} onChange={(event) => setEditingSecurityMode(event.target.value as 'starttls' | 'ssl' | 'plain')} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500">
+                        <select value={editingSecurityMode} onChange={(event) => setEditingSecurityMode(event.target.value as 'starttls' | 'ssl' | 'plain')} className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]">
                           <option value="starttls">STARTTLS</option>
                           <option value="ssl">SSL/TLS</option>
                           <option value="plain">Plain</option>
@@ -515,11 +515,11 @@ export default function MailboxesPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1.5">
-                        <div className="flex justify-between items-center text-xs font-semibold text-slate-600">
+                        <div className="flex justify-between items-center text-xs font-semibold text-[var(--muted-foreground)]">
                           <span>{mb.display_name || 'Mailbox'}</span>
                           <span>Max {mb.daily_send_limit}</span>
                         </div>
-                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                        <div className="w-full h-2 bg-[var(--surface-muted)] rounded-full overflow-hidden shadow-inner">
                           <div className={`h-full rounded-full ${mb.status === 'active' ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gradient-to-r from-yellow-400 to-amber-500'}`} style={{ width: '0%' }}></div>
                         </div>
                       </div>
@@ -533,14 +533,14 @@ export default function MailboxesPage() {
                             data-testid={`save-mailbox-${mb.id}`}
                             disabled={isBusy}
                             onClick={() => void handleUpdateMailbox(mb.id)}
-                            className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
+                            className="rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-bold text-white transition-colors disabled:opacity-50"
                           >
                             {isBusy ? 'Saving...' : 'Save'}
                           </button>
                           <button
                             data-testid={`cancel-mailbox-${mb.id}`}
                             onClick={cancelEditMailbox}
-                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                            className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-bold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)]"
                           >
                             Cancel
                           </button>
@@ -551,14 +551,14 @@ export default function MailboxesPage() {
                             data-testid={`check-smtp-mailbox-${mb.id}`}
                             disabled={isBusy}
                             onClick={() => void handleCheckMailboxProvider(mb.id)}
-                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100 disabled:opacity-50"
+                            className="p-2 text-[var(--muted-foreground)] hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-100 disabled:opacity-50"
                           >
                             <ShieldCheck size={16} />
                           </button>
                           <button
                             data-testid={`edit-mailbox-${mb.id}`}
                             onClick={() => beginEditMailbox(mb)}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                            className="p-2 text-[var(--muted-foreground)] hover:text-[var(--primary)] hover:bg-[#d4e4d3] rounded-lg transition-colors border border-transparent hover:border-[#b8d4b6]"
                           >
                             <Edit2 size={16} />
                           </button>
@@ -566,7 +566,7 @@ export default function MailboxesPage() {
                             data-testid={`delete-mailbox-${mb.id}`}
                             disabled={isBusy}
                             onClick={() => void handleDeleteMailbox(mb.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 disabled:opacity-50"
+                            className="p-2 text-[var(--muted-foreground)] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 disabled:opacity-50"
                           >
                             <Trash2 size={16} />
                           </button>

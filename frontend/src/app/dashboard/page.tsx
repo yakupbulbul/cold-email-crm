@@ -122,25 +122,25 @@ export default function Dashboard() {
                 description="A quick explanation of the current database-backed state, without decorative filler."
               />
               <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">Audience mix</div>
+                    <div className="text-sm font-medium text-[var(--foreground)]">Audience mix</div>
                     <div className="mt-1 text-sm text-[var(--muted-foreground)]">B2B and B2C counts come from the backend deliverability summary.</div>
                   </div>
                   <StatusBadge tone="info">Live data</StatusBadge>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">Suppression safety</div>
+                    <div className="text-sm font-medium text-[var(--foreground)]">Suppression safety</div>
                     <div className="mt-1 text-sm text-[var(--muted-foreground)]">Suppressed and unsubscribed contacts remain visible as blockers.</div>
                   </div>
                   <StatusBadge tone={(stats.suppressed_contacts || 0) > 0 ? "warning" : "success"}>
                     {(stats.suppressed_contacts || 0) > 0 ? "Needs review" : "Healthy"}
                   </StatusBadge>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">Campaign workload</div>
+                    <div className="text-sm font-medium text-[var(--foreground)]">Campaign workload</div>
                     <div className="mt-1 text-sm text-[var(--muted-foreground)]">Use the campaigns page to inspect preflight, lists, and real execution timing.</div>
                   </div>
                   <StatusBadge tone="neutral">{stats.active_campaigns || 0} active</StatusBadge>
@@ -184,12 +184,12 @@ function PriorityRow({ label, value, tone }: { label: string; value: number; ton
 
 function ActionRow({ title, detail, href }: { title: string; detail: string; href: string }) {
   return (
-    <Link href={href} className="group flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition-colors hover:bg-white">
+    <Link href={href} className="group flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 transition-colors hover:bg-[var(--surface)]">
       <div>
-        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        <div className="text-sm font-semibold text-[var(--foreground)]">{title}</div>
         <div className="mt-1 text-sm text-[var(--muted-foreground)]">{detail}</div>
       </div>
-      <div className="mt-1 rounded-full bg-white p-2 text-slate-500 transition-colors group-hover:text-slate-900">
+      <div className="mt-1 rounded-full bg-[var(--surface)] p-2 text-[var(--muted-foreground)] transition-colors group-hover:text-[var(--foreground)]">
         <ArrowRight size={16} />
       </div>
     </Link>

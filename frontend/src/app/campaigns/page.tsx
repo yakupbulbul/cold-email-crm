@@ -684,11 +684,11 @@ export default function CampaignsPage() {
       <SurfaceCard className="p-5">
       <form onSubmit={handleCreate} className="grid gap-4 md:grid-cols-2">
         <div>
-          <label htmlFor="campaign-name" className="block text-sm font-semibold text-slate-700 mb-2">Campaign Name</label>
+          <label htmlFor="campaign-name" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Campaign Name</label>
           <input id="campaign-name" data-testid="campaign-name-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="April outreach" className="form-input" />
         </div>
         <div>
-          <label htmlFor="campaign-mailbox" className="block text-sm font-semibold text-slate-700 mb-2">Mailbox</label>
+          <label htmlFor="campaign-mailbox" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Mailbox</label>
           <select id="campaign-mailbox" data-testid="campaign-mailbox-select" value={mailboxId} onChange={(event) => setMailboxId(event.target.value)} className="form-input">
             <option value="">Select a mailbox</option>
             {mailboxes.map((mailbox) => (
@@ -697,11 +697,11 @@ export default function CampaignsPage() {
           </select>
         </div>
         <div>
-          <label htmlFor="campaign-subject" className="block text-sm font-semibold text-slate-700 mb-2">Template Subject</label>
+          <label htmlFor="campaign-subject" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Template Subject</label>
           <input id="campaign-subject" data-testid="campaign-subject-input" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Quick introduction" className="form-input" />
         </div>
         <div>
-          <label htmlFor="campaign-template-picker" className="block text-sm font-semibold text-slate-700 mb-2">Template Library</label>
+          <label htmlFor="campaign-template-picker" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Template Library</label>
           <select id="campaign-template-picker" defaultValue="" onChange={(event) => applyTemplateToCreate(event.target.value)} className="form-input">
             <option value="">Use a saved template</option>
             {templates.map((template) => (
@@ -710,14 +710,14 @@ export default function CampaignsPage() {
           </select>
         </div>
         <div>
-          <label htmlFor="campaign-type" className="block text-sm font-semibold text-slate-700 mb-2">Campaign Type</label>
+          <label htmlFor="campaign-type" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Campaign Type</label>
           <select id="campaign-type" value={campaignType} onChange={(event) => setCampaignType(event.target.value as 'b2b' | 'b2c')} className="form-input">
             <option value="b2b">B2B</option>
             <option value="b2c">B2C</option>
           </select>
         </div>
         <div>
-          <label htmlFor="campaign-goal" className="block text-sm font-semibold text-slate-700 mb-2">Goal Type</label>
+          <label htmlFor="campaign-goal" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Goal Type</label>
           <select id="campaign-goal" value={goalType} onChange={(event) => setGoalType(event.target.value)} className="form-input">
             <option value="outreach">Outreach</option>
             <option value="promotion">Promotion</option>
@@ -726,50 +726,50 @@ export default function CampaignsPage() {
           </select>
         </div>
         <div>
-          <label htmlFor="campaign-compliance" className="block text-sm font-semibold text-slate-700 mb-2">Compliance Mode</label>
+          <label htmlFor="campaign-compliance" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Compliance Mode</label>
           <select id="campaign-compliance" value={complianceMode} onChange={(event) => setComplianceMode(event.target.value)} className="form-input">
             <option value="standard">Standard</option>
             <option value="strict_b2c">Strict B2C</option>
           </select>
         </div>
         <div>
-          <label htmlFor="campaign-daily-limit" className="block text-sm font-semibold text-slate-700 mb-2">Daily Limit</label>
+          <label htmlFor="campaign-daily-limit" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Daily Limit</label>
           <input id="campaign-daily-limit" data-testid="campaign-daily-limit-input" type="number" min="1" value={dailyLimit} onChange={(event) => setDailyLimit(event.target.value)} className="form-input" />
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="campaign-body" className="block text-sm font-semibold text-slate-700 mb-2">Template Body</label>
+          <label htmlFor="campaign-body" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Template Body</label>
           <textarea id="campaign-body" data-testid="campaign-body-input" value={body} onChange={(event) => setBody(event.target.value)} rows={5} placeholder="Hi {{first_name}}, ..." className="form-input resize-y" />
         </div>
-        <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="md:col-span-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0 flex-1">
-              <label htmlFor="template-name" className="block text-sm font-semibold text-slate-700 mb-2">Save current subject/body as template</label>
-              <input id="template-name" value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Reusable intro template" className="form-input bg-white" />
+              <label htmlFor="template-name" className="block text-sm font-semibold text-[var(--foreground)] mb-2">Save current subject/body as template</label>
+              <input id="template-name" value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Reusable intro template" className="form-input bg-[var(--surface)]" />
             </div>
-            <button type="button" onClick={() => void handleCreateTemplate()} className="rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 hover:bg-blue-50">
+            <button type="button" onClick={() => void handleCreateTemplate()} className="rounded-xl border border-[#b8d4b6] bg-[var(--surface)] px-4 py-2.5 text-sm font-bold text-[var(--primary)] hover:bg-[#d4e4d3]">
               Save Template
             </button>
           </div>
           {templates.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {templates.slice(0, 6).map((template) => (
-                <div key={template.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  <button type="button" onClick={() => applyTemplateToCreate(template.id)} className="hover:text-blue-700">{template.name}</button>
-                  <button type="button" onClick={() => void handleDeleteTemplate(template.id)} className="text-slate-400 hover:text-red-600" aria-label={`Delete ${template.name}`}>
+                <div key={template.id} className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)]">
+                  <button type="button" onClick={() => applyTemplateToCreate(template.id)} className="hover:text-[var(--primary)]">{template.name}</button>
+                  <button type="button" onClick={() => void handleDeleteTemplate(template.id)} className="text-[var(--muted-foreground)] hover:text-red-600" aria-label={`Delete ${template.name}`}>
                     <X size={13} />
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="mt-3 text-xs text-slate-500">No saved templates yet. Save the current subject/body to reuse it later.</div>
+            <div className="mt-3 text-xs text-[var(--muted-foreground)]">No saved templates yet. Save the current subject/body to reuse it later.</div>
           )}
         </div>
         <div className="md:col-span-2">
-          <div className="mb-2 text-sm font-semibold text-slate-700">Reusable lead lists</div>
+          <div className="mb-2 text-sm font-semibold text-[var(--foreground)]">Reusable lead lists</div>
           <div className="flex flex-wrap gap-2">
             {lists.length === 0 ? (
-              <div className="text-sm text-slate-500">No reusable lists yet. Create lists from the Lists page.</div>
+              <div className="text-sm text-[var(--muted-foreground)]">No reusable lists yet. Create lists from the Lists page.</div>
             ) : (
               lists.map((list) => {
                 const selected = selectedCreateListIds.includes(list.id);
@@ -780,11 +780,11 @@ export default function CampaignsPage() {
                     onClick={() => toggleCreateList(list.id)}
                     className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
                       selected
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        ? 'border-[var(--primary)] bg-[#d4e4d3] text-[var(--primary)]'
+                        : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-muted)]'
                     }`}
                   >
-                    {list.name} <span className="ml-1 text-xs text-slate-400">({list.lead_count})</span>
+                    {list.name} <span className="ml-1 text-xs text-[var(--muted-foreground)]">({list.lead_count})</span>
                   </button>
                 );
               })
@@ -792,9 +792,9 @@ export default function CampaignsPage() {
           </div>
         </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
-          {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-slate-500">
+          {submitError ? <div className="text-sm font-medium text-red-700">{submitError}</div> : <div className="text-sm text-[var(--muted-foreground)]">
             <div>{campaignType === 'b2c' ? 'B2C campaigns surface stricter consent and unsubscribe blockers in preflight.' : 'B2B campaigns allow risky leads with warnings when compliance stays standard.'}</div>
-            <div className="mt-1">Sender preview: <span className="font-mono text-slate-700">{buildSenderPreview(mailboxes.find((mailbox) => mailbox.id === mailboxId))}</span></div>
+            <div className="mt-1">Sender preview: <span className="font-mono text-[var(--foreground)]">{buildSenderPreview(mailboxes.find((mailbox) => mailbox.id === mailboxId))}</span></div>
           </div>}
           <button data-testid="create-campaign-button" type="submit" disabled={isSubmitting || mailboxes.length === 0} className="btn-primary">
             <Plus size={18} strokeWidth={3} /> {isSubmitting ? 'Creating...' : 'Create Campaign'}
@@ -833,8 +833,8 @@ export default function CampaignsPage() {
             const currentSequence = sequenceSteps[campaign.id];
 
             return (
-              <div key={campaign.id} data-testid={`campaign-card-${campaign.id}`} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all p-7 group relative overflow-hidden">
-                <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 opacity-30 group-hover:opacity-70 transition-opacity ${campaign.status === 'active' ? 'bg-blue-300' : 'bg-slate-300'}`}></div>
+              <div key={campaign.id} data-testid={`campaign-card-${campaign.id}`} className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm hover:shadow-md transition-all p-7 group relative overflow-hidden">
+                <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 opacity-30 group-hover:opacity-70 transition-opacity ${campaign.status === 'active' ? 'bg-[#b8d4b6]' : 'bg-[var(--border-strong)]'}`}></div>
                 <div className="relative z-10">
                   <div className="flex justify-between items-start mb-6">
                     <div>
@@ -844,13 +844,13 @@ export default function CampaignsPage() {
                             data-testid={`edit-campaign-name-${campaign.id}`}
                             value={editState.name}
                             onChange={(event) => setEditState((current) => current ? { ...current, name: event.target.value } : current)}
-                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                           />
                           <select
                             data-testid={`edit-campaign-mailbox-${campaign.id}`}
                             value={editState.mailboxId}
                             onChange={(event) => setEditState((current) => current ? { ...current, mailboxId: event.target.value } : current)}
-                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                           >
                             <option value="">Select a mailbox</option>
                             {mailboxes.map((mailbox) => (
@@ -861,7 +861,7 @@ export default function CampaignsPage() {
                             <select
                               value={editState.campaignType}
                               onChange={(event) => setEditState((current) => current ? { ...current, campaignType: event.target.value } : current)}
-                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                              className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                             >
                               <option value="b2b">B2B</option>
                               <option value="b2c">B2C</option>
@@ -869,7 +869,7 @@ export default function CampaignsPage() {
                             <select
                               value={editState.goalType}
                               onChange={(event) => setEditState((current) => current ? { ...current, goalType: event.target.value } : current)}
-                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                              className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                             >
                               <option value="outreach">Outreach</option>
                               <option value="promotion">Promotion</option>
@@ -879,7 +879,7 @@ export default function CampaignsPage() {
                             <select
                               value={editState.complianceMode}
                               onChange={(event) => setEditState((current) => current ? { ...current, complianceMode: event.target.value } : current)}
-                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                              className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                             >
                               <option value="standard">Standard</option>
                               <option value="strict_b2c">Strict B2C</option>
@@ -888,89 +888,89 @@ export default function CampaignsPage() {
                         </div>
                       ) : (
                         <>
-                          <h3 className="text-xl font-extrabold text-slate-800 mb-1.5 group-hover:text-blue-600 transition-colors">{campaign.name}</h3>
-                          <p className="text-sm font-semibold text-slate-400 flex items-center gap-1.5">
+                          <h3 className="text-xl font-extrabold text-[var(--foreground)] mb-1.5 group-hover:text-[var(--primary)] transition-colors">{campaign.name}</h3>
+                          <p className="text-sm font-semibold text-[var(--muted-foreground)] flex items-center gap-1.5">
                             <Calendar size={14}/> Created on {new Date(campaign.created_at).toLocaleDateString()}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2">
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{campaign.campaign_type}</span>
-                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{campaign.goal_type}</span>
+                            <span className="rounded-full bg-[var(--surface-muted)] px-3 py-1 text-xs font-bold text-[var(--foreground)]">{campaign.campaign_type}</span>
+                            <span className="rounded-full bg-[#d4e4d3] px-3 py-1 text-xs font-bold text-[var(--primary)]">{campaign.goal_type}</span>
                             <span className={`rounded-full px-3 py-1 text-xs font-bold ${campaign.compliance_mode === 'strict_b2c' ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>{campaign.compliance_mode}</span>
                           </div>
                         </>
                       )}
                     </div>
-                    <span data-testid={`campaign-status-${campaign.id}`} className={`px-4 py-1 text-xs font-bold tracking-wide rounded-full border shadow-sm ${campaign.status === 'active' ? 'bg-blue-50 text-blue-700 border-blue-200' : campaign.status === 'paused' ? 'bg-amber-50 text-amber-700 border-amber-200' : campaign.status === 'archived' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                    <span data-testid={`campaign-status-${campaign.id}`} className={`px-4 py-1 text-xs font-bold tracking-wide rounded-full border shadow-sm ${campaign.status === 'active' ? 'bg-[#d4e4d3] text-[var(--primary)] border-[#b8d4b6]' : campaign.status === 'paused' ? 'bg-amber-50 text-amber-700 border-amber-200' : campaign.status === 'archived' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-[var(--surface-muted)] text-[var(--muted-foreground)] border-[var(--border)]'}`}>
                       {campaign.status}
                     </span>
                   </div>
 
                   {isEditing ? (
-                    <div className="mb-6 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-6 space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
                       <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Subject</label>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Subject</label>
                         <input
                           data-testid={`edit-campaign-subject-${campaign.id}`}
                           value={editState.subject}
                           onChange={(event) => setEditState((current) => current ? { ...current, subject: event.target.value } : current)}
-                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                         />
                       </div>
                       <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Body</label>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Body</label>
                         <textarea
                           data-testid={`edit-campaign-body-${campaign.id}`}
                           value={editState.body}
                           onChange={(event) => setEditState((current) => current ? { ...current, body: event.target.value } : current)}
                           rows={4}
-                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                         />
                       </div>
                       <div>
-                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Daily Limit</label>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Daily Limit</label>
                         <input
                           data-testid={`edit-campaign-limit-${campaign.id}`}
                           type="number"
                           min="1"
                           value={editState.dailyLimit}
                           onChange={(event) => setEditState((current) => current ? { ...current, dailyLimit: event.target.value } : current)}
-                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                         />
                       </div>
                     </div>
                   ) : null}
 
-                  <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+                  <div className="grid grid-cols-3 gap-4 border-t border-[var(--surface-muted)] pt-6">
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><Users size={14}/> Leads</p>
-                      <p className="text-3xl font-extrabold text-slate-800">{campaign.lead_count || 0}</p>
+                      <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><Users size={14}/> Leads</p>
+                      <p className="text-3xl font-extrabold text-[var(--foreground)]">{campaign.lead_count || 0}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><BarChart2 size={14}/> Sent</p>
-                      <p className="text-3xl font-extrabold text-slate-800">{campaign.sent_count || 0}</p>
+                      <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest mb-1 shadow-sm flex items-center gap-1.5"><BarChart2 size={14}/> Sent</p>
+                      <p className="text-3xl font-extrabold text-[var(--foreground)]">{campaign.sent_count || 0}</p>
                     </div>
                      <div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm">Reply Rate</p>
+                      <p className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-widest mb-1 shadow-sm">Reply Rate</p>
                       <p className="text-3xl font-extrabold text-green-600">{campaign.reply_rate || '0%'}</p>
                     </div>
                   </div>
 
-                  <div className="mt-4 text-sm font-medium text-slate-500">
-                    Daily limit: <span className="font-semibold text-slate-800">{campaign.daily_limit}</span>
+                  <div className="mt-4 text-sm font-medium text-[var(--muted-foreground)]">
+                    Daily limit: <span className="font-semibold text-[var(--foreground)]">{campaign.daily_limit}</span>
                   </div>
-                  <div className="mt-2 text-sm font-medium text-slate-500">
-                    Sender: <span className="font-mono text-slate-700">{buildSenderPreview(effectiveMailbox)}</span>
+                  <div className="mt-2 text-sm font-medium text-[var(--muted-foreground)]">
+                    Sender: <span className="font-mono text-[var(--foreground)]">{buildSenderPreview(effectiveMailbox)}</span>
                   </div>
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Execution</div>
-                    <div className="mt-2 text-sm font-semibold text-slate-700">
+                  <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Execution</div>
+                    <div className="mt-2 text-sm font-semibold text-[var(--foreground)]">
                       State: {campaign.execution_summary?.state || 'idle'}
                     </div>
-                    <div className="mt-1 text-sm text-slate-600">
+                    <div className="mt-1 text-sm text-[var(--muted-foreground)]">
                       {campaign.execution_summary?.detail || 'No dispatch timing available.'}
                     </div>
                     {campaign.execution_summary?.next_send_decision ? (
-                      <div className="mt-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                      <div className="mt-2 rounded-xl border border-[#b8d4b6] bg-[#d4e4d3] px-3 py-2 text-sm text-[#2d6a4f]">
                         Next send decision: <span className="font-semibold">{campaign.execution_summary.next_send_decision}</span>
                       </div>
                     ) : null}
@@ -980,8 +980,8 @@ export default function CampaignsPage() {
                       </div>
                     ) : null}
                     {executionTimingLabel(campaign) ? (
-                      <div className="mt-2 text-sm text-slate-600">
-                        {executionTimingLabel(campaign)?.label}: <span className="font-medium text-slate-800">{executionTimingLabel(campaign)?.value}</span>
+                      <div className="mt-2 text-sm text-[var(--muted-foreground)]">
+                        {executionTimingLabel(campaign)?.label}: <span className="font-medium text-[var(--foreground)]">{executionTimingLabel(campaign)?.value}</span>
                       </div>
                     ) : null}
                     <div className="mt-2 grid gap-2 sm:grid-cols-3">
@@ -990,24 +990,24 @@ export default function CampaignsPage() {
                       <SummaryStat label="Blocked leads" value={Object.values(campaign.execution_summary?.blocked_leads || {}).reduce((sum, count) => sum + count, 0)} />
                     </div>
                     {campaign.execution_summary?.next_eligible_lead ? (
-                      <div className="mt-2 text-sm text-slate-600">
-                        Next eligible lead: <span className="font-medium text-slate-800">{campaign.execution_summary.next_eligible_lead.email}</span>
+                      <div className="mt-2 text-sm text-[var(--muted-foreground)]">
+                        Next eligible lead: <span className="font-medium text-[var(--foreground)]">{campaign.execution_summary.next_eligible_lead.email}</span>
                       </div>
                     ) : null}
-                    <div className="mt-1 text-sm text-slate-600">
-                      Last completed: <span className="font-medium text-slate-800">{formatExecutionTime(campaign.execution_summary?.last_completed_at)}</span>
+                    <div className="mt-1 text-sm text-[var(--muted-foreground)]">
+                      Last completed: <span className="font-medium text-[var(--foreground)]">{formatExecutionTime(campaign.execution_summary?.last_completed_at)}</span>
                     </div>
                     {campaign.execution_summary?.last_delivery_attempt_at ? (
-                      <div className="mt-1 text-sm text-slate-600">
+                      <div className="mt-1 text-sm text-[var(--muted-foreground)]">
                         Last delivery attempt:{' '}
-                        <span className="font-medium text-slate-800">
+                        <span className="font-medium text-[var(--foreground)]">
                           {campaign.execution_summary.last_delivery_status || 'unknown'} at {formatExecutionTime(campaign.execution_summary.last_delivery_attempt_at)}
                         </span>
                       </div>
                     ) : null}
                     {campaign.execution_summary?.last_delivery_target_email ? (
-                      <div className="mt-1 text-sm text-slate-600">
-                        Last target: <span className="font-medium text-slate-800">{campaign.execution_summary.last_delivery_target_email}</span>
+                      <div className="mt-1 text-sm text-[var(--muted-foreground)]">
+                        Last target: <span className="font-medium text-[var(--foreground)]">{campaign.execution_summary.last_delivery_target_email}</span>
                       </div>
                     ) : null}
                     {campaign.execution_summary?.last_delivery_error ? (
@@ -1016,19 +1016,19 @@ export default function CampaignsPage() {
                       </div>
                     ) : null}
                     {campaign.execution_summary?.job_id ? (
-                      <div className="mt-1 text-sm text-slate-600">
-                        Current job: <span className="font-mono text-slate-800">{campaign.execution_summary.job_id}</span>
+                      <div className="mt-1 text-sm text-[var(--muted-foreground)]">
+                        Current job: <span className="font-mono text-[var(--foreground)]">{campaign.execution_summary.job_id}</span>
                       </div>
                     ) : null}
                     {campaign.execution_summary?.job_history?.length ? (
-                      <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                        <summary className="cursor-pointer text-sm font-semibold text-slate-700">Job history</summary>
+                      <details className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
+                        <summary className="cursor-pointer text-sm font-semibold text-[var(--foreground)]">Job history</summary>
                         <div className="mt-3 space-y-2">
                           {campaign.execution_summary.job_history.slice(0, 5).map((job) => (
-                            <div key={job.job_id} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                            <div key={job.job_id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-mono text-slate-800">{job.job_id}</span>
-                                <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">{job.status}</span>
+                                <span className="font-mono text-[var(--foreground)]">{job.job_id}</span>
+                                <span className="rounded-full bg-[var(--surface-muted)] px-2 py-0.5 font-semibold text-[var(--foreground)]">{job.status}</span>
                               </div>
                               <div className="mt-1">Queued: {formatExecutionTime(job.created_at)} · Started: {formatExecutionTime(job.started_at)} · Finished: {formatExecutionTime(job.finished_at)}</div>
                               {job.error_message ? <div className="mt-1 text-rose-700">{job.error_message}</div> : null}
@@ -1039,20 +1039,20 @@ export default function CampaignsPage() {
                     ) : null}
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-700">
+                  <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-[var(--foreground)]">
                       <Link2 size={16} /> Reusable lists
                     </div>
                     {attachedLists.length > 0 ? (
                       <div className="mb-3 flex flex-wrap gap-2">
                         {attachedLists.map((list) => (
-                          <div key={list.id} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                          <div key={list.id} className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]">
                             <span>{list.name}</span>
                             <button
                               type="button"
                               onClick={() => void handleRemoveList(campaign.id, list.id)}
                               disabled={isActionPending(campaign.id, 'remove-list')}
-                              className="text-slate-400 transition hover:text-red-600"
+                              className="text-[var(--muted-foreground)] transition hover:text-red-600"
                               aria-label={`Remove ${list.name}`}
                             >
                               <X size={14} />
@@ -1061,14 +1061,14 @@ export default function CampaignsPage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="mb-3 text-sm text-slate-500">No lists attached yet. Attach reusable lead groups to share contacts across campaigns.</div>
+                      <div className="mb-3 text-sm text-[var(--muted-foreground)]">No lists attached yet. Attach reusable lead groups to share contacts across campaigns.</div>
                     )}
 
                     <div className="grid gap-3 sm:grid-cols-[1fr,auto]">
                       <select
                         value={attachTargets[campaign.id] || ''}
                         onChange={(event) => setAttachTargets((current) => ({ ...current, [campaign.id]: event.target.value }))}
-                        className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] focus:ring-4 focus:ring-[#d4e4d3]"
                       >
                         <option value="">Attach a list</option>
                         {availableLists.map((list) => (
@@ -1079,7 +1079,7 @@ export default function CampaignsPage() {
                         type="button"
                         onClick={() => void handleAttachList(campaign.id)}
                         disabled={!attachTargets[campaign.id] || isActionPending(campaign.id, 'attach-list')}
-                        className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                        className="rounded-xl border border-[#b8d4b6] bg-[#d4e4d3] px-4 py-2 text-sm font-bold text-[var(--primary)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-[var(--surface-muted)] disabled:text-[var(--muted-foreground)]"
                       >
                         {isActionPending(campaign.id, 'attach-list') ? 'Attaching...' : 'Attach list'}
                       </button>
@@ -1099,9 +1099,9 @@ export default function CampaignsPage() {
                     </div>
                   </div>
 
-                  <details className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                  <details className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
                     <summary
-                      className="cursor-pointer text-sm font-bold text-slate-700"
+                      className="cursor-pointer text-sm font-bold text-[var(--foreground)]"
                       onClick={() => {
                         if (!currentSequence) void loadCampaignSequence(campaign);
                       }}
@@ -1110,11 +1110,11 @@ export default function CampaignsPage() {
                     </summary>
                     <div className="mt-4 space-y-4">
                       {(currentSequence || []).map((step, index) => (
-                        <div key={`${campaign.id}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div key={`${campaign.id}-${index}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
                           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <div className="text-sm font-bold text-slate-800">Step {index + 1}</div>
+                            <div className="text-sm font-bold text-[var(--foreground)]">Step {index + 1}</div>
                             <div className="flex items-center gap-2">
-                              <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                              <label className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--muted-foreground)]">
                                 <input
                                   type="checkbox"
                                   checked={step.stop_on_reply}
@@ -1131,38 +1131,38 @@ export default function CampaignsPage() {
                           </div>
                           <div className="grid gap-3 md:grid-cols-[140px,1fr]">
                             <div>
-                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Delay days</label>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">Delay days</label>
                               <input
                                 type="number"
                                 min="0"
                                 value={index === 0 ? 0 : step.delay_days}
                                 disabled={index === 0}
                                 onChange={(event) => updateLocalSequenceStep(campaign.id, index, { delay_days: Number(event.target.value) || 0 })}
-                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 disabled:bg-slate-100"
+                                className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] disabled:bg-[var(--surface-muted)]"
                               />
                             </div>
                             <div>
-                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Subject</label>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">Subject</label>
                               <input
                                 value={step.subject}
                                 onChange={(event) => updateLocalSequenceStep(campaign.id, index, { subject: event.target.value })}
-                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                                className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)]"
                               />
                             </div>
                             <div className="md:col-span-2">
-                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Body</label>
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">Body</label>
                               <textarea
                                 value={step.body}
                                 rows={4}
                                 onChange={(event) => updateLocalSequenceStep(campaign.id, index, { body: event.target.value })}
-                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                                className="w-full rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)]"
                               />
                             </div>
                           </div>
                         </div>
                       ))}
                       {!currentSequence ? (
-                        <div className="text-sm text-slate-500">Loading sequence steps...</div>
+                        <div className="text-sm text-[var(--muted-foreground)]">Loading sequence steps...</div>
                       ) : null}
                       {sequenceErrors[campaign.id] ? (
                         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
@@ -1170,14 +1170,14 @@ export default function CampaignsPage() {
                         </div>
                       ) : null}
                       <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => addLocalSequenceStep(campaign)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                        <button type="button" onClick={() => addLocalSequenceStep(campaign)} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--surface-muted)]">
                           Add Follow-up
                         </button>
                         <button
                           type="button"
                           onClick={() => void saveCampaignSequence(campaign.id)}
                           disabled={!currentSequence || isActionPending(campaign.id, 'sequence')}
-                          className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          className="rounded-xl bg-[var(--sidebar)] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isActionPending(campaign.id, 'sequence') ? 'Saving...' : 'Save Sequence'}
                         </button>
@@ -1193,7 +1193,7 @@ export default function CampaignsPage() {
                           type="button"
                           onClick={() => void handleSave(campaign.id)}
                           disabled={!!actionState}
-                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl bg-[var(--sidebar)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-[#3d2e22] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isActionPending(campaign.id, 'save') ? <LoaderCircle size={16} className="animate-spin" /> : <Pencil size={16} />}
                           Save
@@ -1203,7 +1203,7 @@ export default function CampaignsPage() {
                           type="button"
                           onClick={cancelEdit}
                           disabled={!!actionState}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <X size={16} />
                           Cancel
@@ -1216,7 +1216,7 @@ export default function CampaignsPage() {
                           type="button"
                           onClick={() => beginEdit(campaign)}
                           disabled={!!actionState || !!editState}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Pencil size={16} />
                           Edit
@@ -1266,7 +1266,7 @@ export default function CampaignsPage() {
                           type="button"
                           onClick={() => void handleStart(campaign.id)}
                           disabled={!!actionState || isEditing}
-                          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#2d6a4f]/20 transition-colors hover:bg-[#245a42] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isActionPending(campaign.id, 'start') ? <LoaderCircle size={16} className="animate-spin" /> : <Play size={16} />}
                           Start
@@ -1276,7 +1276,7 @@ export default function CampaignsPage() {
                           type="button"
                           onClick={() => void handlePreflight(campaign.id)}
                           disabled={!!actionState || isEditing}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isActionPending(campaign.id, 'preflight') ? <LoaderCircle size={16} className="animate-spin" /> : <ShieldAlert size={16} />}
                           Preflight
@@ -1361,7 +1361,7 @@ export default function CampaignsPage() {
                       {dryRun.blockers.length > 0 ? (
                         <div className="mt-3 space-y-2">
                           {dryRun.blockers.map((blocker) => (
-                            <div key={blocker.code} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-700">
+                            <div key={blocker.code} className="rounded-lg border border-red-200 bg-[var(--surface)] px-3 py-2 text-sm text-red-700">
                               <span className="font-semibold">{blocker.code.replaceAll('_', ' ')}</span>: {blocker.message}
                             </div>
                           ))}
@@ -1370,7 +1370,7 @@ export default function CampaignsPage() {
                       {dryRun.warnings.length > 0 ? (
                         <div className="mt-3 space-y-2">
                           {dryRun.warnings.map((warning) => (
-                            <div key={warning.code} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-amber-800">
+                            <div key={warning.code} className="rounded-lg border border-amber-200 bg-[var(--surface)] px-3 py-2 text-sm text-amber-800">
                               <span className="font-semibold">{warning.code.replaceAll('_', ' ')}</span>: {warning.message}
                             </div>
                           ))}
@@ -1380,9 +1380,9 @@ export default function CampaignsPage() {
                   )}
 
                   {preflight && (
-                    <div data-testid={`campaign-preflight-${campaign.id}`} className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div data-testid={`campaign-preflight-${campaign.id}`} className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-bold text-slate-700">Preflight: {preflight.status}</span>
+                        <span className="text-sm font-bold text-[var(--foreground)]">Preflight: {preflight.status}</span>
                         <span className={`rounded-full px-3 py-1 text-xs font-bold ${preflight.blocked ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                           {preflight.blocked ? 'Blocked' : 'Ready'}
                         </span>
@@ -1401,7 +1401,7 @@ export default function CampaignsPage() {
                             </summary>
                             <div className="mt-2 space-y-2">
                               {preflightPassed.map((check) => (
-                                <div key={check.name} className="rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm text-emerald-800">
+                                <div key={check.name} className="rounded-lg border border-emerald-100 bg-[var(--surface)] px-3 py-2 text-sm text-emerald-800">
                                   <span className="font-semibold">{check.name}</span>: {check.message}
                                 </div>
                               ))}
@@ -1409,7 +1409,7 @@ export default function CampaignsPage() {
                           </details>
                         ) : null}
                         {preflight.audience_summary && (
-                          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                          <div className="rounded-lg border border-[#b8d4b6] bg-[#d4e4d3] px-3 py-2 text-sm text-[#2d6a4f]">
                             Audience summary: {preflight.audience_summary.reachable_count} reachable, {preflight.audience_summary.risky_count} risky, {preflight.audience_summary.unsubscribed_count ?? 0} unsubscribed, {preflight.audience_summary.consent_unknown_count ?? 0} consent unknown.
                           </div>
                         )}
@@ -1444,7 +1444,7 @@ function PreflightCheckGroup({
       <div className="text-sm font-semibold">{title}</div>
       <div className="mt-2 space-y-2">
         {checks.map((check) => (
-          <div key={check.name} className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm">
+          <div key={check.name} className="rounded-lg border border-white/70 bg-[var(--surface)] px-3 py-2 text-sm">
             <span className="font-semibold">{check.name}</span>: {check.message}
           </div>
         ))}
@@ -1464,9 +1464,9 @@ function PauseGlyph() {
 
 function SummaryStat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-      <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-lg font-bold text-slate-800">{value}</div>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3">
+      <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--muted-foreground)]">{label}</div>
+      <div className="mt-1 text-lg font-bold text-[var(--foreground)]">{value}</div>
     </div>
   );
 }

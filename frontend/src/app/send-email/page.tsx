@@ -135,7 +135,7 @@ export default function SendEmailPage() {
       <SurfaceCard className="p-5">
       <form onSubmit={handleSend} className="grid gap-4 md:grid-cols-2">
         <div>
-          <label htmlFor="send-email-mailbox" className="mb-2 block text-sm font-semibold text-slate-700">Sender Mailbox</label>
+          <label htmlFor="send-email-mailbox" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Sender Mailbox</label>
           <select id="send-email-mailbox" value={mailboxId} onChange={(event) => setMailboxId(event.target.value)} className="form-input">
             <option value="">Select a mailbox</option>
             {mailboxes.map((mailbox) => (
@@ -146,31 +146,31 @@ export default function SendEmailPage() {
           </select>
         </div>
         <div>
-          <label htmlFor="send-email-to" className="mb-2 block text-sm font-semibold text-slate-700">To</label>
+          <label htmlFor="send-email-to" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">To</label>
           <input id="send-email-to" value={to} onChange={(event) => setTo(event.target.value)} placeholder="recipient@example.com" className="form-input" />
         </div>
         <div>
-          <label htmlFor="send-email-cc" className="mb-2 block text-sm font-semibold text-slate-700">CC</label>
+          <label htmlFor="send-email-cc" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">CC</label>
           <input id="send-email-cc" value={cc} onChange={(event) => setCc(event.target.value)} placeholder="Optional, comma separated" className="form-input" />
         </div>
         <div>
-          <label htmlFor="send-email-bcc" className="mb-2 block text-sm font-semibold text-slate-700">BCC</label>
+          <label htmlFor="send-email-bcc" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">BCC</label>
           <input id="send-email-bcc" value={bcc} onChange={(event) => setBcc(event.target.value)} placeholder="Optional, comma separated" className="form-input" />
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="send-email-subject" className="mb-2 block text-sm font-semibold text-slate-700">Subject</label>
+          <label htmlFor="send-email-subject" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Subject</label>
           <input id="send-email-subject" value={subject} onChange={(event) => setSubject(event.target.value)} className="form-input" />
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="send-email-text-body" className="mb-2 block text-sm font-semibold text-slate-700">Text Body</label>
+          <label htmlFor="send-email-text-body" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Text Body</label>
           <textarea id="send-email-text-body" value={textBody} onChange={(event) => setTextBody(event.target.value)} rows={6} className="form-input" />
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="send-email-html-body" className="mb-2 block text-sm font-semibold text-slate-700">HTML Body</label>
+          <label htmlFor="send-email-html-body" className="mb-2 block text-sm font-semibold text-[var(--foreground)]">HTML Body</label>
           <textarea id="send-email-html-body" value={htmlBody} onChange={(event) => setHtmlBody(event.target.value)} rows={4} placeholder="<p>Hello from the app</p>" className="form-input font-mono text-sm" />
         </div>
         <div className="md:col-span-2 flex items-center justify-between gap-4">
-          <div className="text-sm text-slate-500">Direct send uses the backend SMTP integration only. It bypasses campaign lists, workers, and preflight.</div>
+          <div className="text-sm text-[var(--muted-foreground)]">Direct send uses the backend SMTP integration only. It bypasses campaign lists, workers, and preflight.</div>
           <div className="flex items-center gap-3">
             <button data-testid="check-smtp-button" type="button" onClick={() => void handleCheckSelectedMailbox()} disabled={!mailboxId || submitting} className="btn-secondary">
               <MailCheck size={16} />
@@ -187,17 +187,17 @@ export default function SendEmailPage() {
 
       {selectedMailbox ? (
         <SurfaceCard className="px-5 py-4">
-          <div className="text-sm font-semibold text-slate-700">Selected mailbox transport</div>
-          <div className="mt-2 text-sm font-medium text-slate-700">
-            From preview: <span className="break-all text-slate-800">{buildSenderPreview(selectedMailbox)}</span>
+          <div className="text-sm font-semibold text-[var(--foreground)]">Selected mailbox transport</div>
+          <div className="mt-2 text-sm font-medium text-[var(--foreground)]">
+            From preview: <span className="break-all text-[var(--foreground)]">{buildSenderPreview(selectedMailbox)}</span>
           </div>
-          <div className="mt-2 text-sm text-slate-600">
+          <div className="mt-2 text-sm text-[var(--muted-foreground)]">
             {selectedMailbox.email} via {(selectedMailbox.provider_type || "google_workspace").replaceAll("_", " ")} on {selectedMailbox.smtp_host}:{selectedMailbox.smtp_port} using {selectedMailbox.smtp_security_mode.toUpperCase()}
           </div>
-          <div className="mt-2 text-sm text-slate-600">
+          <div className="mt-2 text-sm text-[var(--muted-foreground)]">
             Provider state: {(selectedMailbox.provider_status || "active").replaceAll("_", " ")} · OAuth {(selectedMailbox.oauth_connection_status || "not_connected").replaceAll("_", " ")}
           </div>
-          <div className={`mt-2 text-sm font-medium ${(smtpDiagnostic?.status || selectedMailbox.smtp_last_check_status) === 'healthy' ? 'text-emerald-700' : 'text-slate-600'}`}>
+          <div className={`mt-2 text-sm font-medium ${(smtpDiagnostic?.status || selectedMailbox.smtp_last_check_status) === 'healthy' ? 'text-emerald-700' : 'text-[var(--muted-foreground)]'}`}>
             {smtpDiagnostic?.message || selectedMailbox.last_provider_check_message || selectedMailbox.smtp_last_check_message || 'Provider diagnostics have not been checked yet for this mailbox.'}
           </div>
         </SurfaceCard>
@@ -215,7 +215,7 @@ export default function SendEmailPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-[var(--border)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                   <th className="px-2 py-3">When</th>
                   <th className="px-2 py-3">To</th>
                   <th className="px-2 py-3">Subject</th>
@@ -226,7 +226,7 @@ export default function SendEmailPage() {
               </thead>
               <tbody>
                 {logs.map((log) => (
-                  <tr key={log.id} className="border-b border-slate-100 text-sm text-slate-700">
+                  <tr key={log.id} className="border-b border-[var(--surface-muted)] text-sm text-[var(--foreground)]">
                     <td className="px-2 py-3">{log.created_at ? new Date(log.created_at).toLocaleString() : "Unknown"}</td>
                     <td className="px-2 py-3">{log.target_email}</td>
                     <td className="px-2 py-3">{log.subject || "-"}</td>
@@ -235,8 +235,8 @@ export default function SendEmailPage() {
                         {log.delivery_status}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-xs font-mono text-slate-500">{log.provider_message_id || "-"}</td>
-                    <td className="px-2 py-3 text-xs text-slate-500">{log.smtp_response || "-"}</td>
+                    <td className="px-2 py-3 text-xs font-mono text-[var(--muted-foreground)]">{log.provider_message_id || "-"}</td>
+                    <td className="px-2 py-3 text-xs text-[var(--muted-foreground)]">{log.smtp_response || "-"}</td>
                   </tr>
                 ))}
               </tbody>

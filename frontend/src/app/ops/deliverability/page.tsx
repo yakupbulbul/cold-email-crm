@@ -32,7 +32,7 @@ function IssueList({ title, issues, empty }: { title: string; issues: Deliverabi
   return (
     <SurfaceCard className="p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-slate-950">{title}</h2>
+        <h2 className="text-base font-semibold text-[var(--foreground)]">{title}</h2>
         <StatusBadge tone={issues.length ? "warning" : "success"}>{issues.length}</StatusBadge>
       </div>
       <div className="mt-4 space-y-3">
@@ -40,12 +40,12 @@ function IssueList({ title, issues, empty }: { title: string; issues: Deliverabi
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">{empty}</div>
         ) : (
           issues.map((issue, index) => (
-            <div key={`${issue.code}-${index}`} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+            <div key={`${issue.code}-${index}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
               <div className="flex items-start gap-3">
                 <ShieldAlert className={issue.severity === "critical" ? "mt-0.5 text-rose-600" : "mt-0.5 text-amber-600"} size={17} />
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-900">{issueLabel(issue)}</div>
-                  {issue.next_action ? <div className="mt-1 text-xs leading-5 text-slate-600">Next action: {issue.next_action}</div> : null}
+                  <div className="text-sm font-semibold text-[var(--foreground)]">{issueLabel(issue)}</div>
+                  {issue.next_action ? <div className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">Next action: {issue.next_action}</div> : null}
                 </div>
               </div>
             </div>
@@ -59,15 +59,15 @@ function IssueList({ title, issues, empty }: { title: string; issues: Deliverabi
 function ReadinessTable({ title, items, kind }: { title: string; items: DeliverabilityEntity[]; kind: "domain" | "mailbox" }) {
   return (
     <SurfaceCard className="overflow-hidden">
-      <div className="border-b border-slate-200 px-5 py-4">
-        <h2 className="text-base font-semibold text-slate-950">{title}</h2>
+      <div className="border-b border-[var(--border)] px-5 py-4">
+        <h2 className="text-base font-semibold text-[var(--foreground)]">{title}</h2>
       </div>
       {items.length === 0 ? (
-        <div className="p-5 text-sm text-slate-600">No {kind === "domain" ? "domains" : "mailboxes"} exist yet.</div>
+        <div className="p-5 text-sm text-[var(--muted-foreground)]">No {kind === "domain" ? "domains" : "mailboxes"} exist yet.</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left">
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
               <tr>
                 <th className="px-5 py-3">{kind === "domain" ? "Domain" : "Mailbox"}</th>
                 <th className="px-5 py-3">Status</th>
@@ -76,40 +76,40 @@ function ReadinessTable({ title, items, kind }: { title: string; items: Delivera
                 <th className="px-5 py-3">Last checked</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[var(--surface-muted)]">
               {items.map((item) => {
                 const issue = item.blockers[0] || item.warnings[0];
                 return (
                   <tr key={item.id || item.email || item.name} className="align-top">
                     <td className="px-5 py-4">
-                      <div className="font-semibold text-slate-900">{item.email || item.name}</div>
-                      {kind === "mailbox" ? <div className="mt-1 text-xs text-slate-500">{item.domain}</div> : null}
+                      <div className="font-semibold text-[var(--foreground)]">{item.email || item.name}</div>
+                      {kind === "mailbox" ? <div className="mt-1 text-xs text-[var(--muted-foreground)]">{item.domain}</div> : null}
                     </td>
                     <td className="px-5 py-4"><StatusPill status={item.status} /></td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{item.provider_type?.replaceAll("_", " ") || "Domain DNS"}</td>
-                    <td className="max-w-md px-5 py-4 text-sm text-slate-600">
+                    <td className="px-5 py-4 text-sm text-[var(--muted-foreground)]">{item.provider_type?.replaceAll("_", " ") || "Domain DNS"}</td>
+                    <td className="max-w-md px-5 py-4 text-sm text-[var(--muted-foreground)]">
                       <div>{issue ? issue.message : "No deliverability issue detected."}</div>
                       {item.checks.length > 0 ? (
                         <details className="mt-2">
-                          <summary className="cursor-pointer text-xs font-semibold text-slate-500 hover:text-slate-800">
+                          <summary className="cursor-pointer text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
                             View readiness checks
                           </summary>
                           <div className="mt-2 space-y-1.5">
                             {item.checks.slice(0, 6).map((check) => (
-                              <div key={check.code} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+                              <div key={check.code} className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-2.5 py-2 text-xs text-[var(--muted-foreground)]">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <StatusBadge tone={toneForStatus(check.status)}>{check.status}</StatusBadge>
-                                  <span className="font-semibold text-slate-800">{check.label}</span>
+                                  <span className="font-semibold text-[var(--foreground)]">{check.label}</span>
                                 </div>
                                 <div className="mt-1 leading-5">{check.detail}</div>
-                                {check.next_action ? <div className="mt-1 font-medium text-slate-700">Next: {check.next_action}</div> : null}
+                                {check.next_action ? <div className="mt-1 font-medium text-[var(--foreground)]">Next: {check.next_action}</div> : null}
                               </div>
                             ))}
                           </div>
                         </details>
                       ) : null}
                     </td>
-                    <td className="px-5 py-4 text-sm text-slate-500">{formatDateTime(item.last_checked_at)}</td>
+                    <td className="px-5 py-4 text-sm text-[var(--muted-foreground)]">{formatDateTime(item.last_checked_at)}</td>
                   </tr>
                 );
               })}
@@ -157,7 +157,7 @@ export default function DeliverabilityDashboard() {
       {pageError ? <AlertBanner tone="danger" title="Deliverability unavailable">{pageError}</AlertBanner> : null}
 
       {loading && !overview ? (
-        <SurfaceCard className="flex h-64 items-center justify-center text-sm font-medium text-slate-500">Loading deliverability truth...</SurfaceCard>
+        <SurfaceCard className="flex h-64 items-center justify-center text-sm font-medium text-[var(--muted-foreground)]">Loading deliverability truth...</SurfaceCard>
       ) : !overview ? (
         <EmptyState icon={Radar} title="No deliverability data loaded" description="The backend did not return a deliverability overview. Check API health and authentication." />
       ) : (
@@ -167,18 +167,18 @@ export default function DeliverabilityDashboard() {
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusPill status={overview.status} />
-                  <span className="text-sm text-slate-500">Generated {formatDateTime(overview.generated_at)}</span>
+                  <span className="text-sm text-[var(--muted-foreground)]">Generated {formatDateTime(overview.generated_at)}</span>
                 </div>
-                <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-slate-950">
+                <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
                   Overall readiness is {overview.status}.
                 </h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted-foreground)]">
                   This status is derived from persisted DNS verification, provider availability, SMTP/IMAP diagnostics, warm-up activity, send logs, and contact verification fields.
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-right">
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Derived score</div>
-                <div className="mt-1 text-3xl font-semibold tracking-[-0.04em] text-slate-950">{overview.score ?? "N/A"}</div>
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-5 py-4 text-right">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Derived score</div>
+                <div className="mt-1 text-3xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">{overview.score ?? "N/A"}</div>
               </div>
             </div>
           </SurfaceCard>
@@ -197,18 +197,18 @@ export default function DeliverabilityDashboard() {
 
           {fixPriority.length > 0 ? (
             <SurfaceCard className="p-5">
-              <div className="flex items-center gap-2 text-base font-semibold text-slate-950">
+              <div className="flex items-center gap-2 text-base font-semibold text-[var(--foreground)]">
                 <Sparkles size={18} className="text-sky-600" />
                 Recommended fix order
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {fixPriority.map((issue, index) => (
-                  <div key={`${issue.code}-${issue.entity || index}`} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <div key={`${issue.code}-${issue.entity || index}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--foreground)]">
                     <div className="flex items-start gap-3">
-                      <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-950 ring-1 ring-slate-200">{index + 1}</span>
+                      <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--foreground)] ring-1 ring-[var(--border)]">{index + 1}</span>
                       <div className="min-w-0">
-                        <div className="font-semibold text-slate-900">{issueLabel(issue)}</div>
-                        {issue.next_action ? <div className="mt-1 text-xs leading-5 text-slate-600">Next action: {issue.next_action}</div> : null}
+                        <div className="font-semibold text-[var(--foreground)]">{issueLabel(issue)}</div>
+                        {issue.next_action ? <div className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">Next action: {issue.next_action}</div> : null}
                       </div>
                     </div>
                   </div>
@@ -225,51 +225,51 @@ export default function DeliverabilityDashboard() {
           <div className="grid gap-6 xl:grid-cols-2">
             <SurfaceCard className="p-5">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold text-slate-950">Provider posture</h2>
-                <AlertTriangle size={18} className={overview.providers.some((provider) => provider.status === "blocked") ? "text-rose-600" : "text-slate-400"} />
+                <h2 className="text-base font-semibold text-[var(--foreground)]">Provider posture</h2>
+                <AlertTriangle size={18} className={overview.providers.some((provider) => provider.status === "blocked") ? "text-rose-600" : "text-[var(--muted-foreground)]"} />
               </div>
               <div className="mt-4 space-y-3">
                 {overview.providers.map((provider) => (
-                  <div key={provider.provider_type} className="rounded-xl border border-slate-200 px-4 py-3">
+                  <div key={provider.provider_type} className="rounded-xl border border-[var(--border)] px-4 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="font-semibold capitalize text-slate-900">{provider.provider_type.replaceAll("_", " ")}</div>
+                      <div className="font-semibold capitalize text-[var(--foreground)]">{provider.provider_type.replaceAll("_", " ")}</div>
                       <StatusPill status={provider.status} />
                     </div>
-                    <div className="mt-2 text-sm text-slate-600">{provider.detail || "No provider detail available."}</div>
-                    <div className="mt-2 text-xs text-slate-500">{provider.mailbox_count} mailbox(es), {provider.enabled ? "enabled" : "disabled"}, {provider.configured ? "configured" : "not configured"}</div>
+                    <div className="mt-2 text-sm text-[var(--muted-foreground)]">{provider.detail || "No provider detail available."}</div>
+                    <div className="mt-2 text-xs text-[var(--muted-foreground)]">{provider.mailbox_count} mailbox(es), {provider.enabled ? "enabled" : "disabled"}, {provider.configured ? "configured" : "not configured"}</div>
                   </div>
                 ))}
               </div>
             </SurfaceCard>
 
             <SurfaceCard className="p-5">
-              <div className="flex items-center gap-2 text-base font-semibold text-slate-950">
+              <div className="flex items-center gap-2 text-base font-semibold text-[var(--foreground)]">
                 <CheckCircle2 size={18} className="text-emerald-600" />
                 Campaign posture
               </div>
               <div className="mt-4 grid grid-cols-3 gap-3">
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase text-slate-500">Active</div>
-                  <div className="mt-1 text-2xl font-semibold text-slate-950">{overview.campaigns.summary.active ?? 0}</div>
+                <div className="rounded-xl bg-[var(--surface-muted)] p-3">
+                  <div className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">Active</div>
+                  <div className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{overview.campaigns.summary.active ?? 0}</div>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase text-slate-500">Paused</div>
-                  <div className="mt-1 text-2xl font-semibold text-slate-950">{overview.campaigns.summary.paused ?? 0}</div>
+                <div className="rounded-xl bg-[var(--surface-muted)] p-3">
+                  <div className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">Paused</div>
+                  <div className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{overview.campaigns.summary.paused ?? 0}</div>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs font-semibold uppercase text-slate-500">Checked</div>
-                  <div className="mt-1 text-2xl font-semibold text-slate-950">{overview.campaigns.summary.checked_campaigns ?? 0}</div>
+                <div className="rounded-xl bg-[var(--surface-muted)] p-3">
+                  <div className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">Checked</div>
+                  <div className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{overview.campaigns.summary.checked_campaigns ?? 0}</div>
                 </div>
               </div>
               <div className="mt-4 space-y-3">
                 {overview.campaigns.items.length === 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">No active or paused campaigns need deliverability review right now.</div>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--muted-foreground)]">No active or paused campaigns need deliverability review right now.</div>
                 ) : (
                   overview.campaigns.items.slice(0, 5).map((campaign) => (
-                    <div key={campaign.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+                    <div key={campaign.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] px-4 py-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-900">{campaign.name}</div>
-                        <div className="truncate text-xs text-slate-500">{campaign.blockers[0]?.message || campaign.warnings[0]?.message || "No known campaign deliverability issue."}</div>
+                        <div className="truncate text-sm font-semibold text-[var(--foreground)]">{campaign.name}</div>
+                        <div className="truncate text-xs text-[var(--muted-foreground)]">{campaign.blockers[0]?.message || campaign.warnings[0]?.message || "No known campaign deliverability issue."}</div>
                       </div>
                       <StatusPill status={campaign.status} />
                     </div>

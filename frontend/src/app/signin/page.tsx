@@ -86,28 +86,28 @@ export default function SignInPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.08),_transparent_38%),linear-gradient(180deg,#f8fbff_0%,#f3f6fb_100%)] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(45,106,79,0.06),_transparent_38%),linear-gradient(180deg,#faf8f5_0%,#f5f0eb_100%)] px-4 py-5 sm:px-6 lg:px-8">
             <main className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-5xl items-center justify-center">
                 <section className="grid w-full items-center gap-8 lg:grid-cols-[0.78fr,1fr] lg:gap-10">
-                    <div className="order-2 rounded-[1.75rem] border border-slate-200 bg-white/70 p-5 text-slate-700 shadow-[0_16px_45px_rgba(15,23,42,0.06)] backdrop-blur lg:order-1 lg:p-6">
+                    <div className="order-2 rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)]/70 p-5 text-[var(--foreground)] shadow-[0_16px_45px_rgba(45,31,20,0.06)] backdrop-blur lg:order-1 lg:p-6">
                         <Link href="/" className="inline-flex items-center gap-3">
-                            <div className="rounded-2xl bg-slate-950 px-4 py-3">
+                            <div className="rounded-2xl bg-[var(--sidebar)] px-4 py-3">
                                 <Image src="/crm-logo.png" alt="Campaign Manager" width={76} height={38} className="h-auto w-[76px]" priority />
                             </div>
                             <div>
-                                <div className="text-sm font-semibold text-slate-950">Campaign Manager</div>
-                                <div className="text-xs text-slate-500">Workspace access</div>
+                                <div className="text-sm font-semibold text-[var(--foreground)]">Campaign Manager</div>
+                                <div className="text-xs text-[var(--muted-foreground)]">Workspace access</div>
                             </div>
                         </Link>
 
                         <div className="mt-8">
-                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
                                 Secure operator sign-in
                             </div>
-                            <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-[-0.04em] text-slate-950 sm:text-3xl">
+                            <h1 className="mt-3 text-2xl font-semibold leading-tight tracking-[-0.04em] text-[var(--foreground)] sm:text-3xl">
                                 Access the workspace for campaigns, senders, and replies.
                             </h1>
-                            <p className="mt-4 text-sm leading-6 text-slate-600">
+                            <p className="mt-4 text-sm leading-6 text-[var(--muted-foreground)]">
                                 Sign in with your operator credentials to manage outbound infrastructure and campaign operations.
                             </p>
                         </div>
@@ -120,30 +120,30 @@ export default function SignInPage() {
                     </div>
 
                     <div className="order-1 flex justify-center lg:order-2">
-                        <div className="w-full max-w-[29rem] rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_28px_70px_rgba(15,23,42,0.12)] sm:p-8">
+                        <div className="w-full max-w-[29rem] rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_28px_70px_rgba(45,31,20,0.12)] sm:p-8">
                             <div className="mb-6">
                                 <div className="mb-5 flex items-center justify-between gap-4 lg:hidden">
                                     <Link href="/" className="flex items-center gap-3">
-                                        <div className="rounded-2xl bg-slate-950 px-4 py-3">
+                                        <div className="rounded-2xl bg-[var(--sidebar)] px-4 py-3">
                                             <Image src="/crm-logo.png" alt="Campaign Manager" width={74} height={38} className="h-auto w-[74px]" priority />
                                         </div>
                                         <div>
-                                            <div className="text-sm font-semibold text-slate-950">Campaign Manager</div>
-                                            <div className="text-xs text-slate-500">Workspace access</div>
+                                            <div className="text-sm font-semibold text-[var(--foreground)]">Campaign Manager</div>
+                                            <div className="text-xs text-[var(--muted-foreground)]">Workspace access</div>
                                         </div>
                                     </Link>
-                                    <Link href="/" className="text-sm font-medium text-slate-500 hover:text-slate-900">
+                                    <Link href="/" className="text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
                                         Overview
                                     </Link>
                                 </div>
 
-                                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
                                     Workspace access
                                 </div>
-                                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-4xl">
+                                <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-[var(--foreground)] sm:text-4xl">
                                     Sign in
                                 </h2>
-                                <p className="mt-3 text-sm leading-6 text-slate-600">
+                                <p className="mt-3 text-sm leading-6 text-[var(--muted-foreground)]">
                                     Continue to your internal dashboard.
                                 </p>
                             </div>
@@ -161,7 +161,7 @@ export default function SignInPage() {
                                     error={emailError}
                                 >
                                     <div className="relative">
-                                        <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
                                         <input
                                             data-testid="email-input"
                                             type="email"
@@ -184,7 +184,7 @@ export default function SignInPage() {
                                     error={passwordError}
                                 >
                                     <div className="relative">
-                                        <Lock size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <Lock size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
                                         <input
                                             data-testid="password-input"
                                             type={showPassword ? "text" : "password"}
@@ -202,7 +202,7 @@ export default function SignInPage() {
                                             data-testid="password-toggle"
                                             type="button"
                                             onClick={() => setShowPassword((current) => !current)}
-                                            className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                            className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                                             aria-label={showPassword ? "Hide password" : "Show password"}
                                         >
                                             {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -225,9 +225,9 @@ export default function SignInPage() {
                                 </button>
                             </form>
 
-                            <div className="mt-6 flex flex-col justify-between gap-3 border-t border-slate-100 pt-5 text-sm text-slate-500 sm:flex-row sm:items-center">
+                            <div className="mt-6 flex flex-col justify-between gap-3 border-t border-[var(--surface-muted)] pt-5 text-sm text-[var(--muted-foreground)] sm:flex-row sm:items-center">
                                 <span>Protected by backend session auth.</span>
-                                <Link href="/" className="font-medium text-slate-900 hover:text-slate-700">
+                                <Link href="/" className="font-medium text-[var(--foreground)] hover:text-[var(--foreground)]">
                                     Product overview
                                 </Link>
                             </div>
@@ -247,8 +247,8 @@ function ValuePoint({
     text: string;
 }) {
     return (
-        <div className="flex items-start gap-3 text-sm leading-6 text-slate-600">
-            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white">
+        <div className="flex items-start gap-3 text-sm leading-6 text-[var(--muted-foreground)]">
+            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--sidebar)] text-white">
                 <Icon size={13} />
             </div>
             <span>{text}</span>

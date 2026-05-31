@@ -12,16 +12,16 @@ const statusTone: Record<string, string> = {
     warning: "bg-amber-50 text-amber-700 border-amber-200",
     degraded: "bg-amber-50 text-amber-700 border-amber-200",
     dns_partial: "bg-amber-50 text-amber-700 border-amber-200",
-    local_only: "bg-slate-100 text-slate-700 border-slate-200",
+    local_only: "bg-[var(--surface-muted)] text-[var(--foreground)] border-[var(--border)]",
     blocked: "bg-red-50 text-red-700 border-red-200",
     failed: "bg-red-50 text-red-700 border-red-200",
-    pending: "bg-slate-100 text-slate-700 border-slate-200",
+    pending: "bg-[var(--surface-muted)] text-[var(--foreground)] border-[var(--border)]",
     verified: "bg-green-50 text-green-700 border-green-200",
     missing: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
 function StatusBadge({ label, value }: { label: string; value: string }) {
-    const tone = statusTone[value] ?? "bg-slate-100 text-slate-700 border-slate-200";
+    const tone = statusTone[value] ?? "bg-[var(--surface-muted)] text-[var(--foreground)] border-[var(--border)]";
     return (
         <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${tone}`}>
             <span>{label}</span>
@@ -32,12 +32,12 @@ function StatusBadge({ label, value }: { label: string; value: string }) {
 
 function GuidanceRow({ title, host, type, expectedValue, explanation }: { title: string; host?: string; type?: string; expectedValue?: string; explanation?: string }) {
     return (
-        <div className="rounded-xl border border-slate-200 p-3">
-            <div className="font-semibold text-slate-800">{title}</div>
-            {host ? <div className="mt-2 text-xs uppercase tracking-wide text-slate-500">Host: {host}</div> : null}
-            {type ? <div className="mt-1 text-xs uppercase tracking-wide text-slate-500">Type: {type}</div> : null}
-            {expectedValue ? <div className="mt-2 break-all rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{expectedValue}</div> : null}
-            {explanation ? <div className="mt-2 text-sm text-slate-600">{explanation}</div> : null}
+        <div className="rounded-xl border border-[var(--border)] p-3">
+            <div className="font-semibold text-[var(--foreground)]">{title}</div>
+            {host ? <div className="mt-2 text-xs uppercase tracking-wide text-[var(--muted-foreground)]">Host: {host}</div> : null}
+            {type ? <div className="mt-1 text-xs uppercase tracking-wide text-[var(--muted-foreground)]">Type: {type}</div> : null}
+            {expectedValue ? <div className="mt-2 break-all rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-sm text-[var(--foreground)]">{expectedValue}</div> : null}
+            {explanation ? <div className="mt-2 text-sm text-[var(--muted-foreground)]">{explanation}</div> : null}
         </div>
     );
 }
@@ -155,7 +155,7 @@ export default function DomainsPage() {
             <SurfaceCard className="p-5">
                 <form onSubmit={handleCreateDomain} className="flex flex-col gap-4 md:flex-row md:items-end">
                     <div className="flex-1">
-                        <label htmlFor="domain-name" className="block text-sm font-semibold text-slate-700 mb-2">
+                        <label htmlFor="domain-name" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
                             Domain Name
                         </label>
                         <input
@@ -188,8 +188,8 @@ export default function DomainsPage() {
                     <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 border border-red-100">
                         <ServerCrash className="text-red-500" size={28} />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-2">Failed to Load Domains</h3>
-                    <p className="text-sm text-slate-500 max-w-sm mb-2">Something went wrong while fetching your domain infrastructure.</p>
+                    <h3 className="text-lg font-bold text-[var(--foreground)] mb-2">Failed to Load Domains</h3>
+                    <p className="text-sm text-[var(--muted-foreground)] max-w-sm mb-2">Something went wrong while fetching your domain infrastructure.</p>
                     <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded">{error}</p>
                 </SurfaceCard>
             ) : loading ? (
@@ -205,7 +205,7 @@ export default function DomainsPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      {domains.map((d) => (
-                         <SurfaceCard key={d.id} className="p-6 text-slate-800">
+                         <SurfaceCard key={d.id} className="p-6 text-[var(--foreground)]">
                              <div className="flex flex-col gap-4">
                                  <div className="flex items-start justify-between gap-4">
                                      <div>
@@ -218,7 +218,7 @@ export default function DomainsPage() {
                                      <button
                                          type="button"
                                          onClick={() => setActiveDetailsId(activeDetailsId === d.id ? null : d.id)}
-                                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                                         className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)]"
                                      >
                                          Details
                                          {activeDetailsId === d.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -232,15 +232,15 @@ export default function DomainsPage() {
                                      <StatusBadge label="DMARC" value={d.dmarc_status} />
                                  </div>
 
-                                 <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                     <div className="font-semibold text-slate-700">Readiness summary</div>
+                                 <div className="rounded-xl border border-[var(--surface-muted)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--muted-foreground)]">
+                                     <div className="font-semibold text-[var(--foreground)]">Readiness summary</div>
                                      <div className="mt-1">{d.missing_requirements?.length ? d.missing_requirements[0] : "Domain verification has not run yet."}</div>
                                      {deliverabilityByDomain[d.id]?.blockers?.[0] || deliverabilityByDomain[d.id]?.warnings?.[0] ? (
                                          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
                                              {(deliverabilityByDomain[d.id].blockers[0] || deliverabilityByDomain[d.id].warnings[0]).message}
                                          </div>
                                      ) : null}
-                                     <div className="mt-2 text-xs text-slate-500">
+                                     <div className="mt-2 text-xs text-[var(--muted-foreground)]">
                                          Last checked: {d.last_checked_at ? new Date(d.last_checked_at).toLocaleString() : "Never"}
                                      </div>
                                  </div>
@@ -250,7 +250,7 @@ export default function DomainsPage() {
                                          type="button"
                                          onClick={() => void handleDomainAction(d.id, "verify")}
                                          disabled={busyDomainId === d.id}
-                                         className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                         className="inline-flex items-center gap-2 rounded-xl bg-[var(--sidebar)] px-4 py-2 text-sm font-bold text-white hover:bg-[#3d2e22] disabled:cursor-not-allowed disabled:opacity-50"
                                      >
                                          <ShieldCheck size={16} />
                                          {busyDomainId === d.id ? "Verifying..." : "Verify"}
@@ -259,7 +259,7 @@ export default function DomainsPage() {
                                          type="button"
                                          onClick={() => void handleDomainAction(d.id, "refresh")}
                                          disabled={busyDomainId === d.id}
-                                         className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                         className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
                                      >
                                          <RefreshCw size={16} />
                                          Refresh
@@ -277,34 +277,34 @@ export default function DomainsPage() {
                                  </div>
 
                                  {activeDetailsId === d.id && (
-                                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                                         <div className="flex items-center gap-2 font-semibold text-slate-800">
+                                     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 text-sm text-[var(--foreground)]">
+                                         <div className="flex items-center gap-2 font-semibold text-[var(--foreground)]">
                                              {d.status === "ready" ? <ShieldCheck size={16} className="text-green-600" /> : <ShieldAlert size={16} className="text-amber-600" />}
                                              Domain Details
                                          </div>
                                          <div className="mt-3 grid gap-3 md:grid-cols-2">
-                                             <div className="rounded-xl bg-white p-4 border border-slate-200">
-                                                 <div className="font-semibold text-slate-800">Local Record</div>
+                                             <div className="rounded-xl bg-[var(--surface)] p-4 border border-[var(--border)]">
+                                                 <div className="font-semibold text-[var(--foreground)]">Local Record</div>
                                                  <div className="mt-2">Status: {d.status.replaceAll("_", " ")}</div>
                                                  <div>Created: {new Date(d.created_at).toLocaleString()}</div>
                                                  <div>Last checked: {d.last_checked_at ? new Date(d.last_checked_at).toLocaleString() : "Never"}</div>
                                              </div>
                                          </div>
 
-                                         <div className="mt-3 rounded-xl bg-white p-4 border border-slate-200">
-                                             <div className="font-semibold text-slate-800">DNS Checks</div>
+                                         <div className="mt-3 rounded-xl bg-[var(--surface)] p-4 border border-[var(--border)]">
+                                             <div className="font-semibold text-[var(--foreground)]">DNS Checks</div>
                                              <div className="mt-3 grid gap-3 md:grid-cols-2">
                                                  {(["mx", "spf", "dkim", "dmarc"] as const).map((key) => {
                                                      const result = d.dns_results?.[key];
                                                      return (
-                                                         <div key={key} className="rounded-xl border border-slate-200 p-3">
+                                                         <div key={key} className="rounded-xl border border-[var(--border)] p-3">
                                                              <div className="flex items-center justify-between gap-2">
-                                                                 <span className="font-semibold uppercase tracking-wide text-xs text-slate-500">{key}</span>
+                                                                 <span className="font-semibold uppercase tracking-wide text-xs text-[var(--muted-foreground)]">{key}</span>
                                                                  <StatusBadge label="Status" value={result?.status || "pending"} />
                                                              </div>
-                                                             <div className="mt-2 text-sm text-slate-600">{result?.detail || "No result available yet."}</div>
+                                                             <div className="mt-2 text-sm text-[var(--muted-foreground)]">{result?.detail || "No result available yet."}</div>
                                                              {result?.records?.length ? (
-                                                                 <div className="mt-2 text-xs text-slate-500 break-all">
+                                                                 <div className="mt-2 text-xs text-[var(--muted-foreground)] break-all">
                                                                      {result.records.join(" | ")}
                                                                  </div>
                                                              ) : null}
@@ -314,21 +314,21 @@ export default function DomainsPage() {
                                              </div>
                                          </div>
 
-                                         <div className="mt-3 rounded-xl bg-white p-4 border border-slate-200">
-                                             <div className="font-semibold text-slate-800">Missing Requirements</div>
+                                         <div className="mt-3 rounded-xl bg-[var(--surface)] p-4 border border-[var(--border)]">
+                                             <div className="font-semibold text-[var(--foreground)]">Missing Requirements</div>
                                              {d.missing_requirements?.length ? (
-                                                 <ul className="mt-2 list-disc pl-5 text-sm text-slate-600">
+                                                 <ul className="mt-2 list-disc pl-5 text-sm text-[var(--muted-foreground)]">
                                                      {d.missing_requirements.map((item) => (
                                                          <li key={item}>{item}</li>
                                                      ))}
                                                  </ul>
                                              ) : (
-                                                 <div className="mt-2 text-sm text-slate-600">No missing requirements. This domain is mail-ready.</div>
+                                                 <div className="mt-2 text-sm text-[var(--muted-foreground)]">No missing requirements. This domain is mail-ready.</div>
                                              )}
                                          </div>
 
-                                         <div className="mt-3 rounded-xl bg-white p-4 border border-slate-200">
-                                             <div className="font-semibold text-slate-800">How To Fix</div>
+                                         <div className="mt-3 rounded-xl bg-[var(--surface)] p-4 border border-[var(--border)]">
+                                             <div className="font-semibold text-[var(--foreground)]">How To Fix</div>
                                              <div className="mt-3 grid gap-3 md:grid-cols-2">
                                                  {(["mx", "spf", "dkim", "dmarc"] as const).map((key) => {
                                                      const guidance = d.verification_summary?.remediation?.dns?.[key] as {

@@ -56,21 +56,21 @@ export default function CSVUploadDropzone({ onUploadSuccess }: DropzoneProps) {
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             className={`w-full max-w-2xl mx-auto p-12 mt-8 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all ${
-                dragging ? "border-blue-500 bg-blue-50" : "border-slate-300 bg-slate-50 hover:border-slate-400"
+                dragging ? "border-[var(--primary)] bg-[#d4e4d3]" : "border-[var(--border-strong)] bg-[var(--surface-muted)] hover:border-[var(--border-strong)]"
             }`}
         >
-            <div className="p-4 bg-white rounded-2xl shadow-sm mb-6">
-                {parsing ? <FileType className="animate-pulse text-blue-500" size={40} /> : <UploadCloud className="text-blue-500" size={40} />}
+            <div className="p-4 bg-[var(--surface)] rounded-2xl shadow-sm mb-6">
+                {parsing ? <FileType className="animate-pulse text-[var(--primary)]" size={40} /> : <UploadCloud className="text-[var(--primary)]" size={40} />}
             </div>
             
-            <h3 className="text-xl font-bold text-slate-800 mb-2">
+            <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">
                 {parsing ? "Parsing Records..." : "Drag & Drop CSV File"}
             </h3>
-            <p className="text-sm text-slate-500 text-center max-w-sm mb-6">
+            <p className="text-sm text-[var(--muted-foreground)] text-center max-w-sm mb-6">
                 Upload your raw lead contacts in CSV format. The system will automatically map the headers and validate entries securely.
             </p>
 
-            <label className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-slate-900/20 active:scale-95">
+            <label className="cursor-pointer bg-[var(--sidebar)] hover:bg-[#3d2e22] text-white px-6 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-[#2d1f14]/20 active:scale-95">
                 Browse Files
                 <input 
                     type="file" 

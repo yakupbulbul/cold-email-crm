@@ -32,7 +32,7 @@ type BulkState = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  unverified: "bg-slate-100 text-slate-700",
+  unverified: "bg-[var(--surface-muted)] text-[var(--foreground)]",
   valid: "bg-green-100 text-green-700",
   risky: "bg-yellow-100 text-yellow-700",
   invalid: "bg-red-100 text-red-700",
@@ -90,7 +90,7 @@ function statusBadge(status: string) {
 
 function scoreBadge(score: number | null) {
   if (score === null || score === undefined) {
-    return <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Not scored</span>;
+    return <span className="rounded-lg bg-[var(--surface-muted)] px-3 py-1 text-xs font-bold text-[var(--muted-foreground)]">Not scored</span>;
   }
 
   const style = score >= 90 ? "bg-green-50 text-green-700" : score >= 70 ? "bg-yellow-50 text-yellow-700" : "bg-red-50 text-red-700";
@@ -99,11 +99,11 @@ function scoreBadge(score: number | null) {
 
 function integrityBadge(integrity: Contact["verification_integrity"]) {
   if (!integrity) {
-    return <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Not checked</span>;
+    return <span className="rounded-lg bg-[var(--surface-muted)] px-3 py-1 text-xs font-bold text-[var(--muted-foreground)]">Not checked</span>;
   }
 
   return (
-    <span className={`rounded-lg px-3 py-1 text-xs font-bold ${INTEGRITY_STYLES[integrity] || "bg-slate-100 text-slate-700"}`}>
+    <span className={`rounded-lg px-3 py-1 text-xs font-bold ${INTEGRITY_STYLES[integrity] || "bg-[var(--surface-muted)] text-[var(--foreground)]"}`}>
       {integrity}
     </span>
   );
@@ -462,9 +462,9 @@ export default function ContactsPage() {
       />
 
       {banner && (
-        <div className="flex items-start justify-between rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 text-sm font-medium text-blue-700">
+        <div className="flex items-start justify-between rounded-2xl border border-[#b8d4b6] bg-[#d4e4d3] px-5 py-4 text-sm font-medium text-[var(--primary)]">
           <span>{banner}</span>
-          <button className="text-blue-500 hover:text-blue-700" onClick={() => setBanner(null)}>Dismiss</button>
+          <button className="text-[var(--primary)] hover:text-[var(--primary)]" onClick={() => setBanner(null)}>Dismiss</button>
         </div>
       )}
 
@@ -480,27 +480,27 @@ export default function ContactsPage() {
           <select
             value={listFilterId}
             onChange={(event) => setListFilterId(event.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)]"
           >
             <option value="all">All lists</option>
             {lists.map((list) => (
               <option key={list.id} value={list.id}>{list.name}</option>
             ))}
           </select>
-          <select value={contactTypeFilter} onChange={(event) => setContactTypeFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700">
+          <select value={contactTypeFilter} onChange={(event) => setContactTypeFilter(event.target.value)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)]">
             <option value="all">All contact types</option>
             <option value="b2b">B2B</option>
             <option value="b2c">B2C</option>
             <option value="mixed">Mixed / imported</option>
           </select>
-          <select value={consentFilter} onChange={(event) => setConsentFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700">
+          <select value={consentFilter} onChange={(event) => setConsentFilter(event.target.value)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)]">
             <option value="all">All consent states</option>
             <option value="granted">Granted</option>
             <option value="unknown">Unknown</option>
             <option value="revoked">Revoked</option>
             <option value="not_required">Not required</option>
           </select>
-          <select value={unsubscribeFilter} onChange={(event) => setUnsubscribeFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700">
+          <select value={unsubscribeFilter} onChange={(event) => setUnsubscribeFilter(event.target.value)} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)]">
             <option value="all">All subscription states</option>
             <option value="subscribed">Subscribed</option>
             <option value="unsubscribed">Unsubscribed</option>
@@ -510,7 +510,7 @@ export default function ContactsPage() {
             type="button"
             disabled={!selectedLeadIds.length || !!bulkState && ["queued", "running"].includes(bulkState.status)}
             onClick={() => void handleBulkVerify(selectedLeadIds)}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--sidebar)] px-4 py-2.5 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:bg-[var(--border-strong)]"
           >
             {bulkState && ["queued", "running"].includes(bulkState.status) ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
             Verify selected
@@ -519,7 +519,7 @@ export default function ContactsPage() {
             value={bulkContactType}
             onChange={(event) => setBulkContactType(event.target.value as "b2b" | "b2c" | "mixed")}
             aria-label="Bulk contact type"
-            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)]"
           >
             <option value="b2b">B2B</option>
             <option value="b2c">B2C</option>
@@ -529,7 +529,7 @@ export default function ContactsPage() {
             type="button"
             disabled={!selectedLeadIds.length || addingLeadId === "__bulk_contact_type__"}
             onClick={() => void handleBulkContactTypeAssign()}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-bold text-[var(--foreground)] transition disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-[var(--surface-muted)] disabled:text-[var(--muted-foreground)]"
           >
             {addingLeadId === "__bulk_contact_type__" ? <LoaderCircle size={16} className="animate-spin" /> : null}
             Set contact type
@@ -537,7 +537,7 @@ export default function ContactsPage() {
           <select
             value={bulkListTargetId}
             onChange={(event) => setBulkListTargetId(event.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)]"
           >
             <option value="">Choose list</option>
             {lists.map((list) => (
@@ -548,7 +548,7 @@ export default function ContactsPage() {
             type="button"
             disabled={!selectedLeadIds.length || !bulkListTargetId || addingLeadId === "__bulk__"}
             onClick={() => void handleBulkAddToList()}
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#b8d4b6] bg-[#d4e4d3] px-4 py-2.5 text-sm font-bold text-[var(--primary)] transition disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-[var(--surface-muted)] disabled:text-[var(--muted-foreground)]"
           >
             {addingLeadId === "__bulk__" ? <LoaderCircle size={16} className="animate-spin" /> : <ListPlus size={16} />}
             Add selected to list
@@ -557,13 +557,13 @@ export default function ContactsPage() {
             value={bulkTags}
             onChange={(event) => setBulkTags(event.target.value)}
             placeholder="vip, newsletter"
-            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)]"
           />
           <button
             type="button"
             disabled={!selectedLeadIds.length || addingLeadId === "__bulk_tags__"}
             onClick={() => void handleBulkTagAssign()}
-            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-bold text-indigo-700 transition disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-[var(--surface-muted)] disabled:text-[var(--muted-foreground)]"
           >
             <Tags size={16} />
             Assign tags
@@ -572,7 +572,7 @@ export default function ContactsPage() {
             type="button"
             disabled={!selectedLeadIds.length || addingLeadId === "__bulk_suppress__"}
             onClick={() => void handleBulkSuppress()}
-            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 transition disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-[var(--surface-muted)] disabled:text-[var(--muted-foreground)]"
           >
             <ShieldX size={16} />
             Suppress selected
@@ -581,7 +581,7 @@ export default function ContactsPage() {
             <button
               type="button"
               onClick={() => void handleBulkVerify(filteredLeads.map((lead) => lead.id))}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#b8d4b6] bg-[#d4e4d3] px-4 py-2.5 text-sm font-bold text-[var(--primary)] transition hover:bg-[#d4e4d3]"
             >
               <MailCheck size={16} />
               Verify imported leads
@@ -591,11 +591,11 @@ export default function ContactsPage() {
       </SurfaceCard>
 
       {bulkState && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-bold text-slate-700">Bulk verification</div>
-              <div className="text-sm text-slate-500">
+              <div className="text-sm font-bold text-[var(--foreground)]">Bulk verification</div>
+              <div className="text-sm text-[var(--muted-foreground)]">
                 {bulkState.status === "completed"
                   ? `Completed ${bulkState.processedCount} of ${bulkState.requestedCount} leads.`
                   : bulkState.status === "failed"
@@ -617,7 +617,7 @@ export default function ContactsPage() {
           <span className="text-sm">{error}</span>
         </div>
       ) : loading && leads.length === 0 ? (
-        <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex h-64 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
           <Spinner size="lg" />
         </div>
       ) : (
@@ -635,46 +635,46 @@ export default function ContactsPage() {
                       aria-label={`Select ${lead.email}`}
                       checked={isSelected}
                       onChange={() => toggleLead(lead.id)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-[var(--border-strong)] text-[var(--primary)] focus:ring-[#2d6a4f]"
                     />
                   </TableCell>
-                  <TableCell className="font-bold text-slate-800">{lead.email}</TableCell>
-                  <TableCell className="font-medium text-slate-600">
+                  <TableCell className="font-bold text-[var(--foreground)]">{lead.email}</TableCell>
+                  <TableCell className="font-medium text-[var(--muted-foreground)]">
                     <div>{[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "-"}</div>
-                    <div className="text-xs text-slate-400">{lead.company || "No company"}{lead.persona ? ` • ${lead.persona}` : ""}</div>
+                    <div className="text-xs text-[var(--muted-foreground)]">{lead.company || "No company"}{lead.persona ? ` • ${lead.persona}` : ""}</div>
                   </TableCell>
-                  <TableCell className="text-slate-600">
+                  <TableCell className="text-[var(--muted-foreground)]">
                     <div className="flex flex-wrap gap-1">
-                      <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{lead.contact_type || "mixed"}</span>
-                      <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">{lead.consent_status || "unknown"}</span>
+                      <span className="rounded-lg bg-[var(--surface-muted)] px-2 py-1 text-xs font-semibold text-[var(--foreground)]">{lead.contact_type || "mixed"}</span>
+                      <span className="rounded-lg bg-[#d4e4d3] px-2 py-1 text-xs font-semibold text-[var(--primary)]">{lead.consent_status || "unknown"}</span>
                       <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${(lead.unsubscribe_status || "subscribed") === "subscribed" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{lead.unsubscribe_status || "subscribed"}</span>
-                      <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${(lead.contact_quality_tier || "low") === "high" ? "bg-emerald-50 text-emerald-700" : (lead.contact_quality_tier || "low") === "medium" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"}`}>{lead.contact_quality_tier || "low"} quality</span>
+                      <span className={`rounded-lg px-2 py-1 text-xs font-semibold ${(lead.contact_quality_tier || "low") === "high" ? "bg-emerald-50 text-emerald-700" : (lead.contact_quality_tier || "low") === "medium" ? "bg-amber-50 text-amber-700" : "bg-[var(--surface-muted)] text-[var(--foreground)]"}`}>{lead.contact_quality_tier || "low"} quality</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex max-w-[180px] flex-wrap gap-1">
                       {(lead.list_names || []).length ? (
                         lead.list_names?.map((listName) => (
-                          <span key={`${lead.id}-${listName}`} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                          <span key={`${lead.id}-${listName}`} className="rounded-lg bg-[var(--surface-muted)] px-2 py-1 text-xs font-semibold text-[var(--foreground)]">
                             {listName}
                           </span>
                         ))
                       ) : (
-                        <span className="text-xs text-slate-400">No lists</span>
+                        <span className="text-xs text-[var(--muted-foreground)]">No lists</span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>{statusBadge(lead.email_status || "unverified")}</TableCell>
                   <TableCell>{scoreBadge(lead.verification_score)}</TableCell>
                   <TableCell>{integrityBadge(lead.verification_integrity)}</TableCell>
-                  <TableCell className="text-slate-500">{lead.last_verified_at ? new Date(lead.last_verified_at).toLocaleString() : "Not checked"}</TableCell>
+                  <TableCell className="text-[var(--muted-foreground)]">{lead.last_verified_at ? new Date(lead.last_verified_at).toLocaleString() : "Not checked"}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => void handleVerifyOne(lead.id)}
                         disabled={isVerifying}
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition disabled:bg-blue-300"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-bold text-white transition disabled:bg-[#b8d4b6]"
                       >
                         {isVerifying ? <LoaderCircle size={14} className="animate-spin" /> : <MailCheck size={14} />}
                         Verify
@@ -682,7 +682,7 @@ export default function ContactsPage() {
                       <select
                         value={rowListTarget}
                         onChange={(event) => setRowListTargets((current) => ({ ...current, [lead.id]: event.target.value }))}
-                        className="rounded-lg border border-slate-200 px-2 py-2 text-xs font-medium text-slate-700"
+                        className="rounded-lg border border-[var(--border)] px-2 py-2 text-xs font-medium text-[var(--foreground)]"
                       >
                         <option value="">Choose list</option>
                         {lists
@@ -695,7 +695,7 @@ export default function ContactsPage() {
                         type="button"
                         onClick={() => void handleAddLeadToList(lead.id)}
                         disabled={!rowListTarget || addingLeadId === lead.id}
-                        className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#b8d4b6] px-3 py-2 text-xs font-bold text-[var(--primary)] transition disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:text-[var(--muted-foreground)]"
                       >
                         {addingLeadId === lead.id ? <LoaderCircle size={14} className="animate-spin" /> : <ListPlus size={14} />}
                         Add to list
@@ -703,7 +703,7 @@ export default function ContactsPage() {
                       <button
                         type="button"
                         onClick={() => setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id)}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                        className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-bold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
                       >
                         {expandedLeadId === lead.id ? "Hide" : "Details"}
                       </button>
@@ -716,8 +716,8 @@ export default function ContactsPage() {
               <TableRow>
                 <TableCell className="py-12 text-center" colSpan={10}>
                   <div className="space-y-2">
-                    <div className="text-lg font-bold text-slate-500">No leads available</div>
-                    <div className="text-sm text-slate-400">
+                    <div className="text-lg font-bold text-[var(--muted-foreground)]">No leads available</div>
+                    <div className="text-sm text-[var(--muted-foreground)]">
                       Import leads or create them through your workflow, then verify them here.
                     </div>
                   </div>
@@ -733,20 +733,20 @@ export default function ContactsPage() {
                 aria-label="Select all visible leads"
                 checked={allVisibleSelected}
                 onChange={toggleAllVisible}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-[var(--border-strong)] text-[var(--primary)] focus:ring-[#2d6a4f]"
               />
-              <span className="text-sm font-medium text-slate-600">
+              <span className="text-sm font-medium text-[var(--muted-foreground)]">
                 Select all visible leads ({filteredLeads.length})
               </span>
             </div>
           )}
 
           {expandedLead && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">{expandedLead.email}</h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <h2 className="text-xl font-bold text-[var(--foreground)]">{expandedLead.email}</h2>
+                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                     Latest verification state for this lead.
                   </p>
                 </div>
@@ -757,7 +757,7 @@ export default function ContactsPage() {
                 <DetailCard label="Score">{scoreBadge(expandedLead.verification_score)}</DetailCard>
                 <DetailCard label="Integrity">{integrityBadge(expandedLead.verification_integrity)}</DetailCard>
                 <DetailCard label="Last checked">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-sm font-medium text-[var(--foreground)]">
                     {expandedLead.last_verified_at ? new Date(expandedLead.last_verified_at).toLocaleString() : "Not checked yet"}
                   </span>
                 </DetailCard>
@@ -776,7 +776,7 @@ export default function ContactsPage() {
                     <select
                       value={contactTypeDraft}
                       onChange={(event) => setContactTypeDraft(event.target.value as "b2b" | "b2c" | "mixed")}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                      className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--foreground)]"
                       disabled={updatingLeadId === expandedLead.id}
                     >
                       <option value="b2b">B2B</option>
@@ -787,20 +787,20 @@ export default function ContactsPage() {
                       type="button"
                       onClick={() => void handleUpdateContactType()}
                       disabled={updatingLeadId === expandedLead.id || contactTypeDraft === (expandedLead.contact_type || "mixed")}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-bold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {updatingLeadId === expandedLead.id ? <LoaderCircle size={14} className="animate-spin" /> : null}
                       Save
                     </button>
                   </div>
                 </DetailCard>
-                <DetailCard label="Consent"><span className="text-sm font-medium text-slate-700">{expandedLead.consent_status || "unknown"}</span></DetailCard>
-                <DetailCard label="Subscription"><span className="text-sm font-medium text-slate-700">{expandedLead.unsubscribe_status || "subscribed"}</span></DetailCard>
-                <DetailCard label="Engagement"><span className="text-sm font-medium text-slate-700">{expandedLead.engagement_score ?? 0}</span></DetailCard>
+                <DetailCard label="Consent"><span className="text-sm font-medium text-[var(--foreground)]">{expandedLead.consent_status || "unknown"}</span></DetailCard>
+                <DetailCard label="Subscription"><span className="text-sm font-medium text-[var(--foreground)]">{expandedLead.unsubscribe_status || "subscribed"}</span></DetailCard>
+                <DetailCard label="Engagement"><span className="text-sm font-medium text-[var(--foreground)]">{expandedLead.engagement_score ?? 0}</span></DetailCard>
               </div>
 
               <div className="mt-6">
-                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Tags</div>
+                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Tags</div>
                 {(expandedLead.tags || []).length ? (
                   <div className="flex flex-wrap gap-2">
                     {expandedLead.tags?.map((tag) => (
@@ -808,37 +808,37 @@ export default function ContactsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">No tags assigned yet.</div>
+                  <div className="rounded-xl bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--muted-foreground)]">No tags assigned yet.</div>
                 )}
               </div>
 
               <div className="mt-6">
-                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">List membership</div>
+                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-[var(--muted-foreground)]">List membership</div>
                 {(expandedLead.list_names || []).length ? (
                   <div className="flex flex-wrap gap-2">
                     {expandedLead.list_names?.map((listName) => (
-                      <span key={`${expandedLead.id}-${listName}`} className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
+                      <span key={`${expandedLead.id}-${listName}`} className="rounded-xl bg-[var(--surface-muted)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]">
                         {listName}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  <div className="rounded-xl bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--muted-foreground)]">
                     This lead is not assigned to any reusable list yet.
                   </div>
                 )}
               </div>
 
               <div className="mt-6">
-                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Verification reasons</div>
+                <div className="mb-2 text-sm font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Verification reasons</div>
                 {expandedLead.verification_reasons?.length ? (
-                  <ul className="space-y-2 text-sm text-slate-700">
+                  <ul className="space-y-2 text-sm text-[var(--foreground)]">
                     {expandedLead.verification_reasons.map((reason) => (
-                      <li key={reason} className="rounded-xl bg-slate-50 px-4 py-3">{reason}</li>
+                      <li key={reason} className="rounded-xl bg-[var(--surface-muted)] px-4 py-3">{reason}</li>
                     ))}
                   </ul>
                 ) : (
-                  <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  <div className="rounded-xl bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--muted-foreground)]">
                     This lead has not been checked yet. Run verification to populate reasons.
                   </div>
                 )}
@@ -853,8 +853,8 @@ export default function ContactsPage() {
 
 function DetailCard({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">{label}</div>
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+      <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">{label}</div>
       {children}
     </div>
   );
@@ -864,7 +864,7 @@ function FlagBadge({ label, value, positive = false }: { label: string; value: b
   const isTrue = typeof value === "boolean" ? value : Boolean(value);
   const display = typeof value === "boolean" ? (value ? "Yes" : "No") : value;
   const style = positive
-    ? "bg-blue-50 text-blue-700"
+    ? "bg-[#d4e4d3] text-[var(--primary)]"
     : isTrue
       ? "bg-red-50 text-red-700"
       : "bg-emerald-50 text-emerald-700";

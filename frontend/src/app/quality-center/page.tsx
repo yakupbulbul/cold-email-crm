@@ -35,20 +35,20 @@ function ResultRow({
   taskPending?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge tone={toneForStatus(result.status)}>{statusLabel(result.status)}</StatusBadge>
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{result.category.replaceAll("_", " ")}</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">{result.category.replaceAll("_", " ")}</span>
           </div>
-          <div className="mt-2 text-sm font-semibold text-slate-950">{result.name}</div>
-          <p className="mt-1 text-sm leading-6 text-slate-600">{result.message}</p>
-          <div className="mt-2 text-xs text-slate-400">Checked {formatDateTime(result.checked_at)}</div>
+          <div className="mt-2 text-sm font-semibold text-[var(--foreground)]">{result.name}</div>
+          <p className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">{result.message}</p>
+          <div className="mt-2 text-xs text-[var(--muted-foreground)]">Checked {formatDateTime(result.checked_at)}</div>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           {result.href ? (
-            <Link href={result.href} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href={result.href} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--surface-muted)]">
               Open context
             </Link>
           ) : null}
@@ -57,7 +57,7 @@ function ResultRow({
               type="button"
               disabled={taskPending}
               onClick={() => onCreateTask(result)}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Create task
             </button>
@@ -73,12 +73,12 @@ function RunCard({ title, run }: { title: string; run?: QualityCheckRun | null }
     <SurfaceCard className="p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-sm font-semibold text-slate-950">{title}</div>
-          <div className="mt-2 text-sm leading-6 text-slate-600">{run?.summary || "No run has been recorded yet."}</div>
+          <div className="text-sm font-semibold text-[var(--foreground)]">{title}</div>
+          <div className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">{run?.summary || "No run has been recorded yet."}</div>
         </div>
         <StatusBadge tone={toneForStatus(run?.status)}>{statusLabel(run?.status)}</StatusBadge>
       </div>
-      <div className="mt-4 text-xs text-slate-500">Last completed: {formatDateTime(run?.completed_at)}</div>
+      <div className="mt-4 text-xs text-[var(--muted-foreground)]">Last completed: {formatDateTime(run?.completed_at)}</div>
     </SurfaceCard>
   );
 }
@@ -184,7 +184,7 @@ export default function QualityCenterPage() {
       {actionMessage ? <AlertBanner tone="success" title="Quality action completed">{actionMessage}</AlertBanner> : null}
 
       {loading && !summary ? (
-        <SurfaceCard className="flex h-64 items-center justify-center text-sm font-medium text-slate-500">Loading quality state...</SurfaceCard>
+        <SurfaceCard className="flex h-64 items-center justify-center text-sm font-medium text-[var(--muted-foreground)]">Loading quality state...</SurfaceCard>
       ) : !summary ? (
         <EmptyState icon={ShieldCheck} title="No quality state available" description="The backend did not return a Quality Center summary. Check API health and authentication." />
       ) : (
@@ -205,8 +205,8 @@ export default function QualityCenterPage() {
             <SectionTitle title="Recommended next fixes" description="Prioritized from failed, blocked, and stale quality checks." />
             <div className="space-y-2">
               {summary.recommended_next_fixes.map((fix, index) => (
-                <div key={`${fix}-${index}`} className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-950 ring-1 ring-slate-200">{index + 1}</span>
+                <div key={`${fix}-${index}`} className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--foreground)]">
+                  <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--foreground)] ring-1 ring-[var(--border)]">{index + 1}</span>
                   <span>{fix}</span>
                 </div>
               ))}
@@ -249,18 +249,18 @@ export default function QualityCenterPage() {
           </SurfaceCard>
 
           <SurfaceCard className="overflow-hidden">
-            <div className="border-b border-slate-200 px-5 py-4">
-              <div className="flex items-center gap-2 text-base font-semibold text-slate-950">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <div className="flex items-center gap-2 text-base font-semibold text-[var(--foreground)]">
                 <Activity size={18} className="text-sky-600" />
                 Recent quality runs
               </div>
             </div>
             {summary.recent_runs.length === 0 ? (
-              <div className="p-5 text-sm text-slate-600">No quality runs have been recorded yet. Run a smoke check to create the first quality record.</div>
+              <div className="p-5 text-sm text-[var(--muted-foreground)]">No quality runs have been recorded yet. Run a smoke check to create the first quality record.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-left">
-                  <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-xs font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                     <tr>
                       <th className="px-5 py-3">Run</th>
                       <th className="px-5 py-3">Status</th>
@@ -268,13 +268,13 @@ export default function QualityCenterPage() {
                       <th className="px-5 py-3">Completed</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-[var(--surface-muted)]">
                     {summary.recent_runs.map((run) => (
                       <tr key={run.id}>
-                        <td className="px-5 py-4 text-sm font-semibold text-slate-900">{run.run_type.replaceAll("_", " ")}</td>
+                        <td className="px-5 py-4 text-sm font-semibold text-[var(--foreground)]">{run.run_type.replaceAll("_", " ")}</td>
                         <td className="px-5 py-4"><StatusBadge tone={toneForStatus(run.status)}>{statusLabel(run.status)}</StatusBadge></td>
-                        <td className="max-w-xl px-5 py-4 text-sm text-slate-600">{run.summary || "No summary recorded."}</td>
-                        <td className="px-5 py-4 text-sm text-slate-500">{formatDateTime(run.completed_at)}</td>
+                        <td className="max-w-xl px-5 py-4 text-sm text-[var(--muted-foreground)]">{run.summary || "No summary recorded."}</td>
+                        <td className="px-5 py-4 text-sm text-[var(--muted-foreground)]">{formatDateTime(run.completed_at)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -287,11 +287,11 @@ export default function QualityCenterPage() {
             <div className="flex items-start gap-3">
               <CheckCircle2 size={18} className="mt-0.5 text-emerald-600" />
               <div>
-                <div className="font-semibold text-slate-950">Structured quality evidence</div>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
+                <div className="font-semibold text-[var(--foreground)]">Structured quality evidence</div>
+                <p className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">
                   Quality Center stores structured results, not raw terminal logs. It complements existing smoke scripts, release docs, Command Center logs, and header notifications.
                 </p>
-                <Link href="/command-center" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-950">
+                <Link href="/command-center" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] hover:text-[var(--foreground)]">
                   <ClipboardList size={15} /> Open Command Center
                 </Link>
               </div>

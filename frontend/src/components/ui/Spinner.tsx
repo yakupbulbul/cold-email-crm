@@ -11,7 +11,7 @@ export default function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) 
 
     return (
         <div className="flex items-center justify-center w-full h-full p-4">
-            <Loader2 className={`animate-spin text-blue-600 ${sizeClasses[size]}`} />
+            <Loader2 className={`animate-spin text-[var(--primary)] ${sizeClasses[size]}`} />
         </div>
     );
 }

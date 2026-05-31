@@ -62,7 +62,7 @@ export default function SuppressionPage() {
             <SurfaceCard className="p-5">
             <form onSubmit={handleCreate} className="flex flex-col gap-4 md:flex-row md:items-end">
                 <div className="flex-1">
-                    <label htmlFor="suppression-email" className="block text-sm font-semibold text-slate-700 mb-2">
+                    <label htmlFor="suppression-email" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
                         Email Address
                     </label>
                     <input
@@ -76,7 +76,7 @@ export default function SuppressionPage() {
                     />
                 </div>
                 <div className="md:w-64">
-                    <label htmlFor="suppression-reason" className="block text-sm font-semibold text-slate-700 mb-2">
+                    <label htmlFor="suppression-reason" className="block text-sm font-semibold text-[var(--foreground)] mb-2">
                         Reason
                     </label>
                     <input
@@ -103,7 +103,7 @@ export default function SuppressionPage() {
 
             {submitError ? <AlertBanner tone="danger" title="Suppression create failed">{submitError}</AlertBanner> : null}
 
-            <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-8 mt-8 flex flex-col items-center justify-center max-w-full">
+            <div className="bg-[var(--surface)] rounded-2xl border border-red-100 shadow-sm p-8 mt-8 flex flex-col items-center justify-center max-w-full">
                 {error && list.length === 0 ? (
                     <div className="p-6 text-red-700 flex flex-col items-center justify-center py-12 text-center w-full">
                         <AlertCircle className="mb-4 text-red-500" size={32} />
@@ -117,12 +117,12 @@ export default function SuppressionPage() {
                         <Table columns={["Blocked Address", "Penalty Reason", "Detection Source", "Blocked On", "Actions"]}>
                             {list.map((item) => (
                                 <TableRow key={item.id}>
-                                    <TableCell className="font-bold text-slate-800">{item.email}</TableCell>
+                                    <TableCell className="font-bold text-[var(--foreground)]">{item.email}</TableCell>
                                     <TableCell className="text-red-600 font-bold">{item.reason}</TableCell>
-                                    <TableCell className="text-slate-500 font-bold uppercase text-xs">{item.source}</TableCell>
-                                    <TableCell className="text-slate-600 font-medium">{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                                    <TableCell className="text-[var(--muted-foreground)] font-bold uppercase text-xs">{item.source}</TableCell>
+                                    <TableCell className="text-[var(--muted-foreground)] font-medium">{new Date(item.created_at).toLocaleDateString()}</TableCell>
                                     <TableCell>
-                                        <button onClick={() => performDelete(item.id)} className="text-slate-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-xl">
+                                        <button onClick={() => performDelete(item.id)} className="text-[var(--muted-foreground)] hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-xl">
                                             <Trash2 size={18} />
                                         </button>
                                     </TableCell>
@@ -131,7 +131,7 @@ export default function SuppressionPage() {
                             {list.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center py-12">
-                                        <span className="text-slate-400 font-bold text-lg">No suppression entries yet.</span>
+                                        <span className="text-[var(--muted-foreground)] font-bold text-lg">No suppression entries yet.</span>
                                     </TableCell>
                                 </TableRow>
                             )}

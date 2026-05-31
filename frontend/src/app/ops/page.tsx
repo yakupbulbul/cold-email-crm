@@ -15,13 +15,13 @@ function getStatusIcon(status: string) {
 
 function StatusCard({ title, icon, data }: { title: string; icon: ReactNode; data?: HealthComponent | null }) {
     return (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow h-full">
+        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow h-full">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-slate-50 rounded-xl text-slate-600">{icon}</div>
-                    <span className="font-bold text-slate-800 tracking-tight">{title}</span>
+                    <div className="p-2.5 bg-[var(--surface-muted)] rounded-xl text-[var(--muted-foreground)]">{icon}</div>
+                    <span className="font-bold text-[var(--foreground)] tracking-tight">{title}</span>
                 </div>
-                {data ? getStatusIcon(data.status) : <div className="w-6 h-6 bg-slate-100 rounded-full animate-pulse" />}
+                {data ? getStatusIcon(data.status) : <div className="w-6 h-6 bg-[var(--surface-muted)] rounded-full animate-pulse" />}
             </div>
 
             <div className="space-y-2 mt-2 flex-grow">
@@ -30,14 +30,14 @@ function StatusCard({ title, icon, data }: { title: string; icon: ReactNode; dat
                 )}
                 {data?.active_count !== undefined && (
                     <div className="flex justify-between text-sm mt-auto">
-                        <span className="text-slate-500 font-medium">Active Nodes</span>
-                        <span className="font-bold text-slate-800">{data.active_count} / {data.total_registered}</span>
+                        <span className="text-[var(--muted-foreground)] font-medium">Active Nodes</span>
+                        <span className="font-bold text-[var(--foreground)]">{data.active_count} / {data.total_registered}</span>
                     </div>
                 )}
                 {data?.latency_ms !== undefined && (
                     <div className="flex justify-between text-sm mt-auto">
-                        <span className="text-slate-500 font-medium">Ping Latency</span>
-                        <span className="font-bold text-slate-800">{data.latency_ms}ms</span>
+                        <span className="text-[var(--muted-foreground)] font-medium">Ping Latency</span>
+                        <span className="font-bold text-[var(--foreground)]">{data.latency_ms}ms</span>
                     </div>
                 )}
                 {data?.status === "healthy" && data?.active_count === undefined && data?.latency_ms === undefined && (
@@ -84,10 +84,10 @@ export default function OpsDashboard() {
                 description="Inspect backend, worker, alert, and deliverability posture with backend-driven readiness and blocker visibility."
                 actions={(
                 <div className="flex items-center gap-3">
-                    <Link href="/ops/jobs" className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all shadow-sm active:scale-95">
+                    <Link href="/ops/jobs" className="px-5 py-2.5 bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-muted)] text-[var(--foreground)] font-bold rounded-xl transition-all shadow-sm active:scale-95">
                         Worker Queues
                     </Link>
-                    <Link href="/ops/alerts" className="px-5 py-2.5 bg-slate-900 hover:bg-black text-white font-bold rounded-xl transition-all shadow-lg active:scale-95">
+                    <Link href="/ops/alerts" className="px-5 py-2.5 bg-[var(--sidebar)] hover:bg-black text-white font-bold rounded-xl transition-all shadow-lg active:scale-95">
                         System Alerts
                     </Link>
                 </div>
@@ -104,14 +104,14 @@ export default function OpsDashboard() {
             {/* Live Action Feed Panel */}
             <div className="grid grid-cols-3 gap-6 mt-8">
                 <SurfaceCard className="col-span-2 p-6 overflow-y-auto h-96">
-                    <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 sticky top-0 bg-white z-10 pb-2 border-b border-slate-100">
+                    <h3 className="font-bold text-[var(--foreground)] mb-6 flex items-center gap-2 sticky top-0 bg-[var(--surface)] z-10 pb-2 border-b border-[var(--surface-muted)]">
                         <MailWarning size={20} className="text-amber-500" /> Recent System Alerts & Blockers
                     </h3>
                     <div className="space-y-4">
                         {loading && alerts.length === 0 ? (
-                           <div className="flex justify-center p-8"><span className="animate-pulse text-slate-400">Loading alerts...</span></div>
+                           <div className="flex justify-center p-8"><span className="animate-pulse text-[var(--muted-foreground)]">Loading alerts...</span></div>
                         ) : alerts.length === 0 ? (
-                            <div className="p-8 text-center text-slate-400">No active system alerts detected. Systems are stable.</div>
+                            <div className="p-8 text-center text-[var(--muted-foreground)]">No active system alerts detected. Systems are stable.</div>
                         ) : (
                             alerts.map((alert) => (
                                 <div key={alert.id} className={`p-3 border-l-4 ${alert.severity === 'critical' ? 'border-red-500 bg-red-50 text-red-800' : 'border-amber-500 bg-amber-50 text-amber-800'} text-sm font-bold rounded-r-lg`}>
@@ -124,19 +124,19 @@ export default function OpsDashboard() {
                 </SurfaceCard>
                 
                 <SurfaceCard className="col-span-1 p-6 overflow-hidden">
-                    <h3 className="font-bold text-slate-800 mb-6">Live Pulse</h3>
+                    <h3 className="font-bold text-[var(--foreground)] mb-6">Live Pulse</h3>
                     <div className="flex flex-col gap-4">
-                        <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
-                            <span className="text-slate-500 font-bold text-xs uppercase">Emails Sent Today</span>
-                            <span className="text-blue-600 font-black text-xl">{deliverability?.sent || 0}</span>
+                        <div className="flex justify-between items-center bg-[var(--surface-muted)] p-3 rounded-lg">
+                            <span className="text-[var(--muted-foreground)] font-bold text-xs uppercase">Emails Sent Today</span>
+                            <span className="text-[var(--primary)] font-black text-xl">{deliverability?.sent || 0}</span>
                         </div>
-                        <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
-                            <span className="text-slate-500 font-bold text-xs uppercase">Bounces Blocked</span>
+                        <div className="flex justify-between items-center bg-[var(--surface-muted)] p-3 rounded-lg">
+                            <span className="text-[var(--muted-foreground)] font-bold text-xs uppercase">Bounces Blocked</span>
                             <span className="text-amber-600 font-black text-xl">{deliverability?.suppressed || 0}</span>
                         </div>
                         {liveMetrics.map((metric) => (
-                            <div key={metric.label} className="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
-                                <span className="text-slate-500 font-bold text-xs uppercase">{metric.label}</span>
+                            <div key={metric.label} className="flex justify-between items-center bg-[var(--surface-muted)] p-3 rounded-lg">
+                                <span className="text-[var(--muted-foreground)] font-bold text-xs uppercase">{metric.label}</span>
                                 <span className={`${metric.tone} font-black text-xl`}>{metric.value}</span>
                             </div>
                         ))}
@@ -152,25 +152,25 @@ export default function OpsDashboard() {
                             <SurfaceCard key={provider} className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Provider</div>
-                                        <div className="mt-2 text-xl font-extrabold text-slate-900">Google Workspace</div>
+                                        <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Provider</div>
+                                        <div className="mt-2 text-xl font-extrabold text-[var(--foreground)]">Google Workspace</div>
                                     </div>
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
+                                    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[var(--foreground)]">
                                         <Mail size={18} />
                                     </div>
                                 </div>
                                 <div className="mt-4 flex flex-wrap gap-2">
-                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
                                         {item.enabled ? "Enabled" : "Disabled"}
                                     </span>
-                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
                                         {item.configured ? "Configured" : "Not configured"}
                                     </span>
-                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--foreground)]">
                                         {item.status}
                                     </span>
                                 </div>
-                                <div className="mt-4 text-sm text-slate-600">{item.detail || "No provider detail available."}</div>
+                                <div className="mt-4 text-sm text-[var(--muted-foreground)]">{item.detail || "No provider detail available."}</div>
                             </SurfaceCard>
                         );
                     })}

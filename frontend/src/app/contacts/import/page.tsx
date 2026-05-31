@@ -94,15 +94,15 @@ export default function LeadImportPage() {
 
     return (
         <div className="space-y-6 animate-fade-in relative min-h-screen">
-            <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Bulk Bulk Import</h1>
+            <h1 className="text-3xl font-bold text-[var(--foreground)] tracking-tight">Bulk Bulk Import</h1>
             
             {/* Stepper */}
             <div className="flex items-center space-x-4 mb-8">
-                <div className={`px-4 py-2 rounded-lg font-bold text-sm ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>1. Upload</div>
-                <div className={`w-8 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-slate-200'} rounded-full`}></div>
-                <div className={`px-4 py-2 rounded-lg font-bold text-sm ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>2. Map Columns</div>
-                <div className={`w-8 h-1 ${step >= 3 ? 'bg-blue-600' : 'bg-slate-200'} rounded-full`}></div>
-                <div className={`px-4 py-2 rounded-lg font-bold text-sm ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>3. Review & Import</div>
+                <div className={`px-4 py-2 rounded-lg font-bold text-sm ${step >= 1 ? 'bg-[var(--primary)] text-white' : 'bg-[var(--border)] text-[var(--muted-foreground)]'}`}>1. Upload</div>
+                <div className={`w-8 h-1 ${step >= 2 ? 'bg-[var(--primary)]' : 'bg-[var(--border)]'} rounded-full`}></div>
+                <div className={`px-4 py-2 rounded-lg font-bold text-sm ${step >= 2 ? 'bg-[var(--primary)] text-white' : 'bg-[var(--border)] text-[var(--muted-foreground)]'}`}>2. Map Columns</div>
+                <div className={`w-8 h-1 ${step >= 3 ? 'bg-[var(--primary)]' : 'bg-[var(--border)]'} rounded-full`}></div>
+                <div className={`px-4 py-2 rounded-lg font-bold text-sm ${step >= 3 ? 'bg-[var(--primary)] text-white' : 'bg-[var(--border)] text-[var(--muted-foreground)]'}`}>3. Review & Import</div>
             </div>
 
             {step === 1 && (
@@ -110,14 +110,14 @@ export default function LeadImportPage() {
             )}
 
             {step === 2 && (
-                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl">
-                    <h3 className="text-xl font-bold text-slate-800 mb-6">Map System Variables</h3>
+                <div className="bg-[var(--surface)] p-8 rounded-2xl border border-[var(--border)] shadow-sm max-w-3xl">
+                    <h3 className="text-xl font-bold text-[var(--foreground)] mb-6">Map System Variables</h3>
                     <div className="space-y-5">
                         {Object.keys(mappings).map(sysField => (
-                            <div key={sysField} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                <span className="font-semibold text-slate-700 capitalize">{sysField.replace("_", " ")}</span>
+                            <div key={sysField} className="flex items-center justify-between p-4 bg-[var(--surface-muted)] rounded-xl border border-[var(--surface-muted)]">
+                                <span className="font-semibold text-[var(--foreground)] capitalize">{sysField.replace("_", " ")}</span>
                                 <select 
-                                    className="px-4 py-2 rounded-lg border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none w-64"
+                                    className="px-4 py-2 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] font-medium focus:ring-2 focus:ring-[#2d6a4f] outline-none w-64"
                                     value={mappings[sysField]}
                                     onChange={e => setMappings({...mappings, [sysField]: e.target.value})}
                                 >
@@ -131,7 +131,7 @@ export default function LeadImportPage() {
                         <button 
                             disabled={!mappings.email || loading}
                             onClick={confirmMapping}
-                            className="bg-blue-600 disabled:bg-slate-400 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95"
+                            className="bg-[var(--primary)] disabled:bg-[var(--border-strong)] hover:bg-[#245a42] text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95"
                         >
                             {loading ? "Validating Records..." : "Validate Data Sequence"}
                         </button>
@@ -140,10 +140,10 @@ export default function LeadImportPage() {
             )}
 
             {step === 3 && validationResult && (
-                <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl">
+                <div className="bg-[var(--surface)] p-8 rounded-2xl border border-[var(--border)] shadow-sm max-w-3xl">
                     <div className="flex items-center gap-3 mb-6">
                         <CheckCircle className="text-green-500" size={32} />
-                        <h3 className="text-2xl font-bold text-slate-800">Validation Complete</h3>
+                        <h3 className="text-2xl font-bold text-[var(--foreground)]">Validation Complete</h3>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mb-8">
@@ -161,16 +161,16 @@ export default function LeadImportPage() {
                         </div>
                     </div>
 
-                    <div className="p-4 bg-slate-50 text-slate-600 text-sm font-medium rounded-xl border border-slate-200 mb-8 flex items-start gap-3">
+                    <div className="p-4 bg-[var(--surface-muted)] text-[var(--muted-foreground)] text-sm font-medium rounded-xl border border-[var(--border)] mb-8 flex items-start gap-3">
                         <AlertTriangle className="text-yellow-500 shrink-0" size={20} />
                         Only the Valid records will be imported into the Contact ecosystem. Invalid and Duplicate rows will be safely excluded from the database to prevent infrastructure contamination.
                     </div>
 
                     <div className="flex justify-end gap-4">
-                        <button onClick={() => setStep(2)} className="px-6 py-3 font-bold text-slate-500 hover:text-slate-800 transition-colors">
+                        <button onClick={() => setStep(2)} className="px-6 py-3 font-bold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
                             Remap Data
                         </button>
-                        <button onClick={executeImport} disabled={loading || validationResult.valid_rows === 0} className="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95">
+                        <button onClick={executeImport} disabled={loading || validationResult.valid_rows === 0} className="bg-[var(--sidebar)] hover:bg-black text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95">
                             {loading ? "Importing..." : "Execute Final Import"}
                         </button>
                     </div>
