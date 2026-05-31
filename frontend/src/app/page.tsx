@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import {
   ArrowRight,
-  BadgeCheck,
   Globe,
   Inbox,
   MailPlus,
@@ -16,42 +15,12 @@ import {
 } from "lucide-react";
 
 const MODULES = [
-  {
-    title: "Domains",
-    description: "Set up sender domains, verify readiness, and keep infrastructure visible before campaigns go live.",
-    href: "/signin",
-    icon: Globe,
-  },
-  {
-    title: "Mailboxes",
-    description: "Connect mailboxes, validate transport health, and manage sender identity from one workspace.",
-    href: "/signin",
-    icon: MailPlus,
-  },
-  {
-    title: "Campaigns",
-    description: "Create reusable campaigns, attach lists, and control execution with operational clarity.",
-    href: "/signin",
-    icon: Send,
-  },
-  {
-    title: "Contacts",
-    description: "Organize leads, review verification posture, and keep audience quality obvious before sending.",
-    href: "/signin",
-    icon: Users,
-  },
-  {
-    title: "Inbox",
-    description: "Track real replies, review threads, and keep operators focused on active conversations.",
-    href: "/signin",
-    icon: Inbox,
-  },
-  {
-    title: "Warm-up & Ops",
-    description: "Monitor warm-up, worker health, queue state, and runtime blockers from the same product surface.",
-    href: "/signin",
-    icon: Network,
-  },
+  { title: "Domains", href: "/signin", icon: Globe },
+  { title: "Mailboxes", href: "/signin", icon: MailPlus },
+  { title: "Campaigns", href: "/signin", icon: Send },
+  { title: "Contacts", href: "/signin", icon: Users },
+  { title: "Inbox", href: "/signin", icon: Inbox },
+  { title: "Warm-up & Ops", href: "/signin", icon: Network },
 ] as const;
 
 const WORKFLOW = [
@@ -115,100 +84,46 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="product" className="grid gap-6 lg:grid-cols-[0.8fr,1.2fr]">
-            <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)] sm:p-7">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted-foreground)]">Product overview</div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">
-                Built for teams that need one operational surface instead of scattered tools.
-              </h2>
-              <p className="mt-4 text-sm leading-7 text-[var(--muted-foreground)]">
-                The product brings together sender infrastructure, mailbox connectivity, campaign execution, contact quality, reply monitoring, warm-up, and runtime health so operators can see what is ready, blocked, or failing without guessing.
-              </p>
-              <div className="mt-6 space-y-3">
-                <ValuePoint label="Public-safe overview" detail="The landing page explains the product without exposing internal metrics or private runtime state." />
-                <ValuePoint label="One workspace" detail="The signed-in product keeps campaigns, inbox, and health views in a single operator console." />
-                <ValuePoint label="Operational clarity" detail="The app is built around readiness, blockers, and next actions instead of decorative dashboards." />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <section id="product">
+            <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">
+              One surface for your entire outbound stack.
+            </h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {MODULES.map((module) => (
-                <article key={module.title} className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)]">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--sidebar)] text-white">
+                <Link key={module.title} href={token ? "/dashboard" : module.href} className="flex items-center gap-4 rounded-[1.75rem] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-soft)] transition-shadow hover:shadow-md">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--sidebar)] text-white">
                     <module.icon size={18} />
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold tracking-[-0.03em] text-[var(--foreground)]">{module.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">{module.description}</p>
-                  <Link href={token ? "/dashboard" : module.href} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] hover:text-[var(--foreground)]">
-                    {token ? "Open workspace" : "Open in workspace"}
-                    <ArrowRight size={15} />
-                  </Link>
-                </article>
+                  <h3 className="text-base font-semibold tracking-[-0.02em] text-[var(--foreground)]">{module.title}</h3>
+                </Link>
               ))}
             </div>
           </section>
 
-          <section id="workflow" className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-            <div className="rounded-[2rem] border border-[#3d2e22] bg-[var(--sidebar)] p-6 text-[#faf8f5] shadow-[0_28px_60px_rgba(45,31,20,0.2)] sm:p-8">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8b7e74]">How it works</div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
-                A straightforward workflow from infrastructure to replies.
-              </h2>
-              <div className="mt-6 space-y-4">
-                {WORKFLOW.map((step, index) => (
-                  <div key={step} className="flex items-start gap-4 rounded-2xl border border-white/10 bg-[var(--surface)]/5 px-4 py-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-xs font-semibold text-[var(--foreground)]">
-                      {index + 1}
-                    </div>
-                    <div className="text-sm leading-6 text-[#d4c9bc]">{step}</div>
+          <section id="workflow" className="rounded-[2rem] border border-[#3d2e22] bg-[var(--sidebar)] p-6 text-[#faf8f5] shadow-[0_28px_60px_rgba(45,31,20,0.2)] sm:p-8">
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8b7e74]">How it works</div>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
+              From setup to replies in five steps.
+            </h2>
+            <div className="mt-6 space-y-3">
+              {WORKFLOW.map((step, index) => (
+                <div key={step} className="flex items-start gap-4 rounded-2xl border border-white/10 bg-[var(--surface)]/5 px-4 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-xs font-semibold text-[var(--foreground)]">
+                    {index + 1}
                   </div>
-                ))}
-              </div>
+                  <div className="text-sm leading-6 text-[#d4c9bc]">{step}</div>
+                </div>
+              ))}
             </div>
-
-            <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted-foreground)]">Get started</div>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-[var(--foreground)]">
-                Use the product as a guided workspace, not a collection of disconnected pages.
-              </h2>
-              <p className="mt-4 text-sm leading-7 text-[var(--muted-foreground)]">
-                Start with sender setup, move into mailbox and contact preparation, then use campaigns, inbox, and warm-up to operate with clear system feedback.
-              </p>
-              <div className="mt-6 grid gap-3">
-                {[
-                  "Set up a domain and mailbox",
-                  "Import contacts and organize lists",
-                  "Launch campaigns and inspect replies",
-                  "Monitor warm-up and operations",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--foreground)]">
-                    <BadgeCheck size={16} className="text-[var(--foreground)]" />
-                    {item}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href={primaryHref} className="btn-primary px-5 py-3 text-sm">
-                  {token ? "Open workspace" : "Sign in"}
-                </Link>
-                <a href="#product" className="btn-secondary px-5 py-3 text-sm">
-                  Explore sections
-                </a>
-              </div>
+            <div className="mt-7">
+              <Link href={primaryHref} className="btn-primary px-5 py-3 text-sm">
+                {primaryLabel}
+                <ArrowRight size={16} />
+              </Link>
             </div>
           </section>
         </main>
       </div>
-    </div>
-  );
-}
-
-
-function ValuePoint({ label, detail }: { label: string; detail: string }) {
-  return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
-      <div className="text-sm font-semibold text-[var(--foreground)]">{label}</div>
-      <div className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">{detail}</div>
     </div>
   );
 }
