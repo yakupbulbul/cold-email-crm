@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from email.utils import formataddr
 
+import nh3
 from sqlalchemy.orm import Session
 
 from app.models.core import Mailbox
@@ -10,6 +11,29 @@ from app.schemas.email import SendEmailLogResponse, SendEmailRequest
 from app.integrations.smtp.provider import GoogleWorkspaceSMTPProvider, SMTPDiagnosticResult
 from app.services.mail_provider_service import MailProviderRegistry, ProviderUnavailableError
 from app.services.imap_service import MessageParserService, ThreadResolverService
+
+
+ALLOWED_EMAIL_TAGS = {"p", "br", "a", "strong", "em", "b", "i", "u", "ul", "ol", "li",
+                      "h1", "h2", "h3", "h4", "h5", "h6", "img", "table", "tr", "td",
+                      "th", "thead", "tbody", "span", "div", "blockquote", "hr", "pre", "code"}
+ALLOWED_EMAIL_ATTRIBUTES: dict[str, set[str]] = {
+    "a": {"href", "target", "rel"},
+    "img": {"src", "alt", "width", "height", "style"},
+    "td": {"colspan", "rowspan", "style"},
+    "th": {"colspan", "rowspan", "style"},
+    "span": {"style"},
+    "div": {"style"},
+    "table": {"style", "width", "cellpadding", "cellspacing", "border"},
+    "tr": {"style"},
+    "p": {"style"},
+}
+
+
+def sanitize_email_html(html: str) -> str:
+    """Remove scripts, event handlers, and dangerous HTML from email body."""
+    if not html:
+        return html
+    return nh3.clean(html, tags=ALLOWED_EMAIL_TAGS, attributes=ALLOWED_EMAIL_ATTRIBUTES)
 
 
 class SMTPServiceError(Exception):
@@ -68,6 +92,7 @@ class SMTPManagerService:
             raise SMTPServiceError(exc.category, exc.message, status_code=exc.status_code) from exc
 
         self.provider = getattr(provider, "smtp", self.provider)
+        sanitized_html = sanitize_email_html(req.html_body) if req.html_body else req.html_body
         try:
             success, message_id_or_error = provider.send_email(
                 mailbox,
@@ -76,7 +101,7 @@ class SMTPManagerService:
                 to_emails=req.to,
                 subject=req.subject,
                 text_body=req.text_body,
-                html_body=req.html_body,
+                html_body=sanitized_html,
                 cc_emails=req.cc,
                 bcc_emails=req.bcc,
                 in_reply_to=req.in_reply_to,
