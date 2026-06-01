@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Cpu, Terminal, Wrench, AlertTriangle, Zap, BookOpen } from "lucide-react";
+import { FileText, Terminal, Wrench, AlertTriangle, Zap, BookOpen } from "lucide-react";
 import CopyBlock from "@/components/ui/CopyBlock";
 import { PageHeader, SurfaceCard } from "@/components/ui/primitives";
 
@@ -34,6 +34,344 @@ const CURSOR_CONFIG = `{
 }`;
 
 const GENERIC_COMMAND = `cd /path/to/cold-email-crm/backend && python -m app.mcp_server`;
+
+const FULL_DOCUMENTATION = `# Cold Email CRM — MCP Server Documentation
+
+## Overview
+
+The Cold Email CRM exposes a Model Context Protocol (MCP) server that allows AI assistants
+(Claude Code, Cursor, or any MCP-compatible client) to interact with the CRM backend
+directly via natural language. The server uses stdio transport and provides 22 tools
+across 8 functional categories.
+
+---
+
+## Installation & Setup
+
+### Prerequisites
+
+- Python 3.11 or higher
+- PostgreSQL (same instance used by the web application)
+- Redis (for cache and Celery task queue)
+- Backend dependencies installed: \`pip install -r requirements.txt\`
+- Environment variables configured in \`backend/.env\`
+
+### Required Environment Variables
+
+\`\`\`bash
+DATABASE_URL=postgresql://user:password@localhost:5432/cold_email_crm
+REDIS_URL=redis://localhost:6379/0
+SECRET_KEY=your-secret-key
+\`\`\`
+
+---
+
+## Configuration
+
+### Claude Code
+
+Add to your project \`.mcp.json\` (repository root) or \`~/.claude/mcp.json\` (global):
+
+\`\`\`json
+{
+  "mcpServers": {
+    "cold-email-crm": {
+      "command": "python",
+      "args": ["-m", "app.mcp_server"],
+      "cwd": "/absolute/path/to/cold-email-crm/backend",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}
+\`\`\`
+
+### Cursor
+
+Create or edit \`.cursor/mcp.json\` in your project root:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "cold-email-crm": {
+      "command": "python",
+      "args": ["-m", "app.mcp_server"],
+      "cwd": "/absolute/path/to/cold-email-crm/backend",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}
+\`\`\`
+
+### Generic MCP Client (stdio)
+
+Run the server process directly:
+
+\`\`\`bash
+cd /path/to/cold-email-crm/backend
+PYTHONPATH=. python -m app.mcp_server
+\`\`\`
+
+The server communicates via stdin/stdout using the MCP JSON-RPC protocol.
+
+---
+
+## Tool Reference
+
+### Campaigns (4 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_list_campaigns\` | List all campaigns with status, mailbox, and execution summary | status? |
+| \`crm_get_campaign\` | Get detailed campaign info including leads and sequence steps | campaign_id |
+| \`crm_create_campaign\` | Create a new campaign with name, mailbox, subject, and body | name, mailbox_id, subject, body |
+| \`crm_campaign_status\` | Get execution status: lead counts, send stats, blockers | campaign_id |
+
+### Contacts (3 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_list_contacts\` | List contacts with optional filters (email, name, status, tags) | status?, limit? |
+| \`crm_create_contact\` | Create a new contact with email and optional metadata | email, first_name?, last_name?, company? |
+| \`crm_search_contacts\` | Search contacts by email pattern, company, or tags | query |
+
+### Lists (3 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_list_lists\` | List all lead lists with contact counts | — |
+| \`crm_create_list\` | Create a new lead list | name, description? |
+| \`crm_add_contacts_to_list\` | Add contacts to a lead list by their IDs | list_id, contact_ids |
+
+### Mailboxes (3 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_list_mailboxes\` | List all mailboxes with status, SMTP health, and warm-up state | — |
+| \`crm_mailbox_status\` | Get detailed status including SMTP check results and OAuth state | mailbox_id |
+| \`crm_smtp_check\` | Run SMTP connectivity check and return diagnostic results | mailbox_id |
+
+### Sending (2 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_send_email\` | Send a single email through the backend SMTP pipeline | mailbox_id, to, subject, body |
+| \`crm_send_logs\` | Get recent send logs (delivery status, SMTP responses, timestamps) | limit?, mailbox_id? |
+
+### Deliverability (2 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_deliverability_overview\` | Comprehensive overview: domain readiness, mailbox health, campaign stats | — |
+| \`crm_domain_readiness\` | Check DNS readiness for a domain (MX, SPF, DKIM, DMARC) | domain_id |
+
+### Warm-up (4 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_warmup_status\` | Engine status: global state, participating mailboxes, pairs, blockers | — |
+| \`crm_warmup_toggle\` | Enable/disable global warm-up (queues immediate cycle when enabled) | enabled |
+| \`crm_warmup_mailbox_toggle\` | Enable/disable warm-up participation for a specific mailbox | mailbox_id, enabled |
+| \`crm_warmup_logs\` | Get recent warm-up activity logs | limit? |
+
+### Health (2 tools)
+
+| Tool | Description | Required Params |
+|------|-------------|-----------------|
+| \`crm_system_health\` | Check system health: database, Redis, workers, SMTP/IMAP providers | — |
+| \`crm_readiness_check\` | Run production readiness checks (config, infrastructure, bounds) | — |
+
+---
+
+## Usage Examples
+
+### Check system health
+
+\`\`\`
+Use the crm_system_health tool to check if all services are running.
+\`\`\`
+
+### Create a campaign
+
+\`\`\`
+Use crm_create_campaign with:
+- name: "June B2B Outreach"
+- mailbox_id: "<your-mailbox-id>"
+- subject: "Quick question about {{company}}"
+- body: "Hi {{first_name}},\\n\\nI noticed..."
+\`\`\`
+
+### Search and add contacts to a list
+
+\`\`\`
+1. Use crm_search_contacts with query "acme" to find contacts
+2. Use crm_create_list with name "Acme Prospects"
+3. Use crm_add_contacts_to_list with the list_id and contact_ids from step 1
+\`\`\`
+
+### Monitor deliverability
+
+\`\`\`
+Use crm_deliverability_overview to get a full picture of:
+- Domain DNS status (MX, SPF, DKIM, DMARC)
+- Mailbox SMTP health
+- Campaign send statistics
+\`\`\`
+
+---
+
+## Architecture
+
+\`\`\`
+┌─────────────────────┐     stdio      ┌──────────────────┐
+│  MCP Client         │◄──────────────►│  MCP Server      │
+│  (Claude Code,      │   JSON-RPC     │  (Python)        │
+│   Cursor, etc.)     │                │                  │
+└─────────────────────┘                └────────┬─────────┘
+                                                │
+                                       ┌────────▼─────────┐
+                                       │  Service Layer    │
+                                       │  (SQLAlchemy)     │
+                                       └────────┬─────────┘
+                                                │
+                                  ┌─────────────┼─────────────┐
+                                  │             │             │
+                           ┌──────▼───┐  ┌──────▼───┐  ┌─────▼────┐
+                           │PostgreSQL │  │  Redis   │  │  SMTP    │
+                           │          │  │          │  │ Providers│
+                           └──────────┘  └──────────┘  └──────────┘
+\`\`\`
+
+### Server Entry Point
+
+\`\`\`python
+# backend/app/mcp_server/__main__.py
+python -m app.mcp_server
+\`\`\`
+
+### Tool Registration Pattern
+
+Each tool module exports a \`register_*_tools(tools: dict)\` function:
+
+\`\`\`python
+def register_campaign_tools(tools: dict):
+    tools["crm_list_campaigns"] = {
+        "description": "List all campaigns...",
+        "schema": {
+            "type": "object",
+            "properties": { ... },
+            "required": [...]
+        },
+        "handler": handle_list_campaigns,
+    }
+\`\`\`
+
+### File Structure
+
+\`\`\`
+backend/app/mcp_server/
+├── __main__.py          # Entry point (stdio transport)
+├── server.py            # Server creation and tool registration
+├── db.py                # Database session context manager
+└── tools/
+    ├── campaigns.py     # 4 tools
+    ├── contacts.py      # 3 tools
+    ├── lists.py         # 3 tools
+    ├── mailboxes.py     # 3 tools
+    ���── sending.py       # 2 tools
+    ├��─ deliverability.py # 2 tools
+    ├── warmup.py        # 4 tools
+    └── health.py        # 2 tools
+\`\`\`
+
+---
+
+## Troubleshooting
+
+### Connection refused / server won't start
+
+Ensure PostgreSQL and Redis are running. Check that \`.env\` has valid
+\`DATABASE_URL\` and \`REDIS_URL\` values.
+
+### ModuleNotFoundError: No module named 'app'
+
+The \`cwd\` in your config must point to the \`backend/\` directory.
+\`PYTHONPATH\` must include \`.\` so Python resolves the \`app\` package.
+
+### Tools return empty results
+
+The MCP tools query the same database as the web UI. Verify data
+exists in the application first.
+
+### Server works locally but not in Docker
+
+The MCP server is not exposed as a Docker service. Run it on the host
+pointing \`cwd\` to your local checkout. Connect to PostgreSQL via the
+host-mapped port (default: 5432).
+
+### Permission / authentication errors
+
+The MCP server bypasses API authentication (it accesses the DB directly).
+Ensure the database user has SELECT/INSERT/UPDATE permissions.
+
+---
+
+## Security Notes
+
+- The MCP server has direct database access — it bypasses API auth
+- Only run the server locally or in trusted environments
+- Do not expose the stdio transport over a network without additional auth
+- The server inherits all permissions of the database user in .env
+
+---
+
+## Adding Custom Tools
+
+To add a new tool:
+
+1. Create a new file in \`backend/app/mcp_server/tools/\`
+2. Define a \`register_*_tools(tools: dict)\` function
+3. Add tool entries with \`description\`, \`schema\`, and \`handler\`
+4. Import and call the register function in \`server.py\`
+
+Example:
+
+\`\`\`python
+# backend/app/mcp_server/tools/my_feature.py
+import json
+from app.mcp_server.db import get_db_session
+
+def register_my_feature_tools(tools: dict):
+    tools["crm_my_tool"] = {
+        "description": "Description of what this tool does.",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "param1": {"type": "string", "description": "What param1 is"}
+            },
+            "required": ["param1"]
+        },
+        "handler": handle_my_tool,
+    }
+
+def handle_my_tool(args: dict) -> str:
+    with get_db_session() as db:
+        # Your logic here
+        result = {"status": "ok"}
+    return json.dumps(result, indent=2)
+\`\`\`
+
+Then in \`server.py\`:
+
+\`\`\`python
+from app.mcp_server.tools.my_feature import register_my_feature_tools
+# ...
+register_my_feature_tools(all_tools)
+\`\`\`
+`;
 
 const TOOL_CATEGORIES = [
   {
@@ -111,6 +449,20 @@ export default function McpConnectorPage() {
         title="MCP Connector"
         description="Connect Claude Code, Cursor, or any MCP-compatible client to control the CRM via natural language."
       />
+
+      {/* Full Documentation — Copyable */}
+      <SurfaceCard className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+            <FileText size={20} className="text-emerald-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-[var(--foreground)]">Full Documentation</h2>
+            <p className="text-sm text-[var(--muted-foreground)]">Complete MCP server docs in Markdown — copy and paste into your project README or wiki</p>
+          </div>
+        </div>
+        <CopyBlock title="MCP-SERVER-DOCS.md" code={FULL_DOCUMENTATION} />
+      </SurfaceCard>
 
       {/* Quick Start */}
       <SurfaceCard className="p-6">
