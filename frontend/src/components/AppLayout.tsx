@@ -66,6 +66,10 @@ const PAGE_META: Record<string, { title: string; description: string }> = {
         title: "Quality Center",
         description: "Run internal validation, inspect system consistency, and keep operational quality visible.",
     },
+    "/mcp-connector": {
+        title: "MCP Connector",
+        description: "Connect Claude Code or any MCP client to the CRM backend tools.",
+    },
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
