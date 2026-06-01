@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # Security
     SECRET_KEY: str = "dev-only-change-me"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # Database / Redis
