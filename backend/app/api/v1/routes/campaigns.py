@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.api.deps import get_current_active_user
 from app.core.config import settings
@@ -24,6 +26,7 @@ from app.services.list_service import LeadListService
 from app.workers.campaign_worker import run_campaign_cycle
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 CAMPAIGN_BEAT_INTERVAL_SECONDS = 300
 
 
@@ -483,7 +486,9 @@ def list_campaigns(
 
 @router.post("/", response_model=CampaignResponse)
 @router.post("")  # Handle both /campaigns and /campaigns/ without redirect
+@limiter.limit("10/minute")
 def create_campaign(
+    request: Request,
     req: CampaignCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -914,7 +919,8 @@ def remove_list_from_campaign(
     return service.sync_campaign_leads(campaign_id)
 
 @router.post("/{campaign_id}/start")
-def start_campaign(campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+@limiter.limit("5/minute")
+def start_campaign(request: Request, campaign_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     c = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="Campaign not found")

@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.api.deps import get_current_active_user
 from app.core.database import get_db
 from app.models.core import Mailbox
@@ -9,9 +11,12 @@ from app.services.command_center_service import record_command_action
 from app.services.smtp_service import SMTPManagerService, SMTPServiceError
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/send-email", response_model=SendEmailResponse)
+@limiter.limit("10/minute")
 def dispatch_outbound_email(
+    request: Request,
     req: SendEmailRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

@@ -2,9 +2,11 @@ from datetime import datetime, timezone
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -24,6 +26,7 @@ import csv
 from app.models.campaign import Contact
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 def _serialize_contact(db: Session, contact: Contact) -> dict:
@@ -120,7 +123,8 @@ def list_leads(
     return {"items": [_serialize_contact(db, c) for c in contacts], "total": total, "skip": skip, "limit": limit}
 
 @router.post("/import/csv")
-async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def upload_csv(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Invalid file type. Must be CSV.")
     
